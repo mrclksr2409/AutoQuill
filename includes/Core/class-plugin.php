@@ -12,8 +12,9 @@ class Plugin {
     }
 
     private function __construct() {
-        $this->setup_hooks();
         $this->load_dependencies();
+        $this->setup_hooks();
+        \AutoQuill\Database\Schema::maybe_upgrade();
     }
 
     private function setup_hooks() {
