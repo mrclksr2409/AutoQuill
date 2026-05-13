@@ -2,26 +2,27 @@
 namespace AutoQuill\Database;
 
 class Schema {
+    const DB_VERSION = '1.1';
+
     public static function create_tables() {
         global $wpdb;
         $charset_collate = $wpdb->get_charset_collate();
 
-        // RSS Sources Tabelle
         $sources_table = $wpdb->prefix . 'auto_quill_sources';
-        $sources_sql = "CREATE TABLE IF NOT EXISTS $sources_table (
-            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        $sources_sql = "CREATE TABLE $sources_table (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
             title VARCHAR(255) NOT NULL,
             feed_url TEXT NOT NULL,
-            is_active TINYINT(1) DEFAULT 1,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            is_active TINYINT(1) NOT NULL DEFAULT 1,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
             KEY feed_active (is_active)
         ) $charset_collate;";
 
-        // RSS Articles Tabelle
         $articles_table = $wpdb->prefix . 'auto_quill_articles';
-        $articles_sql = "CREATE TABLE IF NOT EXISTS $articles_table (
-            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        $articles_sql = "CREATE TABLE $articles_table (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
             source_id BIGINT UNSIGNED NOT NULL,
             title VARCHAR(255) NOT NULL,
             description LONGTEXT,
@@ -29,44 +30,42 @@ class Schema {
             author VARCHAR(255),
             published_date DATETIME,
             article_url TEXT NOT NULL,
-            article_hash VARCHAR(64) UNIQUE,
-            fetched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            article_hash VARCHAR(64),
+            fetched_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            UNIQUE KEY article_hash (article_hash),
             KEY source_id (source_id),
-            KEY published_date (published_date),
-            FOREIGN KEY (source_id) REFERENCES $sources_table(id) ON DELETE CASCADE
+            KEY published_date (published_date)
         ) $charset_collate;";
 
-        // Topics Tabelle (täglich generiert)
         $topics_table = $wpdb->prefix . 'auto_quill_topics';
-        $topics_sql = "CREATE TABLE IF NOT EXISTS $topics_table (
-            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-            topic_date DATE NOT NULL UNIQUE,
-            topics JSON NOT NULL,
+        $topics_sql = "CREATE TABLE $topics_table (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            topic_date DATE NOT NULL,
+            topics LONGTEXT NOT NULL,
             selected_topic_id INT,
             selected_topic_title VARCHAR(255),
-            post_id BIGINT,
-            status ENUM('pending', 'selected', 'generated', 'published') DEFAULT 'pending',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            KEY topic_date (topic_date),
+            post_id BIGINT UNSIGNED,
+            status VARCHAR(20) NOT NULL DEFAULT 'pending',
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            UNIQUE KEY topic_date (topic_date),
             KEY status (status)
-        ) $charset_collate;";
-
-        // AI Settings Tabelle
-        $settings_table = $wpdb->prefix . 'auto_quill_settings';
-        $settings_sql = "CREATE TABLE IF NOT EXISTS $settings_table (
-            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-            option_name VARCHAR(255) NOT NULL UNIQUE,
-            option_value LONGTEXT,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            KEY option_name (option_name)
         ) $charset_collate;";
 
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta($sources_sql);
         dbDelta($articles_sql);
         dbDelta($topics_sql);
-        dbDelta($settings_sql);
+
+        update_option('auto_quill_db_version', self::DB_VERSION);
+    }
+
+    public static function maybe_upgrade() {
+        if (get_option('auto_quill_db_version') !== self::DB_VERSION) {
+            self::create_tables();
+        }
     }
 
     public static function drop_tables() {
@@ -75,5 +74,6 @@ class Schema {
         $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}auto_quill_sources");
         $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}auto_quill_topics");
         $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}auto_quill_settings");
+        delete_option('auto_quill_db_version');
     }
 }
