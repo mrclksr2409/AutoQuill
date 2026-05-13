@@ -26,26 +26,24 @@
 
         selectTopic: function(e) {
             e.preventDefault();
-            const $btn = $(e.target);
-            const topicIndex = $btn.data('topic-index');
+            const $card = $(e.target).closest('.topic-card');
+            const topicId = parseInt($card.data('topic-id'), 10);
+            const title = $card.find('h3').text();
 
-            // Hier würde die Topic-Auswahl stattfinden
-            // und dann das Blog-Post generieren
-            this.generateBlogPost(topicIndex);
+            this.generateBlogPost(topicId, title);
         },
 
-        generateBlogPost: function(topicIndex) {
+        generateBlogPost: function(topicId, title) {
             const $preview = $('#post-preview');
             $preview.html('<p class="auto-quill-loading">Blog-Post wird generiert...</p>');
 
-            // Simulieren Sie hier den API-Aufruf
             $.ajax({
                 url: this.apiUrl + 'generate-post',
                 type: 'POST',
                 dataType: 'json',
                 data: JSON.stringify({
-                    topic_id: topicIndex,
-                    title: $('.topic-card').eq(topicIndex).find('h3').text(),
+                    topic_id: topicId,
+                    title: title,
                 }),
                 headers: {
                     'X-WP-Nonce': this.restNonce,
@@ -58,12 +56,15 @@
                         this.currentTopic = response.topic;
                         this.currentTopicId = response.topic_id;
                     } else {
-                        this.showAlert('Fehler beim Generieren des Posts', 'error');
+                        const msg = (response && response.error) || 'Fehler beim Generieren des Posts';
+                        this.showAlert(msg, 'error');
                     }
                 },
                 error: (xhr, status, error) => {
                     console.error('Error:', error);
-                    this.showAlert('Fehler beim Generieren des Posts', 'error');
+                    const msg = (xhr && xhr.responseJSON && xhr.responseJSON.error)
+                        || 'Fehler beim Generieren des Posts';
+                    this.showAlert(msg, 'error');
                 },
             });
         },

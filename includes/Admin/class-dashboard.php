@@ -41,12 +41,15 @@ class Dashboard {
                         <?php $topics = json_decode($today_topics->topics, true) ?: []; ?>
                         <div id="topics-list" class="topics-list">
                             <?php foreach ($topics as $idx => $topic): ?>
-                                <div class="topic-card" data-topic-index="<?php echo (int) $idx; ?>">
+                                <div class="topic-card"
+                                     data-topic-id="<?php echo (int) $today_topics->id; ?>"
+                                     data-topic-index="<?php echo (int) $idx; ?>">
                                     <h3><?php echo esc_html($topic['title'] ?? ''); ?></h3>
                                     <p><strong><?php esc_html_e('Begründung:', 'auto-quill'); ?></strong>
                                        <?php echo esc_html($topic['reason'] ?? ''); ?></p>
                                     <p><?php echo esc_html(substr((string) ($topic['summary'] ?? ''), 0, 200)); ?></p>
                                     <button class="button button-primary auto-quill-select-topic"
+                                            data-topic-id="<?php echo (int) $today_topics->id; ?>"
                                             data-topic-index="<?php echo (int) $idx; ?>">
                                         <?php esc_html_e('Blog-Post generieren', 'auto-quill'); ?>
                                     </button>

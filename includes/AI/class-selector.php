@@ -46,6 +46,9 @@ class Selector {
         if ($ai_provider === 'openai') {
             return self::call_openai($prompt);
         }
+        if ($ai_provider === 'claude') {
+            return self::call_claude($prompt);
+        }
         return self::fallback_analyze($articles);
     }
 
@@ -54,7 +57,7 @@ class Selector {
         $api_key  = $settings['ai_api_key'] ?? '';
 
         if (empty($api_key)) {
-            return new \WP_Error('no_api_key', 'OpenAI API Key nicht konfiguriert');
+            return new \WP_Error('no_api_key', 'API Key nicht konfiguriert');
         }
 
         $response = wp_remote_post('https://api.openai.com/v1/chat/completions', [
@@ -87,6 +90,46 @@ class Selector {
         }
 
         return new \WP_Error('api_error', 'OpenAI API-Fehler');
+    }
+
+    private static function call_claude(string $prompt) {
+        $settings = get_option(C::OPTION_KEY, C::defaults());
+        $api_key  = $settings['ai_api_key'] ?? '';
+
+        if (empty($api_key)) {
+            return new \WP_Error('no_api_key', 'API Key nicht konfiguriert');
+        }
+
+        $response = wp_remote_post('https://api.anthropic.com/v1/messages', [
+            'timeout' => 30,
+            'headers' => [
+                'x-api-key'         => $api_key,
+                'anthropic-version' => '2023-06-01',
+                'content-type'      => 'application/json',
+            ],
+            'body' => wp_json_encode([
+                'model'      => 'claude-sonnet-4-6',
+                'max_tokens' => 1500,
+                'system'     => 'Du bist ein hilfreicher Content-Analyzer. Antworte ausschließlich mit gültigem JSON.',
+                'messages'   => [
+                    ['role' => 'user', 'content' => $prompt],
+                ],
+            ]),
+        ]);
+
+        if (is_wp_error($response)) {
+            return $response;
+        }
+
+        $body = json_decode(wp_remote_retrieve_body($response), true);
+        if (isset($body['content'][0]['text'])) {
+            $content = $body['content'][0]['text'];
+            if (preg_match('/\[.*\]/s', $content, $matches)) {
+                return json_decode($matches[0], true);
+            }
+        }
+
+        return new \WP_Error('api_error', 'Claude API-Fehler');
     }
 
     private static function fallback_analyze(array $articles): array {
