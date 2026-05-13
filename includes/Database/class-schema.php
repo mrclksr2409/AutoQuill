@@ -66,7 +66,7 @@ class Schema {
         dbDelta($sources_sql);
         dbDelta($articles_sql);
         dbDelta($topics_sql);
-        dbDelta($settings_table);
+        dbDelta($settings_sql);
     }
 
     public static function drop_tables() {
