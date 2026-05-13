@@ -67,6 +67,9 @@ class Writer {
         if ($ai_provider === 'openai') {
             return self::call_openai_write($prompt);
         }
+        if ($ai_provider === 'claude') {
+            return self::call_claude_write($prompt);
+        }
         return self::generate_basic_post($topic);
     }
 
@@ -75,7 +78,7 @@ class Writer {
         $api_key  = $settings['ai_api_key'] ?? '';
 
         if (empty($api_key)) {
-            return new \WP_Error('no_api_key', 'OpenAI API Key nicht konfiguriert');
+            return new \WP_Error('no_api_key', 'API Key nicht konfiguriert');
         }
 
         $response = wp_remote_post('https://api.openai.com/v1/chat/completions', [
@@ -105,6 +108,43 @@ class Writer {
         }
 
         return new \WP_Error('api_error', 'OpenAI API-Fehler beim Schreiben des Posts');
+    }
+
+    private static function call_claude_write(string $prompt) {
+        $settings = get_option(C::OPTION_KEY, C::defaults());
+        $api_key  = $settings['ai_api_key'] ?? '';
+
+        if (empty($api_key)) {
+            return new \WP_Error('no_api_key', 'API Key nicht konfiguriert');
+        }
+
+        $response = wp_remote_post('https://api.anthropic.com/v1/messages', [
+            'timeout' => 60,
+            'headers' => [
+                'x-api-key'         => $api_key,
+                'anthropic-version' => '2023-06-01',
+                'content-type'      => 'application/json',
+            ],
+            'body' => wp_json_encode([
+                'model'      => 'claude-sonnet-4-6',
+                'max_tokens' => 4096,
+                'system'     => 'Du bist ein professioneller Blog-Autor und erstellst hochwertige, informative Inhalte.',
+                'messages'   => [
+                    ['role' => 'user', 'content' => $prompt],
+                ],
+            ]),
+        ]);
+
+        if (is_wp_error($response)) {
+            return $response;
+        }
+
+        $body = json_decode(wp_remote_retrieve_body($response), true);
+        if (isset($body['content'][0]['text'])) {
+            return $body['content'][0]['text'];
+        }
+
+        return new \WP_Error('api_error', 'Claude API-Fehler beim Schreiben des Posts');
     }
 
     private static function generate_basic_post(array $topic): string {
