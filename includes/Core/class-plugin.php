@@ -22,6 +22,12 @@ class Plugin {
         add_action('admin_menu', [$this, 'register_admin_menu']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
 
+        // Settings API + Persistenz-Handler
+        add_action('admin_init', ['\AutoQuill\Admin\AdminPage', 'register_settings']);
+        add_action('admin_post_auto_quill_add_source',    ['\AutoQuill\Admin\AdminPage', 'handle_add_source']);
+        add_action('admin_post_auto_quill_delete_source', ['\AutoQuill\Admin\AdminPage', 'handle_delete_source']);
+        add_action('wp_ajax_auto_quill_fetch_now',        ['\AutoQuill\Admin\AdminPage', 'handle_fetch_now']);
+
         // WordPress Cron
         add_action('auto_quill_daily_fetch', ['\AutoQuill\RSS\Fetcher', 'fetch_feeds']);
         add_action('auto_quill_daily_select', ['\AutoQuill\AI\Selector', 'select_top_topics']);

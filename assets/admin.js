@@ -20,15 +20,6 @@
 
             // Post veröffentlichen
             $(document).on('click', '#publish-post-btn', this.publishPost.bind(this));
-
-            // RSS-Quelle hinzufügen
-            $(document).on('submit', '#add-source-form', this.addSource.bind(this));
-
-            // RSS-Quelle löschen
-            $(document).on('click', '.delete-source', this.deleteSource.bind(this));
-
-            // Einstellungen speichern
-            $(document).on('submit', '.auto-quill-settings-form', this.saveSettings.bind(this));
         },
 
         selectTopic: function(e) {
@@ -116,42 +107,6 @@
                     $btn.prop('disabled', false).text('Post veröffentlichen');
                 },
             });
-        },
-
-        addSource: function(e) {
-            e.preventDefault();
-            const $form = $(e.target);
-            const title = $form.find('input[name="source_title"]').val();
-            const url = $form.find('input[name="source_url"]').val();
-
-            if (!title || !url) {
-                this.showAlert('Bitte füllen Sie alle Felder aus', 'error');
-                return;
-            }
-
-            // Hier würde der API-Aufruf stattfinden
-            this.showAlert('RSS-Quelle hinzugefügt', 'success');
-            $form.reset();
-        },
-
-        deleteSource: function(e) {
-            e.preventDefault();
-            const sourceId = $(e.target).data('source-id');
-
-            if (!confirm('Wirklich löschen?')) {
-                return;
-            }
-
-            // Hier würde der API-Aufruf stattfinden
-            this.showAlert('RSS-Quelle gelöscht', 'success');
-            setTimeout(() => {
-                location.reload();
-            }, 1000);
-        },
-
-        saveSettings: function(e) {
-            e.preventDefault();
-            this.showAlert('Einstellungen gespeichert', 'success');
         },
 
         showAlert: function(message, type = 'info') {
