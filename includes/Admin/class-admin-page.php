@@ -6,6 +6,135 @@ use AutoQuill\RSS\Fetcher;
 use AutoQuill\AI\Writer;
 
 class AdminPage {
+    const SETTINGS_GROUP  = 'auto_quill_settings_group';
+    const SETTINGS_OPTION = 'auto_quill_settings';
+
+    public static function register_settings() {
+        register_setting(self::SETTINGS_GROUP, self::SETTINGS_OPTION, [
+            'type'              => 'array',
+            'sanitize_callback' => [self::class, 'sanitize_settings'],
+            'default'           => [],
+        ]);
+    }
+
+    public static function sanitize_settings($input) {
+        $prev = get_option(self::SETTINGS_OPTION, []);
+        if (!is_array($prev)) {
+            $prev = [];
+        }
+        if (!is_array($input)) {
+            return $prev;
+        }
+
+        $clean = $prev;
+
+        if (isset($input['ai_provider'])) {
+            $clean['ai_provider'] = in_array($input['ai_provider'], ['openai', 'claude'], true)
+                ? $input['ai_provider']
+                : ($prev['ai_provider'] ?? 'openai');
+        }
+
+        if (isset($input['ai_api_key'])) {
+            $clean['ai_api_key'] = sanitize_text_field((string) $input['ai_api_key']);
+        }
+
+        if (isset($input['post_status'])) {
+            $clean['post_status'] = in_array($input['post_status'], ['draft', 'publish', 'pending'], true)
+                ? $input['post_status']
+                : ($prev['post_status'] ?? 'draft');
+        }
+
+        $clean['auto_publish'] = !empty($input['auto_publish']);
+
+        add_settings_error(
+            self::SETTINGS_OPTION,
+            'auto_quill_settings_updated',
+            __('Einstellungen gespeichert.', 'auto-quill'),
+            'updated'
+        );
+
+        return $clean;
+    }
+
+    public static function handle_add_source() {
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Zugriff verweigert', 'auto-quill'));
+        }
+        check_admin_referer('auto_quill_add_source', 'auto_quill_nonce');
+
+        $title = sanitize_text_field(wp_unslash($_POST['source_title'] ?? ''));
+        $url   = esc_url_raw(wp_unslash($_POST['source_url'] ?? ''));
+
+        $notice = ['type' => 'error', 'msg' => __('Ungültige Eingabe.', 'auto-quill')];
+
+        if ($title !== '' && $url !== '' && wp_http_validate_url($url)) {
+            $result = Database::getInstance()->insert(
+                'sources',
+                [
+                    'title'    => $title,
+                    'feed_url' => $url,
+                    'is_active' => 1,
+                ],
+                ['%s', '%s', '%d']
+            );
+
+            if ($result) {
+                $notice = ['type' => 'success', 'msg' => __('RSS-Quelle hinzugefügt.', 'auto-quill')];
+            } else {
+                $notice = ['type' => 'error', 'msg' => __('Speichern fehlgeschlagen.', 'auto-quill')];
+            }
+        }
+
+        set_transient('auto_quill_notice_' . get_current_user_id(), $notice, 30);
+        wp_safe_redirect(admin_url('admin.php?page=auto-quill-sources'));
+        exit;
+    }
+
+    public static function handle_delete_source() {
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Zugriff verweigert', 'auto-quill'));
+        }
+        $id = absint($_POST['source_id'] ?? 0);
+        check_admin_referer('auto_quill_delete_source_' . $id, 'auto_quill_nonce');
+
+        $notice = ['type' => 'error', 'msg' => __('Löschen fehlgeschlagen.', 'auto-quill')];
+        if ($id > 0) {
+            $result = Database::getInstance()->delete('sources', ['id' => $id], ['%d']);
+            if ($result) {
+                $notice = ['type' => 'success', 'msg' => __('RSS-Quelle gelöscht.', 'auto-quill')];
+            }
+        }
+
+        set_transient('auto_quill_notice_' . get_current_user_id(), $notice, 30);
+        wp_safe_redirect(admin_url('admin.php?page=auto-quill-sources'));
+        exit;
+    }
+
+    public static function handle_fetch_now() {
+        check_ajax_referer('auto-quill-nonce', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Zugriff verweigert', 'auto-quill')], 403);
+        }
+
+        \AutoQuill\RSS\Fetcher::fetch_feeds();
+        wp_send_json_success(['message' => __('Feeds aktualisiert', 'auto-quill')]);
+    }
+
+    private static function render_transient_notice() {
+        $key = 'auto_quill_notice_' . get_current_user_id();
+        $n = get_transient($key);
+        if (!$n) {
+            return;
+        }
+        delete_transient($key);
+        $type = in_array($n['type'] ?? 'info', ['success', 'error', 'warning', 'info'], true) ? $n['type'] : 'info';
+        printf(
+            '<div class="notice notice-%s is-dismissible"><p>%s</p></div>',
+            esc_attr($type),
+            esc_html($n['msg'] ?? '')
+        );
+    }
+
     public static function render_main_page() {
         if (!current_user_can('manage_options')) {
             wp_die('Zugriff verweigert');
@@ -124,9 +253,12 @@ class AdminPage {
         <div class="wrap">
             <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
 
+            <?php self::render_transient_notice(); ?>
+
             <div class="auto-quill-add-source">
                 <h2><?php esc_html_e('Neue RSS-Quelle hinzufügen', 'auto-quill'); ?></h2>
-                <form method="post" id="add-source-form">
+                <form method="post" id="add-source-form" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                    <input type="hidden" name="action" value="auto_quill_add_source">
                     <?php wp_nonce_field('auto_quill_add_source', 'auto_quill_nonce'); ?>
 
                     <table class="form-table">
@@ -182,9 +314,14 @@ class AdminPage {
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <button class="button button-small delete-source" data-source-id="<?php echo $source->id; ?>">
-                                        <?php esc_html_e('Löschen', 'auto-quill'); ?>
-                                    </button>
+                                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline" onsubmit="return confirm('<?php echo esc_js(__('Wirklich löschen?', 'auto-quill')); ?>');">
+                                        <input type="hidden" name="action" value="auto_quill_delete_source">
+                                        <input type="hidden" name="source_id" value="<?php echo (int) $source->id; ?>">
+                                        <?php wp_nonce_field('auto_quill_delete_source_' . $source->id, 'auto_quill_nonce'); ?>
+                                        <button type="submit" class="button button-small button-link-delete">
+                                            <?php esc_html_e('Löschen', 'auto-quill'); ?>
+                                        </button>
+                                    </form>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -202,15 +339,19 @@ class AdminPage {
             wp_die('Zugriff verweigert');
         }
 
-        $settings = get_option('auto_quill_settings', []);
+        $settings = get_option(self::SETTINGS_OPTION, []);
+        if (!is_array($settings)) {
+            $settings = [];
+        }
 
         ?>
         <div class="wrap">
             <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
 
+            <?php settings_errors(self::SETTINGS_OPTION); ?>
+
             <form method="post" action="options.php">
-                <?php settings_fields('auto_quill_settings'); ?>
-                <?php do_settings_sections('auto_quill_settings'); ?>
+                <?php settings_fields(self::SETTINGS_GROUP); ?>
 
                 <table class="form-table">
                     <tr>
@@ -218,7 +359,7 @@ class AdminPage {
                             <label for="ai_provider"><?php esc_html_e('KI-Provider', 'auto-quill'); ?></label>
                         </th>
                         <td>
-                            <select id="ai_provider" name="auto_quill_ai_provider">
+                            <select id="ai_provider" name="auto_quill_settings[ai_provider]">
                                 <option value="openai" <?php selected($settings['ai_provider'] ?? '', 'openai'); ?>>OpenAI</option>
                                 <option value="claude" <?php selected($settings['ai_provider'] ?? '', 'claude'); ?>>Claude (Anthropic)</option>
                             </select>
@@ -230,7 +371,7 @@ class AdminPage {
                             <label for="ai_api_key"><?php esc_html_e('API-Schlüssel', 'auto-quill'); ?></label>
                         </th>
                         <td>
-                            <input type="password" id="ai_api_key" name="auto_quill_ai_api_key" value="<?php echo esc_attr($settings['ai_api_key'] ?? ''); ?>" style="width: 300px;">
+                            <input type="password" id="ai_api_key" name="auto_quill_settings[ai_api_key]" value="<?php echo esc_attr($settings['ai_api_key'] ?? ''); ?>" style="width: 300px;">
                             <p class="description"><?php esc_html_e('Hier wird dein API-Schlüssel sicher gespeichert.', 'auto-quill'); ?></p>
                         </td>
                     </tr>
@@ -240,7 +381,7 @@ class AdminPage {
                             <label for="post_status"><?php esc_html_e('Standard Post-Status', 'auto-quill'); ?></label>
                         </th>
                         <td>
-                            <select id="post_status" name="auto_quill_post_status">
+                            <select id="post_status" name="auto_quill_settings[post_status]">
                                 <option value="draft" <?php selected($settings['post_status'] ?? '', 'draft'); ?>>Entwurf</option>
                                 <option value="publish" <?php selected($settings['post_status'] ?? '', 'publish'); ?>>Veröffentlicht</option>
                                 <option value="pending" <?php selected($settings['post_status'] ?? '', 'pending'); ?>>Genehmigung ausstehend</option>
@@ -251,7 +392,8 @@ class AdminPage {
                     <tr>
                         <th scope="row">
                             <label>
-                                <input type="checkbox" name="auto_quill_auto_publish" value="1" <?php checked($settings['auto_publish'] ?? false, 1); ?>>
+                                <input type="hidden" name="auto_quill_settings[auto_publish]" value="0">
+                                <input type="checkbox" name="auto_quill_settings[auto_publish]" value="1" <?php checked(!empty($settings['auto_publish'])); ?>>
                                 <?php esc_html_e('Posts automatisch veröffentlichen', 'auto-quill'); ?>
                             </label>
                         </th>
