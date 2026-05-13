@@ -43,6 +43,15 @@ class SourcesRepository {
         return $rows ?: [];
     }
 
+    public function find(int $id) {
+        global $wpdb;
+        $row = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$this->table()} WHERE id = %d LIMIT 1",
+            $id
+        ));
+        return $row ?: null;
+    }
+
     public function active(): array {
         global $wpdb;
         $rows = $wpdb->get_results("SELECT * FROM {$this->table()} WHERE is_active = 1 ORDER BY id ASC");

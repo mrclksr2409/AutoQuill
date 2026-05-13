@@ -22,6 +22,62 @@
 
             // Post veröffentlichen
             $(document).on('click', '#publish-post-btn', this.publishPost.bind(this));
+
+            // Topics neu generieren
+            $(document).on('click', '#auto-quill-recrawl-btn', this.recrawl.bind(this));
+            $(document).on('click', '#auto-quill-reselect-btn', this.reselect.bind(this));
+        },
+
+        recrawl: function(e) {
+            e.preventDefault();
+            const $btn = $(e.target);
+            const sourceId = parseInt($('#auto-quill-source-select').val(), 10) || 0;
+            const originalText = $btn.text();
+
+            $btn.prop('disabled', true).text('Wird neu gecrawlt...');
+            this.showAlert('Feeds werden geholt und Themen neu generiert...', 'info');
+
+            $.post(ajaxurl, {
+                action: 'auto_quill_recrawl_topics',
+                nonce: this.nonce,
+                source_id: sourceId,
+            }).done((response) => {
+                if (response && response.success) {
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    const msg = (response && response.data && response.data.message) || 'Fehler beim Neu-Crawlen';
+                    this.showAlert(msg, 'error');
+                    $btn.prop('disabled', false).text(originalText);
+                }
+            }).fail(() => {
+                this.showAlert('Fehler beim Neu-Crawlen', 'error');
+                $btn.prop('disabled', false).text(originalText);
+            });
+        },
+
+        reselect: function(e) {
+            e.preventDefault();
+            const $btn = $(e.target);
+            const originalText = $btn.text();
+
+            $btn.prop('disabled', true).text('Themen werden neu gewählt...');
+            this.showAlert('Themen werden neu gewählt...', 'info');
+
+            $.post(ajaxurl, {
+                action: 'auto_quill_reselect_topics',
+                nonce: this.nonce,
+            }).done((response) => {
+                if (response && response.success) {
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    const msg = (response && response.data && response.data.message) || 'Fehler beim Neu-Wählen';
+                    this.showAlert(msg, 'error');
+                    $btn.prop('disabled', false).text(originalText);
+                }
+            }).fail(() => {
+                this.showAlert('Fehler beim Neu-Wählen', 'error');
+                $btn.prop('disabled', false).text(originalText);
+            });
         },
 
         selectTopic: function(e) {
@@ -132,14 +188,4 @@
     $(document).ready(() => {
         AutoQuill.init();
     });
-
-    // Expose to global scope
-    window.autoQuillFetchNow = function() {
-        $.post(ajaxurl, { action: 'auto_quill_fetch_now', nonce: autoQuill.nonce }, function(response) {
-            AutoQuill.showAlert('RSS-Feeds werden aktualisiert...', 'info');
-            setTimeout(() => {
-                location.reload();
-            }, 3000);
-        });
-    };
 })(jQuery);
