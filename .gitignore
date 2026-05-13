@@ -1,0 +1,49 @@
+# AutoQuill .gitignore
+
+# WordPress
+wp-content/
+wp-admin/
+wp-includes/
+wp-*.php
+wp-config.php
+wp-config-sample.php
+
+# Dependencies
+vendor/
+node_modules/
+composer.lock
+package-lock.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+debug.log
+error.log
+
+# Database
+*.sql
+*.sqlite
+*.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# OS
+Thumbs.db
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Plugin specific
+auto-quill-dev/
+tests/
+coverage/

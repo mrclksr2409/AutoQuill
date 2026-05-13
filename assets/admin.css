@@ -1,0 +1,166 @@
+/* AutoQuill Admin Styles */
+
+.auto-quill-wrap {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+}
+
+.auto-quill-wrap h1 {
+    color: #0073aa;
+    margin-bottom: 20px;
+}
+
+.auto-quill-wrap h2 {
+    color: #0073aa;
+    border-bottom: 2px solid #0073aa;
+    padding-bottom: 10px;
+}
+
+.auto-quill-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+@media (max-width: 1200px) {
+    .auto-quill-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+.auto-quill-panel {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 20px;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+}
+
+.auto-quill-panel h2 {
+    margin-top: 0;
+}
+
+/* Topics List */
+.topics-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.topic-card {
+    border-left: 4px solid #0073aa;
+    padding: 15px;
+    background: #f9f9f9;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.topic-card:hover {
+    box-shadow: 0 2px 5px rgba(0, 115, 170, 0.2);
+    background: #fff;
+}
+
+.topic-card h3 {
+    margin: 0 0 10px 0;
+    color: #0073aa;
+    font-size: 1.1em;
+}
+
+.topic-card p {
+    margin: 5px 0;
+    line-height: 1.6;
+}
+
+.topic-card p strong {
+    color: #333;
+}
+
+.auto-quill-select-topic {
+    margin-top: 10px;
+}
+
+/* Post Preview */
+.post-preview {
+    border: 1px dashed #ccc;
+    padding: 20px;
+    min-height: 300px;
+    max-height: 600px;
+    overflow-y: auto;
+    background: #f9f9f9;
+    border-radius: 4px;
+}
+
+.post-preview h1,
+.post-preview h2,
+.post-preview h3 {
+    color: #0073aa;
+    margin-top: 15px;
+    margin-bottom: 10px;
+}
+
+.post-preview p {
+    line-height: 1.8;
+    color: #333;
+}
+
+/* Loading State */
+.auto-quill-loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.auto-quill-loading::after {
+    content: '';
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    margin-left: 8px;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"><animate attributeName="r" from="8" to="8" begin="0s" dur="1.2s" values="8;8;8;8;" keyTimes="0;.2;.5;1" /></animate><circle cx="12" cy="12" r="1"><animate attributeName="r" from="5" to="8" begin="0.1s" dur="1.2s" values="5;5;8;8;" keyTimes="0;.2;.5;1" /></animate></circle></circle></svg>');
+    background-repeat: no-repeat;
+    background-size: contain;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Settings Page */
+.auto-quill-add-source {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.auto-quill-add-source h2 {
+    margin-top: 0;
+}
+
+/* Alerts */
+.auto-quill-alert {
+    padding: 12px 15px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+}
+
+.auto-quill-alert-success {
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+}
+
+.auto-quill-alert-error {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+}
+
+.auto-quill-alert-info {
+    background-color: #d1ecf1;
+    border: 1px solid #bee5eb;
+    color: #0c5460;
+}

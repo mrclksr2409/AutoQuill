@@ -1,0 +1,42 @@
+{
+  "name": "autoquill/auto-quill",
+  "description": "AI-powered WordPress plugin that automatically collects RSS feeds, selects daily top topics via AI, and generates blog posts",
+  "type": "wordpress-plugin",
+  "version": "1.0.0",
+  "license": "GPL-2.0-or-later",
+  "authors": [
+    {
+      "name": "AutoQuill Team",
+      "email": "info@autoquill.io"
+    }
+  ],
+  "require": {
+    "php": "^8.0"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^9.0",
+    "wp-cli/wp-cli": "^2.0",
+    "squizlabs/php_codesniffer": "^3.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "AutoQuill\\": "includes/"
+    }
+  },
+  "scripts": {
+    "test": "phpunit",
+    "lint": "phpcs includes/",
+    "format": "phpcbf includes/",
+    "wp-cli-test": "wp plugin activate auto-quill"
+  },
+  "keywords": [
+    "wordpress",
+    "plugin",
+    "rss",
+    "ai",
+    "blog",
+    "content-generation",
+    "openai",
+    "automatic"
+  ]
+}
