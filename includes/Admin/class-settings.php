@@ -1,0 +1,147 @@
+<?php
+namespace AutoQuill\Admin;
+
+use AutoQuill\Core\Constants as C;
+
+class Settings {
+    public static function boot(): void {
+        add_action('admin_init', [self::class, 'register']);
+    }
+
+    public static function register(): void {
+        register_setting(
+            C::SETTINGS_GROUP,
+            C::OPTION_KEY,
+            [
+                'type'              => 'array',
+                'sanitize_callback' => [self::class, 'sanitize'],
+                'default'           => C::defaults(),
+                'show_in_rest'      => false,
+            ]
+        );
+    }
+
+    public static function sanitize($input): array {
+        $prev = get_option(C::OPTION_KEY, C::defaults());
+        if (!is_array($prev)) {
+            $prev = C::defaults();
+        }
+        if (!is_array($input)) {
+            return $prev;
+        }
+
+        $clean = $prev;
+
+        if (isset($input['ai_provider'])) {
+            $clean['ai_provider'] = in_array($input['ai_provider'], ['openai', 'claude'], true)
+                ? $input['ai_provider']
+                : ($prev['ai_provider'] ?? 'openai');
+        }
+
+        if (array_key_exists('ai_api_key', $input)) {
+            $clean['ai_api_key'] = sanitize_text_field((string) $input['ai_api_key']);
+        }
+
+        if (isset($input['post_status'])) {
+            $clean['post_status'] = in_array($input['post_status'], ['draft', 'publish', 'pending'], true)
+                ? $input['post_status']
+                : ($prev['post_status'] ?? 'draft');
+        }
+
+        $clean['auto_publish'] = !empty($input['auto_publish']);
+
+        if (isset($input['posts_per_day'])) {
+            $clean['posts_per_day'] = max(1, min(10, (int) $input['posts_per_day']));
+        }
+
+        add_settings_error(
+            C::OPTION_KEY,
+            'auto_quill_settings_updated',
+            __('Einstellungen gespeichert.', 'auto-quill'),
+            'updated'
+        );
+
+        return $clean;
+    }
+
+    public static function render(): void {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('Zugriff verweigert', 'auto-quill'));
+        }
+
+        $settings = get_option(C::OPTION_KEY, C::defaults());
+        if (!is_array($settings)) {
+            $settings = C::defaults();
+        }
+        ?>
+        <div class="wrap">
+            <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+
+            <?php settings_errors(C::OPTION_KEY); ?>
+
+            <form method="post" action="options.php">
+                <?php settings_fields(C::SETTINGS_GROUP); ?>
+
+                <table class="form-table">
+                    <tr>
+                        <th scope="row">
+                            <label for="ai_provider"><?php esc_html_e('KI-Provider', 'auto-quill'); ?></label>
+                        </th>
+                        <td>
+                            <select id="ai_provider" name="<?php echo esc_attr(C::OPTION_KEY); ?>[ai_provider]">
+                                <option value="openai" <?php selected($settings['ai_provider'] ?? '', 'openai'); ?>>OpenAI</option>
+                                <option value="claude" <?php selected($settings['ai_provider'] ?? '', 'claude'); ?>>Claude (Anthropic)</option>
+                            </select>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <th scope="row">
+                            <label for="ai_api_key"><?php esc_html_e('API-Schlüssel', 'auto-quill'); ?></label>
+                        </th>
+                        <td>
+                            <input type="password" id="ai_api_key"
+                                   name="<?php echo esc_attr(C::OPTION_KEY); ?>[ai_api_key]"
+                                   value="<?php echo esc_attr($settings['ai_api_key'] ?? ''); ?>"
+                                   style="width: 300px;">
+                            <p class="description"><?php esc_html_e('Hier wird dein API-Schlüssel sicher gespeichert.', 'auto-quill'); ?></p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <th scope="row">
+                            <label for="post_status"><?php esc_html_e('Standard Post-Status', 'auto-quill'); ?></label>
+                        </th>
+                        <td>
+                            <select id="post_status" name="<?php echo esc_attr(C::OPTION_KEY); ?>[post_status]">
+                                <option value="draft" <?php selected($settings['post_status'] ?? '', 'draft'); ?>>Entwurf</option>
+                                <option value="publish" <?php selected($settings['post_status'] ?? '', 'publish'); ?>>Veröffentlicht</option>
+                                <option value="pending" <?php selected($settings['post_status'] ?? '', 'pending'); ?>>Genehmigung ausstehend</option>
+                            </select>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <th scope="row">
+                            <label>
+                                <input type="hidden"
+                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[auto_publish]"
+                                       value="0">
+                                <input type="checkbox"
+                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[auto_publish]"
+                                       value="1"
+                                       <?php checked(!empty($settings['auto_publish'])); ?>>
+                                <?php esc_html_e('Posts automatisch veröffentlichen', 'auto-quill'); ?>
+                            </label>
+                        </th>
+                    </tr>
+                </table>
+
+                <?php submit_button(); ?>
+            </form>
+
+            <?php StatusPanel::render(); ?>
+        </div>
+        <?php
+    }
+}
