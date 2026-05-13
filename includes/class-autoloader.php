@@ -7,17 +7,21 @@ class Autoloader {
     }
 
     public static function autoload($class) {
-        if (strpos($class, 'AutoQuill') !== 0) {
+        if (strpos($class, 'AutoQuill\\') !== 0) {
             return;
         }
 
-        $relative   = str_replace('AutoQuill\\', '', $class);
-        $parts      = explode('\\', $relative);
-        $class_name = strtolower(array_pop($parts));
-        $sub_dir    = $parts ? implode('/', $parts) . '/' : '';
-        $file       = AUTO_QUILL_INC_DIR . $sub_dir . 'class-' . $class_name . '.php';
+        $relative = substr($class, strlen('AutoQuill\\'));
+        $parts    = explode('\\', $relative);
+        $leaf     = array_pop($parts);
 
-        if (file_exists($file)) {
+        // CamelCase -> kebab-case (AdminPage -> admin-page, SourcesRepository -> sources-repository)
+        $kebab = strtolower(preg_replace('/(?<!^)[A-Z]/', '-$0', $leaf));
+
+        $sub_dir = $parts ? implode('/', $parts) . '/' : '';
+        $file    = AUTO_QUILL_INC_DIR . $sub_dir . 'class-' . $kebab . '.php';
+
+        if (is_file($file)) {
             require_once $file;
         }
     }

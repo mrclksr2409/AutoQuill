@@ -1,30 +1,30 @@
 <?php
 namespace AutoQuill\AI;
 
-use AutoQuill\Database;
+use AutoQuill\Core\Constants as C;
+use AutoQuill\Database\TopicsRepository;
 
 class Writer {
-    public static function generate_post($request) {
-        $params = $request->get_json_params();
-        $topic_id = intval($params['topic_id'] ?? 0);
+    public static function generate_post(\WP_REST_Request $request): \WP_REST_Response {
+        $params   = $request->get_json_params() ?: [];
+        $topic_id = (int) ($params['topic_id'] ?? 0);
+        $title    = (string) ($params['title'] ?? '');
 
-        if (!$topic_id) {
+        if ($topic_id <= 0) {
             return new \WP_REST_Response(['error' => 'Topic ID erforderlich'], 400);
         }
 
-        $db = Database::getInstance();
-        $topic = $db->get_row('topics', ['id' => $topic_id]);
+        $repo  = new TopicsRepository();
+        $topic = $repo->find($topic_id);
 
         if (!$topic) {
             return new \WP_REST_Response(['error' => 'Topic nicht gefunden'], 404);
         }
 
-        // Thema dekodieren
-        $topics_data = json_decode($topic->topics, true);
+        $topics_data    = json_decode($topic->topics, true) ?: [];
         $selected_topic = null;
-
         foreach ($topics_data as $t) {
-            if ($t['title'] === $params['title'] ?? '') {
+            if (($t['title'] ?? '') === $title) {
                 $selected_topic = $t;
                 break;
             }
@@ -34,58 +34,45 @@ class Writer {
             return new \WP_REST_Response(['error' => 'Ausgewähltes Thema nicht gefunden'], 404);
         }
 
-        // KI aufrufen, um Blog-Post zu schreiben
         $post_content = self::write_blog_post($selected_topic);
 
         if (is_wp_error($post_content)) {
             return new \WP_REST_Response(['error' => $post_content->get_error_message()], 500);
         }
 
-        // Thema als ausgewählt markieren
-        $db->update(
-            'topics',
-            [
-                'selected_topic_id' => $topic_id,
-                'selected_topic_title' => $selected_topic['title'],
-                'status' => 'generated',
-            ],
-            ['id' => $topic_id]
-        );
+        $repo->mark_generated($topic_id, $topic_id, (string) $selected_topic['title']);
 
         return new \WP_REST_Response([
-            'success' => true,
+            'success'      => true,
             'post_content' => $post_content,
-            'topic' => $selected_topic,
+            'topic'        => $selected_topic,
+            'topic_id'     => $topic_id,
         ]);
     }
 
-    private static function write_blog_post($topic) {
-        $settings = get_option('auto_quill_settings', []);
+    private static function write_blog_post(array $topic) {
+        $settings    = get_option(C::OPTION_KEY, C::defaults());
         $ai_provider = $settings['ai_provider'] ?? 'openai';
 
-        $prompt = "Schreibe einen ausführlichen, professionellen Blog-Post über das Thema: '{$topic['title']}'
-        
-        Kontext: {$topic['summary']}
-        
-        Der Post sollte:
-        - 800-1200 Wörter lang sein
-        - Mit einer ansprechenden Einleitung beginnen
-        - 3-4 Hauptabschnitte mit Zwischenüberschriften haben
-        - Mit einem Fazit enden
-        - HTML-Formatierung verwenden (aber ohne <html>, <body> etc.)
-        
-        Antworte nur mit dem Blog-Post-Inhalt, keine zusätzlichen Erklärungen.";
+        $prompt = "Schreibe einen ausführlichen, professionellen Blog-Post über das Thema: '{$topic['title']}'\n\n"
+            . "Kontext: " . ($topic['summary'] ?? '') . "\n\n"
+            . "Der Post sollte:\n"
+            . "- 800-1200 Wörter lang sein\n"
+            . "- Mit einer ansprechenden Einleitung beginnen\n"
+            . "- 3-4 Hauptabschnitte mit Zwischenüberschriften haben\n"
+            . "- Mit einem Fazit enden\n"
+            . "- HTML-Formatierung verwenden (aber ohne <html>, <body> etc.)\n\n"
+            . "Antworte nur mit dem Blog-Post-Inhalt, keine zusätzlichen Erklärungen.";
 
         if ($ai_provider === 'openai') {
             return self::call_openai_write($prompt);
-        } else {
-            return self::generate_basic_post($topic);
         }
+        return self::generate_basic_post($topic);
     }
 
-    private static function call_openai_write($prompt) {
-        $settings = get_option('auto_quill_settings', []);
-        $api_key = $settings['ai_api_key'] ?? '';
+    private static function call_openai_write(string $prompt) {
+        $settings = get_option(C::OPTION_KEY, C::defaults());
+        $api_key  = $settings['ai_api_key'] ?? '';
 
         if (empty($api_key)) {
             return new \WP_Error('no_api_key', 'OpenAI API Key nicht konfiguriert');
@@ -95,22 +82,16 @@ class Writer {
             'timeout' => 60,
             'headers' => [
                 'Authorization' => 'Bearer ' . $api_key,
-                'Content-Type' => 'application/json',
+                'Content-Type'  => 'application/json',
             ],
             'body' => wp_json_encode([
-                'model' => 'gpt-3.5-turbo',
-                'messages' => [
-                    [
-                        'role' => 'system',
-                        'content' => 'Du bist ein professioneller Blog-Autor und erstellst hochwertige, informative Inhalte.',
-                    ],
-                    [
-                        'role' => 'user',
-                        'content' => $prompt,
-                    ],
+                'model'       => 'gpt-3.5-turbo',
+                'messages'    => [
+                    ['role' => 'system', 'content' => 'Du bist ein professioneller Blog-Autor und erstellst hochwertige, informative Inhalte.'],
+                    ['role' => 'user',   'content' => $prompt],
                 ],
                 'temperature' => 0.8,
-                'max_tokens' => 2000,
+                'max_tokens'  => 2000,
             ]),
         ]);
 
@@ -126,10 +107,10 @@ class Writer {
         return new \WP_Error('api_error', 'OpenAI API-Fehler beim Schreiben des Posts');
     }
 
-    private static function generate_basic_post($topic) {
-        $post = "<h1>{$topic['title']}</h1>";
-        $post .= "<p><strong>Einleitung:</strong> " . $topic['summary'] . "</p>";
-        $post .= "<p>Dies ist ein automatisch erstellter Blog-Post basierend auf aktuellen Nachrichten.</p>";
+    private static function generate_basic_post(array $topic): string {
+        $post  = '<h1>' . esc_html((string) $topic['title']) . '</h1>';
+        $post .= '<p><strong>Einleitung:</strong> ' . esc_html((string) ($topic['summary'] ?? '')) . '</p>';
+        $post .= '<p>Dies ist ein automatisch erstellter Blog-Post basierend auf aktuellen Nachrichten.</p>';
         return $post;
     }
 }

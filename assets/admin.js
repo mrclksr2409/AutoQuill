@@ -8,7 +8,9 @@
     const AutoQuill = {
         apiUrl: autoQuill.apiUrl,
         nonce: autoQuill.nonce,
+        restNonce: autoQuill.restNonce || autoQuill.nonce,
         currentTopic: null,
+        currentTopicId: null,
 
         init: function() {
             this.bindEvents();
@@ -46,7 +48,7 @@
                     title: $('.topic-card').eq(topicIndex).find('h3').text(),
                 }),
                 headers: {
-                    'X-WP-Nonce': this.nonce,
+                    'X-WP-Nonce': this.restNonce,
                     'Content-Type': 'application/json',
                 },
                 success: (response) => {
@@ -54,6 +56,7 @@
                         $preview.html(response.post_content);
                         $('#publish-post-btn').show().data('post-content', response.post_content);
                         this.currentTopic = response.topic;
+                        this.currentTopicId = response.topic_id;
                     } else {
                         this.showAlert('Fehler beim Generieren des Posts', 'error');
                     }
@@ -84,9 +87,10 @@
                 data: JSON.stringify({
                     post_title: this.currentTopic.title,
                     post_content: postContent,
+                    topic_id: this.currentTopicId,
                 }),
                 headers: {
-                    'X-WP-Nonce': this.nonce,
+                    'X-WP-Nonce': this.restNonce,
                     'Content-Type': 'application/json',
                 },
                 success: (response) => {
