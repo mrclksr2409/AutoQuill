@@ -123,6 +123,24 @@ class Dashboard {
                     <div id="post-preview" class="post-preview">
                         <p><?php esc_html_e('Wählen Sie ein Thema aus, um den Blog-Post zu generieren.', 'auto-quill'); ?></p>
                     </div>
+
+                    <div id="auto-quill-meta-fields" class="auto-quill-meta-fields" style="display:none;">
+                        <div class="auto-quill-field">
+                            <label for="auto-quill-excerpt">
+                                <strong><?php esc_html_e('Social-Media-Auszug', 'auto-quill'); ?></strong>
+                            </label>
+                            <textarea id="auto-quill-excerpt" rows="3"
+                                      placeholder="<?php esc_attr_e('Kurzer, für Social Media optimierter Teaser', 'auto-quill'); ?>"></textarea>
+                        </div>
+                        <div class="auto-quill-field">
+                            <label for="auto-quill-categories">
+                                <strong><?php esc_html_e('Kategorien', 'auto-quill'); ?></strong>
+                                <span class="description"><?php esc_html_e('(Mehrfachauswahl mit Strg/Cmd)', 'auto-quill'); ?></span>
+                            </label>
+                            <select id="auto-quill-categories" multiple size="5"></select>
+                        </div>
+                    </div>
+
                     <button class="button button-primary" id="publish-post-btn" style="display:none;">
                         <?php esc_html_e('Post veröffentlichen', 'auto-quill'); ?>
                     </button>
@@ -141,6 +159,13 @@ class Dashboard {
             .topic-card h3 { margin: 0 0 10px 0; color: #0073aa; }
             .topic-card p { margin: 5px 0; }
             .post-preview { border: 1px dashed #ccc; padding: 20px; min-height: 300px; max-height: 600px; overflow-y: auto; background: #f9f9f9; }
+            .auto-quill-meta-fields { margin-top: 15px; display: flex; flex-direction: column; gap: 12px; }
+            .auto-quill-meta-fields .auto-quill-field { display: flex; flex-direction: column; gap: 4px; }
+            .auto-quill-meta-fields label { font-size: 13px; }
+            .auto-quill-meta-fields textarea,
+            .auto-quill-meta-fields select { width: 100%; box-sizing: border-box; }
+            .auto-quill-meta-fields .description { color: #666; font-weight: normal; font-size: 12px; margin-left: 4px; }
+            #publish-post-btn { margin-top: 15px; }
         </style>
         <?php
     }
