@@ -136,9 +136,11 @@ class Writer {
             . "  \"category_ids\": [<1 bis 3 IDs aus der obigen Liste>]\n"
             . "}";
 
-        $raw = $ai_provider === 'openai'
-            ? self::call_openai_write($prompt)
-            : self::call_claude_write($prompt);
+        $raw = (new Client())->chat(
+            'Du bist ein professioneller Blog-Autor und erstellst hochwertige, informative Inhalte. Antworte immer im geforderten JSON-Format.',
+            $prompt,
+            ['max_tokens' => 4096, 'temperature' => 0.8, 'timeout' => 60]
+        );
 
         if (is_wp_error($raw)) {
             return $raw;
@@ -208,84 +210,10 @@ class Writer {
             }
         }
         return [
-            'content'      => (string) $decoded['content'],
-            'excerpt'      => isset($decoded['excerpt']) ? (string) $decoded['excerpt'] : '',
+            'content'      => wp_kses_post((string) $decoded['content']),
+            'excerpt'      => isset($decoded['excerpt']) ? sanitize_textarea_field((string) $decoded['excerpt']) : '',
             'category_ids' => array_values(array_unique($picked)),
         ];
-    }
-
-    private static function call_openai_write(string $prompt) {
-        $settings = get_option(C::OPTION_KEY, C::defaults());
-        $api_key  = $settings['ai_api_key'] ?? '';
-
-        if (empty($api_key)) {
-            return new \WP_Error('no_api_key', 'API Key nicht konfiguriert');
-        }
-
-        $response = wp_remote_post('https://api.openai.com/v1/chat/completions', [
-            'timeout' => 60,
-            'headers' => [
-                'Authorization' => 'Bearer ' . $api_key,
-                'Content-Type'  => 'application/json',
-            ],
-            'body' => wp_json_encode([
-                'model'       => 'gpt-3.5-turbo',
-                'messages'    => [
-                    ['role' => 'system', 'content' => 'Du bist ein professioneller Blog-Autor und erstellst hochwertige, informative Inhalte. Antworte immer im geforderten JSON-Format.'],
-                    ['role' => 'user',   'content' => $prompt],
-                ],
-                'temperature' => 0.8,
-                'max_tokens'  => 2500,
-            ]),
-        ]);
-
-        if (is_wp_error($response)) {
-            return $response;
-        }
-
-        $body = json_decode(wp_remote_retrieve_body($response), true);
-        if (isset($body['choices'][0]['message']['content'])) {
-            return (string) $body['choices'][0]['message']['content'];
-        }
-
-        return new \WP_Error('api_error', 'OpenAI API-Fehler beim Schreiben des Posts');
-    }
-
-    private static function call_claude_write(string $prompt) {
-        $settings = get_option(C::OPTION_KEY, C::defaults());
-        $api_key  = $settings['ai_api_key'] ?? '';
-
-        if (empty($api_key)) {
-            return new \WP_Error('no_api_key', 'API Key nicht konfiguriert');
-        }
-
-        $response = wp_remote_post('https://api.anthropic.com/v1/messages', [
-            'timeout' => 60,
-            'headers' => [
-                'x-api-key'         => $api_key,
-                'anthropic-version' => '2023-06-01',
-                'content-type'      => 'application/json',
-            ],
-            'body' => wp_json_encode([
-                'model'      => 'claude-sonnet-4-6',
-                'max_tokens' => 4096,
-                'system'     => 'Du bist ein professioneller Blog-Autor und erstellst hochwertige, informative Inhalte. Antworte immer im geforderten JSON-Format.',
-                'messages'   => [
-                    ['role' => 'user', 'content' => $prompt],
-                ],
-            ]),
-        ]);
-
-        if (is_wp_error($response)) {
-            return $response;
-        }
-
-        $body = json_decode(wp_remote_retrieve_body($response), true);
-        if (isset($body['content'][0]['text'])) {
-            return (string) $body['content'][0]['text'];
-        }
-
-        return new \WP_Error('api_error', 'Claude API-Fehler beim Schreiben des Posts');
     }
 
     /**

@@ -5,6 +5,11 @@
 (function($) {
     'use strict';
 
+    const i18n = (autoQuill && autoQuill.i18n) || {};
+    const t = function(key, fallback) {
+        return (i18n && i18n[key]) || fallback || '';
+    };
+
     const AutoQuill = {
         apiUrl: autoQuill.apiUrl,
         nonce: autoQuill.nonce,
@@ -17,13 +22,8 @@
         },
 
         bindEvents: function() {
-            // Topic auswählen
             $(document).on('click', '.auto-quill-select-topic', this.selectTopic.bind(this));
-
-            // Post veröffentlichen
             $(document).on('click', '#publish-post-btn', this.publishPost.bind(this));
-
-            // Topics neu generieren
             $(document).on('click', '#auto-quill-recrawl-btn', this.recrawl.bind(this));
             $(document).on('click', '#auto-quill-reselect-btn', this.reselect.bind(this));
         },
@@ -34,8 +34,8 @@
             const sourceId = parseInt($('#auto-quill-source-select').val(), 10) || 0;
             const originalText = $btn.text();
 
-            $btn.prop('disabled', true).text('Wird neu gecrawlt...');
-            this.showAlert('Feeds werden geholt und Themen neu generiert...', 'info');
+            $btn.prop('disabled', true).text(t('recrawling'));
+            this.showAlert(t('recrawlInfo'), 'info');
 
             $.post(ajaxurl, {
                 action: 'auto_quill_recrawl_topics',
@@ -45,12 +45,12 @@
                 if (response && response.success) {
                     setTimeout(() => location.reload(), 1500);
                 } else {
-                    const msg = (response && response.data && response.data.message) || 'Fehler beim Neu-Crawlen';
+                    const msg = (response && response.data && response.data.message) || t('recrawlError');
                     this.showAlert(msg, 'error');
                     $btn.prop('disabled', false).text(originalText);
                 }
             }).fail(() => {
-                this.showAlert('Fehler beim Neu-Crawlen', 'error');
+                this.showAlert(t('recrawlError'), 'error');
                 $btn.prop('disabled', false).text(originalText);
             });
         },
@@ -60,8 +60,8 @@
             const $btn = $(e.target);
             const originalText = $btn.text();
 
-            $btn.prop('disabled', true).text('Themen werden neu gewählt...');
-            this.showAlert('Themen werden neu gewählt...', 'info');
+            $btn.prop('disabled', true).text(t('reselecting'));
+            this.showAlert(t('reselectInfo'), 'info');
 
             $.post(ajaxurl, {
                 action: 'auto_quill_reselect_topics',
@@ -70,12 +70,12 @@
                 if (response && response.success) {
                     setTimeout(() => location.reload(), 1500);
                 } else {
-                    const msg = (response && response.data && response.data.message) || 'Fehler beim Neu-Wählen';
+                    const msg = (response && response.data && response.data.message) || t('reselectError');
                     this.showAlert(msg, 'error');
                     $btn.prop('disabled', false).text(originalText);
                 }
             }).fail(() => {
-                this.showAlert('Fehler beim Neu-Wählen', 'error');
+                this.showAlert(t('reselectError'), 'error');
                 $btn.prop('disabled', false).text(originalText);
             });
         },
@@ -91,7 +91,9 @@
 
         generateBlogPost: function(topicId, title) {
             const $preview = $('#post-preview');
-            $preview.html('<p class="auto-quill-loading">Blog-Post wird generiert...</p>');
+            $preview.empty().append(
+                $('<p>').addClass('auto-quill-loading').text(t('generating'))
+            );
 
             $.ajax({
                 url: this.apiUrl + 'generate-post',
@@ -117,14 +119,14 @@
                             response.category_ids || []
                         );
                     } else {
-                        const msg = (response && response.error) || 'Fehler beim Generieren des Posts';
+                        const msg = (response && response.error) || t('generateError');
                         this.showAlert(msg, 'error');
                     }
                 },
                 error: (xhr, status, error) => {
                     console.error('Error:', error);
                     const msg = (xhr && xhr.responseJSON && xhr.responseJSON.error)
-                        || 'Fehler beim Generieren des Posts';
+                        || t('generateError');
                     this.showAlert(msg, 'error');
                 },
             });
@@ -155,7 +157,7 @@
             const postContent = $btn.data('post-content');
 
             if (!postContent || !this.currentTopic) {
-                this.showAlert('Keine Post-Inhalte verfügbar', 'error');
+                this.showAlert(t('noContent'), 'error');
                 return;
             }
 
@@ -164,7 +166,7 @@
                 .map((v) => parseInt(v, 10))
                 .filter((v) => !isNaN(v));
 
-            $btn.prop('disabled', true).text('Wird gespeichert...');
+            $btn.prop('disabled', true).text(t('saving'));
 
             $.ajax({
                 url: this.apiUrl + 'publish-post',
@@ -183,28 +185,30 @@
                 },
                 success: (response) => {
                     if (response.success) {
-                        this.showAlert('Post erfolgreich erstellt!', 'success');
+                        this.showAlert(t('publishSuccess'), 'success');
                         setTimeout(() => {
                             location.reload();
                         }, 2000);
                     } else {
-                        this.showAlert('Fehler beim Veröffentlichen', 'error');
+                        this.showAlert(t('publishError'), 'error');
                     }
                 },
                 error: (xhr, status, error) => {
                     console.error('Error:', error);
-                    this.showAlert('Fehler beim Veröffentlichen', 'error');
+                    this.showAlert(t('publishError'), 'error');
                 },
                 complete: () => {
-                    const label = (window.autoQuill && window.autoQuill.publishButtonLabel) || 'Post veröffentlichen';
+                    const label = (window.autoQuill && window.autoQuill.publishButtonLabel) || t('publishSuccess');
                     $btn.prop('disabled', false).text(label);
                 },
             });
         },
 
         showAlert: function(message, type = 'info') {
-            const alertClass = `auto-quill-alert auto-quill-alert-${type}`;
-            const $alert = $(`<div class="${alertClass}">${message}</div>`);
+            const $alert = $('<div>')
+                .addClass('auto-quill-alert')
+                .addClass('auto-quill-alert-' + type)
+                .text(message);
 
             $('.wrap').prepend($alert);
 

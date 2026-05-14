@@ -10,6 +10,7 @@ use AutoQuill\Rest\RestController;
 
 class Plugin {
     public static function boot(): void {
+        add_action('init', [self::class, 'load_textdomain']);
         add_action('admin_init', [Schema::class, 'ensure_tables'], 1);
 
         Settings::boot();
@@ -27,5 +28,13 @@ class Plugin {
         if (!wp_next_scheduled(Constants::CRON_SELECT)) {
             wp_schedule_event(time() + 3600, 'daily', Constants::CRON_SELECT);
         }
+    }
+
+    public static function load_textdomain(): void {
+        load_plugin_textdomain(
+            'auto-quill',
+            false,
+            dirname(plugin_basename(AUTO_QUILL_PLUGIN_DIR . 'auto-quill.php')) . '/languages'
+        );
     }
 }

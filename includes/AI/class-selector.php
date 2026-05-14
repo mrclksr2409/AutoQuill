@@ -22,7 +22,7 @@ class Selector {
             return;
         }
 
-        $today = date('Y-m-d');
+        $today = current_time('Y-m-d');
         (new TopicsRepository())->upsert_for_date($today, $topics);
 
         do_action('auto_quill_topics_selected', $topics);
@@ -30,16 +30,15 @@ class Selector {
 
     private static function analyze_articles(array $articles) {
         $settings    = get_option(C::OPTION_KEY, C::defaults());
-        $ai_provider = $settings['ai_provider'] ?? 'openai';
+        $ai_provider = is_array($settings) ? ($settings['ai_provider'] ?? 'openai') : 'openai';
+
+        if ($ai_provider !== 'openai' && $ai_provider !== 'claude') {
+            return self::fallback_analyze($articles);
+        }
 
         $articles_text = '';
         foreach ($articles as $article) {
-            $description = (string) $article->description;
-            if (function_exists('mb_substr')) {
-                $description = mb_substr($description, 0, 400);
-            } else {
-                $description = substr($description, 0, 400);
-            }
+            $description = mb_substr((string) $article->description, 0, 400);
             $articles_text .= "ID: {$article->id}\n";
             $articles_text .= "Titel: {$article->title}\n";
             $articles_text .= "Beschreibung: {$description}\n";
@@ -52,19 +51,32 @@ class Selector {
             . "[{\"article_id\": <int aus der obigen Liste>, \"title\": \"...\", \"summary\": \"...\", \"reason\": \"...\"}]\n\n"
             . $articles_text;
 
-        if ($ai_provider === 'openai') {
-            $topics = self::call_openai($prompt);
-        } elseif ($ai_provider === 'claude') {
-            $topics = self::call_claude($prompt);
-        } else {
-            return self::fallback_analyze($articles);
+        $raw = (new Client())->chat(
+            'Du bist ein hilfreicher Content-Analyzer. Antworte ausschließlich mit gültigem JSON.',
+            $prompt,
+            ['max_tokens' => 1500, 'temperature' => 0.7, 'timeout' => 30]
+        );
+
+        if (is_wp_error($raw)) {
+            return $raw;
         }
 
+        $topics = self::extract_json_array((string) $raw);
         if (!is_array($topics)) {
-            return $topics;
+            return new \WP_Error('ai_parse_failed', 'KI-Antwort konnte nicht als JSON-Array geparst werden');
         }
 
         return self::attach_article_ids($topics, $articles);
+    }
+
+    private static function extract_json_array(string $content): ?array {
+        if (preg_match('/\[.*\]/s', $content, $matches)) {
+            $decoded = json_decode($matches[0], true);
+            if (is_array($decoded)) {
+                return $decoded;
+            }
+        }
+        return null;
     }
 
     /**
@@ -92,86 +104,6 @@ class Selector {
             $normalized[] = $topic;
         }
         return $normalized;
-    }
-
-    private static function call_openai(string $prompt) {
-        $settings = get_option(C::OPTION_KEY, C::defaults());
-        $api_key  = $settings['ai_api_key'] ?? '';
-
-        if (empty($api_key)) {
-            return new \WP_Error('no_api_key', 'API Key nicht konfiguriert');
-        }
-
-        $response = wp_remote_post('https://api.openai.com/v1/chat/completions', [
-            'timeout' => 30,
-            'headers' => [
-                'Authorization' => 'Bearer ' . $api_key,
-                'Content-Type'  => 'application/json',
-            ],
-            'body' => wp_json_encode([
-                'model'       => 'gpt-3.5-turbo',
-                'messages'    => [
-                    ['role' => 'system', 'content' => 'Du bist ein hilfreicher Content-Analyzer. Antworte ausschließlich mit gültigem JSON.'],
-                    ['role' => 'user',   'content' => $prompt],
-                ],
-                'temperature' => 0.7,
-                'max_tokens'  => 1000,
-            ]),
-        ]);
-
-        if (is_wp_error($response)) {
-            return $response;
-        }
-
-        $body = json_decode(wp_remote_retrieve_body($response), true);
-        if (isset($body['choices'][0]['message']['content'])) {
-            $content = $body['choices'][0]['message']['content'];
-            if (preg_match('/\[.*\]/s', $content, $matches)) {
-                return json_decode($matches[0], true);
-            }
-        }
-
-        return new \WP_Error('api_error', 'OpenAI API-Fehler');
-    }
-
-    private static function call_claude(string $prompt) {
-        $settings = get_option(C::OPTION_KEY, C::defaults());
-        $api_key  = $settings['ai_api_key'] ?? '';
-
-        if (empty($api_key)) {
-            return new \WP_Error('no_api_key', 'API Key nicht konfiguriert');
-        }
-
-        $response = wp_remote_post('https://api.anthropic.com/v1/messages', [
-            'timeout' => 30,
-            'headers' => [
-                'x-api-key'         => $api_key,
-                'anthropic-version' => '2023-06-01',
-                'content-type'      => 'application/json',
-            ],
-            'body' => wp_json_encode([
-                'model'      => 'claude-sonnet-4-6',
-                'max_tokens' => 1500,
-                'system'     => 'Du bist ein hilfreicher Content-Analyzer. Antworte ausschließlich mit gültigem JSON.',
-                'messages'   => [
-                    ['role' => 'user', 'content' => $prompt],
-                ],
-            ]),
-        ]);
-
-        if (is_wp_error($response)) {
-            return $response;
-        }
-
-        $body = json_decode(wp_remote_retrieve_body($response), true);
-        if (isset($body['content'][0]['text'])) {
-            $content = $body['content'][0]['text'];
-            if (preg_match('/\[.*\]/s', $content, $matches)) {
-                return json_decode($matches[0], true);
-            }
-        }
-
-        return new \WP_Error('api_error', 'Claude API-Fehler');
     }
 
     private static function fallback_analyze(array $articles): array {

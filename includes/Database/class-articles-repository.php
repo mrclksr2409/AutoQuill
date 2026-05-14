@@ -67,7 +67,7 @@ class ArticlesRepository {
 
     public function recent(int $hours = 24, int $limit = 50): array {
         global $wpdb;
-        $time_ago = date('Y-m-d H:i:s', time() - ($hours * 3600));
+        $time_ago = gmdate('Y-m-d H:i:s', time() - ($hours * 3600));
         $rows = $wpdb->get_results($wpdb->prepare(
             "SELECT * FROM {$this->table()} WHERE fetched_at >= %s ORDER BY published_date DESC LIMIT %d",
             $time_ago,
@@ -86,7 +86,7 @@ class ArticlesRepository {
             return 0;
         }
         global $wpdb;
-        $cutoff = date('Y-m-d H:i:s', time() - ($days * DAY_IN_SECONDS));
+        $cutoff = gmdate('Y-m-d H:i:s', time() - ($days * DAY_IN_SECONDS));
         $n = $wpdb->query($wpdb->prepare(
             "DELETE FROM {$this->table()} WHERE published_date < %s",
             $cutoff

@@ -60,11 +60,12 @@ class Fetcher {
             }
 
             $author_obj = $item->get_author();
+            $content    = self::fetch_article_content($link);
             $articles->insert([
                 'source_id'      => $source_id,
                 'title'          => mb_substr((string) $item->get_title(), 0, 255),
                 'description'    => mb_substr(strip_tags((string) $item->get_description()), 0, 1000),
-                'content'        => (string) wp_remote_retrieve_body(wp_remote_get($link)),
+                'content'        => $content,
                 'author'         => $author_obj ? (string) $author_obj->name : 'Unknown',
                 'published_date' => (string) $item->get_date('Y-m-d H:i:s'),
                 'article_url'    => $link,
@@ -74,5 +75,20 @@ class Fetcher {
 
         $feed->__destruct();
         unset($feed);
+    }
+
+    private static function fetch_article_content(string $link): string {
+        if ($link === '') {
+            return '';
+        }
+        $response = wp_safe_remote_get($link, [
+            'timeout'     => 10,
+            'redirection' => 3,
+            'user-agent'  => 'AutoQuill/' . AUTO_QUILL_VERSION,
+        ]);
+        if (is_wp_error($response) || (int) wp_remote_retrieve_response_code($response) !== 200) {
+            return '';
+        }
+        return mb_substr((string) wp_remote_retrieve_body($response), 0, 50000);
     }
 }

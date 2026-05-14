@@ -73,12 +73,13 @@ Ein intelligentes WordPress-Plugin, das automatisch RSS-Feeds überwacht, tägli
 
 ### Datenbank-Tabellen
 
-Das Plugin erstellt 4 neue Tabellen:
+Das Plugin erstellt 3 neue Tabellen:
 
 - `wp_auto_quill_sources` - RSS-Quellen
 - `wp_auto_quill_articles` - Gecrawlte Artikel
 - `wp_auto_quill_topics` - Tägliche Themen-Auswahl
-- `wp_auto_quill_settings` - Plugin-Einstellungen
+
+Die Plugin-Einstellungen werden in der `wp_options`-Tabelle unter dem Key `auto_quill_settings` gespeichert.
 
 ## API-Integration
 
