@@ -35,6 +35,28 @@ class Constants {
             'auto_publish'  => false,
             'posts_per_day' => 1,
             'rss_lookback_days' => 7,
+            'prompt_body'    => self::default_prompt_body(),
+            'prompt_excerpt' => self::default_prompt_excerpt(),
         ];
+    }
+
+    public static function default_prompt_body(): string {
+        return "Schreibe einen ausführlichen, professionellen Blog-Post über das Thema: '{title}'\n\n"
+            . "{source_block}"
+            . "Der Post sollte:\n"
+            . "- 800-1200 Wörter lang sein\n"
+            . "- Mit einer ansprechenden Einleitung beginnen\n"
+            . "- 3-4 Hauptabschnitte mit Zwischenüberschriften (<h2>) haben\n"
+            . "- Mit einem Fazit enden\n"
+            . "- HTML-Formatierung verwenden (aber ohne <html>, <body> etc.)\n"
+            . "- Ausschließlich Fakten aus dem obigen Quelltext verwenden und paraphrasieren (kein wörtliches Kopieren)";
+    }
+
+    public static function default_prompt_excerpt(): string {
+        return "Erstelle einen kurzen, für Social Media optimierten Auszug zum Thema '{title}'.\n"
+            . "- 1-2 Sätze\n"
+            . "- maximal ~250 Zeichen\n"
+            . "- mit einem Hook, der zum Klicken animiert\n"
+            . "- auf Deutsch";
     }
 }

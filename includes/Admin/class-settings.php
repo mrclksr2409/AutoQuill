@@ -61,6 +61,20 @@ class Settings {
             $clean['rss_lookback_days'] = $v;
         }
 
+        if (array_key_exists('prompt_body', $input)) {
+            $body = sanitize_textarea_field((string) $input['prompt_body']);
+            $clean['prompt_body'] = trim($body) !== ''
+                ? $body
+                : C::defaults()['prompt_body'];
+        }
+
+        if (array_key_exists('prompt_excerpt', $input)) {
+            $excerpt = sanitize_textarea_field((string) $input['prompt_excerpt']);
+            $clean['prompt_excerpt'] = trim($excerpt) !== ''
+                ? $excerpt
+                : C::defaults()['prompt_excerpt'];
+        }
+
         add_settings_error(
             C::OPTION_KEY,
             'auto_quill_settings_updated',
@@ -153,6 +167,38 @@ class Settings {
                                    value="<?php echo esc_attr((string) ($settings['rss_lookback_days'] ?? 7)); ?>"
                                    style="width: 100px;">
                             <p class="description"><?php esc_html_e('Wie viele Tage zurück sollen Feed-Artikel berücksichtigt werden? 0 = unbegrenzt. Ältere Artikel werden auch aus der Datenbank entfernt.', 'auto-quill'); ?></p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <th scope="row">
+                            <label for="prompt_body"><?php esc_html_e('Prompt: Beitragstext', 'auto-quill'); ?></label>
+                        </th>
+                        <td>
+                            <textarea id="prompt_body" rows="10" class="large-text code"
+                                      name="<?php echo esc_attr(C::OPTION_KEY); ?>[prompt_body]"><?php
+                                echo esc_textarea($settings['prompt_body'] ?? C::defaults()['prompt_body']);
+                            ?></textarea>
+                            <p class="description">
+                                <?php esc_html_e('Anweisungen für die KI zur Erstellung des Blog-Beitrags. Unterstützte Platzhalter:', 'auto-quill'); ?>
+                                <code>{title}</code>, <code>{source_block}</code>, <code>{categories_list}</code>
+                            </p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <th scope="row">
+                            <label for="prompt_excerpt"><?php esc_html_e('Prompt: Social-Media-Auszug', 'auto-quill'); ?></label>
+                        </th>
+                        <td>
+                            <textarea id="prompt_excerpt" rows="6" class="large-text code"
+                                      name="<?php echo esc_attr(C::OPTION_KEY); ?>[prompt_excerpt]"><?php
+                                echo esc_textarea($settings['prompt_excerpt'] ?? C::defaults()['prompt_excerpt']);
+                            ?></textarea>
+                            <p class="description">
+                                <?php esc_html_e('Anweisungen für die KI zur Erstellung des Auszugs. Unterstützte Platzhalter:', 'auto-quill'); ?>
+                                <code>{title}</code>, <code>{source_block}</code>, <code>{categories_list}</code>
+                            </p>
                         </td>
                     </tr>
                 </table>
