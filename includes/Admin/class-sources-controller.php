@@ -17,7 +17,7 @@ class SourcesController {
         check_admin_referer(C::ACTION_ADD, 'auto_quill_nonce');
 
         $title = sanitize_text_field(wp_unslash($_POST['source_title'] ?? ''));
-        $url   = esc_url_raw(wp_unslash($_POST['source_url'] ?? ''));
+        $url   = esc_url_raw(wp_unslash($_POST['source_url'] ?? ''), ['http', 'https']);
 
         if ($title === '' || $url === '' || !wp_http_validate_url($url)) {
             Notices::error(__('Ungültige Eingabe.', 'auto-quill'));

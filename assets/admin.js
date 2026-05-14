@@ -203,8 +203,10 @@
         },
 
         showAlert: function(message, type = 'info') {
-            const alertClass = `auto-quill-alert auto-quill-alert-${type}`;
-            const $alert = $(`<div class="${alertClass}">${message}</div>`);
+            const $alert = $('<div>')
+                .addClass('auto-quill-alert')
+                .addClass('auto-quill-alert-' + type)
+                .text(message);
 
             $('.wrap').prepend($alert);
 

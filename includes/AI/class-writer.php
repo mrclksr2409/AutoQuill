@@ -208,8 +208,8 @@ class Writer {
             }
         }
         return [
-            'content'      => (string) $decoded['content'],
-            'excerpt'      => isset($decoded['excerpt']) ? (string) $decoded['excerpt'] : '',
+            'content'      => wp_kses_post((string) $decoded['content']),
+            'excerpt'      => isset($decoded['excerpt']) ? sanitize_textarea_field((string) $decoded['excerpt']) : '',
             'category_ids' => array_values(array_unique($picked)),
         ];
     }
