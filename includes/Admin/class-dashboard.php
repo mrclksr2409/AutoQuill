@@ -141,17 +141,22 @@ class Dashboard {
 
                 <div class="auto-quill-panel">
                     <h2><?php esc_html_e('Blog-Post Vorschau', 'auto-quill'); ?></h2>
-                    <div id="post-preview" class="post-preview">
-                        <p><?php esc_html_e('Wählen Sie ein Thema aus, um den Blog-Post zu generieren.', 'auto-quill'); ?></p>
-                    </div>
 
-                    <div id="auto-quill-meta-fields" class="auto-quill-meta-fields" style="display:none;">
+                    <div id="auto-quill-meta-fields" class="auto-quill-meta-fields">
                         <div class="auto-quill-field">
                             <label for="auto-quill-title">
                                 <strong><?php esc_html_e('Titel', 'auto-quill'); ?></strong>
                             </label>
                             <input type="text" id="auto-quill-title" class="large-text"
                                    placeholder="<?php esc_attr_e('Wird automatisch von der KI gefüllt', 'auto-quill'); ?>">
+                        </div>
+                        <div class="auto-quill-field auto-quill-field--body">
+                            <label for="post-preview">
+                                <strong><?php esc_html_e('Text', 'auto-quill'); ?></strong>
+                            </label>
+                            <div id="post-preview" class="post-preview">
+                                <p><?php esc_html_e('Wählen Sie ein Thema aus, um den Blog-Post zu generieren.', 'auto-quill'); ?></p>
+                            </div>
                         </div>
                         <div class="auto-quill-field">
                             <label for="auto-quill-excerpt">

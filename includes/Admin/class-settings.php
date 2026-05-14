@@ -132,214 +132,237 @@ class Settings {
             <form method="post" action="options.php">
                 <?php settings_fields(C::SETTINGS_GROUP); ?>
 
-                <table class="form-table">
-                    <tr>
-                        <th scope="row">
-                            <label for="ai_provider"><?php esc_html_e('KI-Provider', 'auto-quill'); ?></label>
-                        </th>
-                        <td>
-                            <select id="ai_provider" name="<?php echo esc_attr(C::OPTION_KEY); ?>[ai_provider]">
-                                <option value="openai" <?php selected($settings['ai_provider'] ?? '', 'openai'); ?>>OpenAI</option>
-                                <option value="claude" <?php selected($settings['ai_provider'] ?? '', 'claude'); ?>>Claude (Anthropic)</option>
-                            </select>
-                        </td>
-                    </tr>
+                <h2 class="nav-tab-wrapper auto-quill-settings-tabs">
+                    <a href="#tab-ki"      class="nav-tab nav-tab-active" data-tab="ki"><?php esc_html_e('KI-Provider', 'auto-quill'); ?></a>
+                    <a href="#tab-publish" class="nav-tab"                data-tab="publish"><?php esc_html_e('Veröffentlichung', 'auto-quill'); ?></a>
+                    <a href="#tab-prompts" class="nav-tab"                data-tab="prompts"><?php esc_html_e('Prompts', 'auto-quill'); ?></a>
+                    <a href="#tab-debug"   class="nav-tab"                data-tab="debug"><?php esc_html_e('Debug', 'auto-quill'); ?></a>
+                </h2>
 
-                    <tr>
-                        <th scope="row">
-                            <label for="ai_api_key"><?php esc_html_e('API-Schlüssel', 'auto-quill'); ?></label>
-                        </th>
-                        <td>
-                            <?php
-                            $key_from_const = C::ai_api_key_from_constant();
-                            $has_stored_key = !empty($settings['ai_api_key']);
-                            $placeholder    = $has_stored_key
-                                ? esc_attr__('Gespeicherter Schlüssel — leer lassen, um ihn zu behalten', 'auto-quill')
-                                : esc_attr__('sk-…', 'auto-quill');
-                            ?>
-                            <input type="password" id="ai_api_key"
-                                   name="<?php echo esc_attr(C::OPTION_KEY); ?>[ai_api_key]"
-                                   value=""
-                                   placeholder="<?php echo $placeholder; ?>"
-                                   autocomplete="new-password"
-                                   <?php disabled($key_from_const); ?>
-                                   style="width: 300px;">
-                            <p class="description">
-                                <?php if ($key_from_const): ?>
-                                    <?php esc_html_e('Schlüssel wird aus der Konstante AUTO_QUILL_AI_KEY in wp-config.php geladen und hat Vorrang vor diesem Feld.', 'auto-quill'); ?>
-                                <?php else: ?>
-                                    <?php esc_html_e('Für mehr Sicherheit kann der Schlüssel auch in wp-config.php als AUTO_QUILL_AI_KEY definiert werden.', 'auto-quill'); ?>
-                                <?php endif; ?>
-                            </p>
-                        </td>
-                    </tr>
+                <div class="auto-quill-tab-panel" data-tab="ki">
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row">
+                                <label for="ai_provider"><?php esc_html_e('KI-Provider', 'auto-quill'); ?></label>
+                            </th>
+                            <td>
+                                <select id="ai_provider" name="<?php echo esc_attr(C::OPTION_KEY); ?>[ai_provider]">
+                                    <option value="openai" <?php selected($settings['ai_provider'] ?? '', 'openai'); ?>>OpenAI</option>
+                                    <option value="claude" <?php selected($settings['ai_provider'] ?? '', 'claude'); ?>>Claude (Anthropic)</option>
+                                </select>
+                            </td>
+                        </tr>
 
-                    <tr>
-                        <th scope="row">
-                            <label for="openai_model"><?php esc_html_e('OpenAI-Modell', 'auto-quill'); ?></label>
-                        </th>
-                        <td>
-                            <input type="text" id="openai_model"
-                                   name="<?php echo esc_attr(C::OPTION_KEY); ?>[openai_model]"
-                                   value="<?php echo esc_attr($settings['openai_model'] ?? C::DEFAULT_OPENAI_MODEL); ?>"
-                                   placeholder="<?php echo esc_attr(C::DEFAULT_OPENAI_MODEL); ?>"
-                                   style="width: 300px;">
-                            <p class="description"><?php
-                                /* translators: %s: default model name */
-                                printf(esc_html__('Standard: %s', 'auto-quill'), '<code>' . esc_html(C::DEFAULT_OPENAI_MODEL) . '</code>');
-                            ?></p>
-                        </td>
-                    </tr>
+                        <tr>
+                            <th scope="row">
+                                <label for="ai_api_key"><?php esc_html_e('API-Schlüssel', 'auto-quill'); ?></label>
+                            </th>
+                            <td>
+                                <?php
+                                $key_from_const = C::ai_api_key_from_constant();
+                                $has_stored_key = !empty($settings['ai_api_key']);
+                                $placeholder    = $has_stored_key
+                                    ? esc_attr__('Gespeicherter Schlüssel — leer lassen, um ihn zu behalten', 'auto-quill')
+                                    : esc_attr__('sk-…', 'auto-quill');
+                                ?>
+                                <input type="password" id="ai_api_key"
+                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[ai_api_key]"
+                                       value=""
+                                       placeholder="<?php echo $placeholder; ?>"
+                                       autocomplete="new-password"
+                                       <?php disabled($key_from_const); ?>
+                                       style="width: 300px;">
+                                <p class="description">
+                                    <?php if ($key_from_const): ?>
+                                        <?php esc_html_e('Schlüssel wird aus der Konstante AUTO_QUILL_AI_KEY in wp-config.php geladen und hat Vorrang vor diesem Feld.', 'auto-quill'); ?>
+                                    <?php else: ?>
+                                        <?php esc_html_e('Für mehr Sicherheit kann der Schlüssel auch in wp-config.php als AUTO_QUILL_AI_KEY definiert werden.', 'auto-quill'); ?>
+                                    <?php endif; ?>
+                                </p>
+                            </td>
+                        </tr>
 
-                    <tr>
-                        <th scope="row">
-                            <label for="claude_model"><?php esc_html_e('Claude-Modell', 'auto-quill'); ?></label>
-                        </th>
-                        <td>
-                            <input type="text" id="claude_model"
-                                   name="<?php echo esc_attr(C::OPTION_KEY); ?>[claude_model]"
-                                   value="<?php echo esc_attr($settings['claude_model'] ?? C::DEFAULT_CLAUDE_MODEL); ?>"
-                                   placeholder="<?php echo esc_attr(C::DEFAULT_CLAUDE_MODEL); ?>"
-                                   style="width: 300px;">
-                            <p class="description"><?php
-                                /* translators: %s: default model name */
-                                printf(esc_html__('Standard: %s', 'auto-quill'), '<code>' . esc_html(C::DEFAULT_CLAUDE_MODEL) . '</code>');
-                            ?></p>
-                        </td>
-                    </tr>
+                        <tr>
+                            <th scope="row">
+                                <label for="openai_model"><?php esc_html_e('OpenAI-Modell', 'auto-quill'); ?></label>
+                            </th>
+                            <td>
+                                <input type="text" id="openai_model"
+                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[openai_model]"
+                                       value="<?php echo esc_attr($settings['openai_model'] ?? C::DEFAULT_OPENAI_MODEL); ?>"
+                                       placeholder="<?php echo esc_attr(C::DEFAULT_OPENAI_MODEL); ?>"
+                                       style="width: 300px;">
+                                <p class="description"><?php
+                                    /* translators: %s: default model name */
+                                    printf(esc_html__('Standard: %s', 'auto-quill'), '<code>' . esc_html(C::DEFAULT_OPENAI_MODEL) . '</code>');
+                                ?></p>
+                            </td>
+                        </tr>
 
-                    <tr>
-                        <th scope="row">
-                            <label for="post_status"><?php esc_html_e('Standard Post-Status', 'auto-quill'); ?></label>
-                        </th>
-                        <td>
-                            <select id="post_status" name="<?php echo esc_attr(C::OPTION_KEY); ?>[post_status]">
-                                <option value="draft" <?php selected($settings['post_status'] ?? '', 'draft'); ?>>Entwurf</option>
-                                <option value="publish" <?php selected($settings['post_status'] ?? '', 'publish'); ?>>Veröffentlicht</option>
-                                <option value="pending" <?php selected($settings['post_status'] ?? '', 'pending'); ?>>Genehmigung ausstehend</option>
-                            </select>
-                        </td>
-                    </tr>
+                        <tr>
+                            <th scope="row">
+                                <label for="claude_model"><?php esc_html_e('Claude-Modell', 'auto-quill'); ?></label>
+                            </th>
+                            <td>
+                                <input type="text" id="claude_model"
+                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[claude_model]"
+                                       value="<?php echo esc_attr($settings['claude_model'] ?? C::DEFAULT_CLAUDE_MODEL); ?>"
+                                       placeholder="<?php echo esc_attr(C::DEFAULT_CLAUDE_MODEL); ?>"
+                                       style="width: 300px;">
+                                <p class="description"><?php
+                                    /* translators: %s: default model name */
+                                    printf(esc_html__('Standard: %s', 'auto-quill'), '<code>' . esc_html(C::DEFAULT_CLAUDE_MODEL) . '</code>');
+                                ?></p>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
 
-                    <tr>
-                        <th scope="row">
-                            <label>
-                                <input type="hidden"
-                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[auto_publish]"
-                                       value="0">
-                                <input type="checkbox"
-                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[auto_publish]"
-                                       value="1"
-                                       <?php checked(!empty($settings['auto_publish'])); ?>>
-                                <?php esc_html_e('Posts automatisch veröffentlichen', 'auto-quill'); ?>
-                            </label>
-                        </th>
-                    </tr>
+                <div class="auto-quill-tab-panel" data-tab="publish" style="display:none;">
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row">
+                                <label for="post_status"><?php esc_html_e('Standard Post-Status', 'auto-quill'); ?></label>
+                            </th>
+                            <td>
+                                <select id="post_status" name="<?php echo esc_attr(C::OPTION_KEY); ?>[post_status]">
+                                    <option value="draft" <?php selected($settings['post_status'] ?? '', 'draft'); ?>>Entwurf</option>
+                                    <option value="publish" <?php selected($settings['post_status'] ?? '', 'publish'); ?>>Veröffentlicht</option>
+                                    <option value="pending" <?php selected($settings['post_status'] ?? '', 'pending'); ?>>Genehmigung ausstehend</option>
+                                </select>
+                            </td>
+                        </tr>
 
-                    <tr>
-                        <th scope="row">
-                            <label for="rss_lookback_days"><?php esc_html_e('RSS-Rückblick (Tage)', 'auto-quill'); ?></label>
-                        </th>
-                        <td>
-                            <input type="number" id="rss_lookback_days" min="0" max="365" step="1"
-                                   name="<?php echo esc_attr(C::OPTION_KEY); ?>[rss_lookback_days]"
-                                   value="<?php echo esc_attr((string) ($settings['rss_lookback_days'] ?? 7)); ?>"
-                                   style="width: 100px;">
-                            <p class="description"><?php esc_html_e('Wie viele Tage zurück sollen Feed-Artikel berücksichtigt werden? 0 = unbegrenzt. Ältere Artikel werden auch aus der Datenbank entfernt.', 'auto-quill'); ?></p>
-                        </td>
-                    </tr>
+                        <tr>
+                            <th scope="row">
+                                <label>
+                                    <input type="hidden"
+                                           name="<?php echo esc_attr(C::OPTION_KEY); ?>[auto_publish]"
+                                           value="0">
+                                    <input type="checkbox"
+                                           name="<?php echo esc_attr(C::OPTION_KEY); ?>[auto_publish]"
+                                           value="1"
+                                           <?php checked(!empty($settings['auto_publish'])); ?>>
+                                    <?php esc_html_e('Posts automatisch veröffentlichen', 'auto-quill'); ?>
+                                </label>
+                            </th>
+                        </tr>
 
-                    <tr>
-                        <th scope="row">
-                            <label for="prompt_title"><?php esc_html_e('Prompt: Titel', 'auto-quill'); ?></label>
-                        </th>
-                        <td>
-                            <textarea id="prompt_title" rows="8" class="large-text code"
-                                      name="<?php echo esc_attr(C::OPTION_KEY); ?>[prompt_title]"><?php
-                                echo esc_textarea($settings['prompt_title'] ?? C::defaults()['prompt_title']);
-                            ?></textarea>
-                            <p class="description">
-                                <?php esc_html_e('Anweisungen für die KI zur Erzeugung des Beitrags-Titels. Unterstützte Platzhalter:', 'auto-quill'); ?>
-                                <code>{topic_title}</code>, <code>{source_block}</code>
-                            </p>
-                        </td>
-                    </tr>
+                        <tr>
+                            <th scope="row">
+                                <label for="rss_lookback_days"><?php esc_html_e('RSS-Rückblick (Tage)', 'auto-quill'); ?></label>
+                            </th>
+                            <td>
+                                <input type="number" id="rss_lookback_days" min="0" max="365" step="1"
+                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[rss_lookback_days]"
+                                       value="<?php echo esc_attr((string) ($settings['rss_lookback_days'] ?? 7)); ?>"
+                                       style="width: 100px;">
+                                <p class="description"><?php esc_html_e('Wie viele Tage zurück sollen Feed-Artikel berücksichtigt werden? 0 = unbegrenzt. Ältere Artikel werden auch aus der Datenbank entfernt.', 'auto-quill'); ?></p>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
 
-                    <tr>
-                        <th scope="row">
-                            <label for="prompt_body"><?php esc_html_e('Prompt: Beitragstext', 'auto-quill'); ?></label>
-                        </th>
-                        <td>
-                            <textarea id="prompt_body" rows="10" class="large-text code"
-                                      name="<?php echo esc_attr(C::OPTION_KEY); ?>[prompt_body]"><?php
-                                echo esc_textarea($settings['prompt_body'] ?? C::defaults()['prompt_body']);
-                            ?></textarea>
-                            <p class="description">
-                                <?php esc_html_e('Anweisungen für die KI zur Erstellung des Blog-Beitrags. Unterstützte Platzhalter:', 'auto-quill'); ?>
-                                <code>{title}</code>, <code>{source_block}</code>
-                            </p>
-                        </td>
-                    </tr>
+                <div class="auto-quill-tab-panel" data-tab="prompts" style="display:none;">
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row">
+                                <label for="prompt_title"><?php esc_html_e('Prompt: Titel', 'auto-quill'); ?></label>
+                            </th>
+                            <td>
+                                <textarea id="prompt_title" rows="8" class="large-text code"
+                                          name="<?php echo esc_attr(C::OPTION_KEY); ?>[prompt_title]"><?php
+                                    echo esc_textarea($settings['prompt_title'] ?? C::defaults()['prompt_title']);
+                                ?></textarea>
+                                <p class="description">
+                                    <?php esc_html_e('Anweisungen für die KI zur Erzeugung des Beitrags-Titels. Unterstützte Platzhalter:', 'auto-quill'); ?>
+                                    <code>{topic_title}</code>, <code>{source_block}</code>
+                                </p>
+                            </td>
+                        </tr>
 
-                    <tr>
-                        <th scope="row">
-                            <?php esc_html_e('Debug-Logging', 'auto-quill'); ?>
-                        </th>
-                        <td>
-                            <label>
-                                <input type="hidden"
-                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[debug_logging]"
-                                       value="0">
-                                <input type="checkbox"
-                                       id="debug_logging"
-                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[debug_logging]"
-                                       value="1"
-                                       <?php checked(!empty($settings['debug_logging'])); ?>>
-                                <?php esc_html_e('Ausführliches Logging aktivieren (Info/Debug)', 'auto-quill'); ?>
-                            </label>
-                            <p class="description">
-                                <?php esc_html_e('Wenn aktiv, werden auch Info- und Debug-Einträge inkl. (gekürzter) API-Payloads aufgezeichnet. Standard: nur Warnungen und Fehler. Logs sind unter „AutoQuill → Logs" und in der Browser-Konsole sichtbar.', 'auto-quill'); ?>
-                            </p>
-                        </td>
-                    </tr>
+                        <tr>
+                            <th scope="row">
+                                <label for="prompt_body"><?php esc_html_e('Prompt: Beitragstext', 'auto-quill'); ?></label>
+                            </th>
+                            <td>
+                                <textarea id="prompt_body" rows="10" class="large-text code"
+                                          name="<?php echo esc_attr(C::OPTION_KEY); ?>[prompt_body]"><?php
+                                    echo esc_textarea($settings['prompt_body'] ?? C::defaults()['prompt_body']);
+                                ?></textarea>
+                                <p class="description">
+                                    <?php esc_html_e('Anweisungen für die KI zur Erstellung des Blog-Beitrags. Unterstützte Platzhalter:', 'auto-quill'); ?>
+                                    <code>{title}</code>, <code>{source_block}</code>
+                                </p>
+                            </td>
+                        </tr>
 
-                    <tr>
-                        <th scope="row">
-                            <label for="prompt_excerpt"><?php esc_html_e('Prompt: Social-Media-Auszug', 'auto-quill'); ?></label>
-                        </th>
-                        <td>
-                            <textarea id="prompt_excerpt" rows="6" class="large-text code"
-                                      name="<?php echo esc_attr(C::OPTION_KEY); ?>[prompt_excerpt]"><?php
-                                echo esc_textarea($settings['prompt_excerpt'] ?? C::defaults()['prompt_excerpt']);
-                            ?></textarea>
-                            <p class="description">
-                                <?php esc_html_e('Anweisungen für die KI zur Erstellung des Auszugs. Unterstützte Platzhalter:', 'auto-quill'); ?>
-                                <code>{title}</code>, <code>{content_excerpt}</code>
-                            </p>
-                        </td>
-                    </tr>
+                        <tr>
+                            <th scope="row">
+                                <label for="prompt_excerpt"><?php esc_html_e('Prompt: Social-Media-Auszug', 'auto-quill'); ?></label>
+                            </th>
+                            <td>
+                                <textarea id="prompt_excerpt" rows="6" class="large-text code"
+                                          name="<?php echo esc_attr(C::OPTION_KEY); ?>[prompt_excerpt]"><?php
+                                    echo esc_textarea($settings['prompt_excerpt'] ?? C::defaults()['prompt_excerpt']);
+                                ?></textarea>
+                                <p class="description">
+                                    <?php esc_html_e('Anweisungen für die KI zur Erstellung des Auszugs. Unterstützte Platzhalter:', 'auto-quill'); ?>
+                                    <code>{title}</code>, <code>{content_excerpt}</code>
+                                </p>
+                            </td>
+                        </tr>
 
-                    <tr>
-                        <th scope="row">
-                            <label for="prompt_category"><?php esc_html_e('Prompt: Kategorie', 'auto-quill'); ?></label>
-                        </th>
-                        <td>
-                            <textarea id="prompt_category" rows="8" class="large-text code"
-                                      name="<?php echo esc_attr(C::OPTION_KEY); ?>[prompt_category]"><?php
-                                echo esc_textarea($settings['prompt_category'] ?? C::defaults()['prompt_category']);
-                            ?></textarea>
-                            <p class="description">
-                                <?php esc_html_e('Anweisungen für die KI zur Auswahl der Kategorien. Unterstützte Platzhalter:', 'auto-quill'); ?>
-                                <code>{title}</code>, <code>{content_excerpt}</code>, <code>{categories_list}</code>
-                            </p>
-                        </td>
-                    </tr>
-                </table>
+                        <tr>
+                            <th scope="row">
+                                <label for="prompt_category"><?php esc_html_e('Prompt: Kategorie', 'auto-quill'); ?></label>
+                            </th>
+                            <td>
+                                <textarea id="prompt_category" rows="8" class="large-text code"
+                                          name="<?php echo esc_attr(C::OPTION_KEY); ?>[prompt_category]"><?php
+                                    echo esc_textarea($settings['prompt_category'] ?? C::defaults()['prompt_category']);
+                                ?></textarea>
+                                <p class="description">
+                                    <?php esc_html_e('Anweisungen für die KI zur Auswahl der Kategorien. Unterstützte Platzhalter:', 'auto-quill'); ?>
+                                    <code>{title}</code>, <code>{content_excerpt}</code>, <code>{categories_list}</code>
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="auto-quill-tab-panel" data-tab="debug" style="display:none;">
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row">
+                                <?php esc_html_e('Debug-Logging', 'auto-quill'); ?>
+                            </th>
+                            <td>
+                                <label>
+                                    <input type="hidden"
+                                           name="<?php echo esc_attr(C::OPTION_KEY); ?>[debug_logging]"
+                                           value="0">
+                                    <input type="checkbox"
+                                           id="debug_logging"
+                                           name="<?php echo esc_attr(C::OPTION_KEY); ?>[debug_logging]"
+                                           value="1"
+                                           <?php checked(!empty($settings['debug_logging'])); ?>>
+                                    <?php esc_html_e('Ausführliches Logging aktivieren (Info/Debug)', 'auto-quill'); ?>
+                                </label>
+                                <p class="description">
+                                    <?php esc_html_e('Wenn aktiv, werden auch Info- und Debug-Einträge inkl. (gekürzter) API-Payloads aufgezeichnet. Standard: nur Warnungen und Fehler. Logs sind unter „AutoQuill → Logs" und in der Browser-Konsole sichtbar.', 'auto-quill'); ?>
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
 
                 <?php submit_button(); ?>
             </form>
 
-            <?php StatusPanel::render(); ?>
+            <div class="auto-quill-tab-panel" data-tab="debug" style="display:none;">
+                <?php StatusPanel::render(); ?>
+            </div>
         </div>
         <?php
     }
