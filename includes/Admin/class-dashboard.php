@@ -129,8 +129,8 @@ class Dashboard {
                             <label for="auto-quill-excerpt">
                                 <strong><?php esc_html_e('Social-Media-Auszug', 'auto-quill'); ?></strong>
                             </label>
-                            <textarea id="auto-quill-excerpt" rows="3"
-                                      placeholder="<?php esc_attr_e('Kurzer, für Social Media optimierter Teaser', 'auto-quill'); ?>"></textarea>
+                            <textarea id="auto-quill-excerpt" rows="3" readonly
+                                      placeholder="<?php esc_attr_e('Wird automatisch von der KI gefüllt', 'auto-quill'); ?>"></textarea>
                         </div>
                         <div class="auto-quill-field">
                             <label for="auto-quill-categories">
@@ -164,6 +164,7 @@ class Dashboard {
             .auto-quill-meta-fields label { font-size: 13px; }
             .auto-quill-meta-fields textarea,
             .auto-quill-meta-fields select { width: 100%; box-sizing: border-box; }
+            .auto-quill-meta-fields textarea[readonly] { background: #f3f4f6; color: #333; cursor: default; }
             .auto-quill-meta-fields .description { color: #666; font-weight: normal; font-size: 12px; margin-left: 4px; }
             #publish-post-btn { margin-top: 15px; }
         </style>
