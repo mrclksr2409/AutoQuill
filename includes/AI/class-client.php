@@ -146,9 +146,6 @@ class Client {
         $messages = [
             ['role' => 'user', 'content' => $user],
         ];
-        if (!empty($opts['json_mode'])) {
-            $messages[] = ['role' => 'assistant', 'content' => '{'];
-        }
 
         $response = wp_remote_post('https://api.anthropic.com/v1/messages', [
             'timeout' => (int) ($opts['timeout'] ?? 60),
@@ -201,10 +198,6 @@ class Client {
                 'usage'       => $body['usage'] ?? null,
             ]);
             return new \WP_Error('truncated', 'Antwort wurde abgeschnitten – bitte max_tokens erhöhen');
-        }
-
-        if (!empty($opts['json_mode'])) {
-            $content = '{' . $content;
         }
 
         Logger::info('client', 'Claude Antwort erhalten', [
