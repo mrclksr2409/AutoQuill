@@ -168,27 +168,6 @@ class Dashboard {
                 </div>
             </div>
         </div>
-
-        <style>
-            .auto-quill-wrap { padding: 20px; }
-            .auto-quill-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
-            .auto-quill-panel { background: #fff; border: 1px solid #ccc; border-radius: 4px; padding: 20px; }
-            .auto-quill-recrawl-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #eee; }
-            .auto-quill-recrawl-controls select { min-width: 180px; }
-            .topics-list { display: flex; flex-direction: column; gap: 15px; }
-            .topic-card { border-left: 4px solid #0073aa; padding: 15px; background: #f9f9f9; border-radius: 4px; }
-            .topic-card h3 { margin: 0 0 10px 0; color: #0073aa; }
-            .topic-card p { margin: 5px 0; }
-            .post-preview { border: 1px dashed #ccc; padding: 20px; min-height: 300px; max-height: 600px; overflow-y: auto; background: #f9f9f9; }
-            .auto-quill-meta-fields { margin-top: 15px; display: flex; flex-direction: column; gap: 12px; }
-            .auto-quill-meta-fields .auto-quill-field { display: flex; flex-direction: column; gap: 4px; }
-            .auto-quill-meta-fields label { font-size: 13px; }
-            .auto-quill-meta-fields textarea,
-            .auto-quill-meta-fields select { width: 100%; box-sizing: border-box; }
-            .auto-quill-meta-fields textarea[readonly] { background: #f3f4f6; color: #333; cursor: default; }
-            .auto-quill-meta-fields .description { color: #666; font-weight: normal; font-size: 12px; margin-left: 4px; }
-            #publish-post-btn { margin-top: 15px; }
-        </style>
         <?php
     }
 }
