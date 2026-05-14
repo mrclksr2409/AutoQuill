@@ -27,6 +27,9 @@ class Constants {
     const CRON_FETCH  = 'auto_quill_daily_fetch';
     const CRON_SELECT = 'auto_quill_daily_select';
 
+    const DEFAULT_OPENAI_MODEL = 'gpt-4o-mini';
+    const DEFAULT_CLAUDE_MODEL = 'claude-sonnet-4-6';
+
     public static function ai_api_key(): string {
         if (defined('AUTO_QUILL_AI_KEY') && AUTO_QUILL_AI_KEY !== '') {
             return (string) AUTO_QUILL_AI_KEY;
@@ -46,6 +49,8 @@ class Constants {
         return [
             'ai_provider'   => 'openai',
             'ai_api_key'    => '',
+            'openai_model'  => self::DEFAULT_OPENAI_MODEL,
+            'claude_model'  => self::DEFAULT_CLAUDE_MODEL,
             'post_status'   => 'draft',
             'auto_publish'  => false,
             'posts_per_day' => 1,

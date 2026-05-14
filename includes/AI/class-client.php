@@ -21,7 +21,17 @@ class Client {
         }
 
         $settings = get_option(C::OPTION_KEY, C::defaults());
-        $provider = is_array($settings) ? ($settings['ai_provider'] ?? 'openai') : 'openai';
+        if (!is_array($settings)) {
+            $settings = C::defaults();
+        }
+        $provider = $settings['ai_provider'] ?? 'openai';
+
+        if (!isset($opts['openai_model'])) {
+            $opts['openai_model'] = $settings['openai_model'] ?? C::DEFAULT_OPENAI_MODEL;
+        }
+        if (!isset($opts['claude_model'])) {
+            $opts['claude_model'] = $settings['claude_model'] ?? C::DEFAULT_CLAUDE_MODEL;
+        }
 
         if ($provider === 'claude') {
             return $this->call_claude($api_key, $system, $user, $opts);
@@ -40,7 +50,7 @@ class Client {
                 'Content-Type'  => 'application/json',
             ],
             'body' => wp_json_encode([
-                'model'       => (string) ($opts['openai_model'] ?? 'gpt-3.5-turbo'),
+                'model'       => (string) ($opts['openai_model'] ?? C::DEFAULT_OPENAI_MODEL),
                 'messages'    => [
                     ['role' => 'system', 'content' => $system],
                     ['role' => 'user',   'content' => $user],
@@ -73,7 +83,7 @@ class Client {
                 'content-type'      => 'application/json',
             ],
             'body' => wp_json_encode([
-                'model'      => (string) ($opts['claude_model'] ?? 'claude-sonnet-4-6'),
+                'model'      => (string) ($opts['claude_model'] ?? C::DEFAULT_CLAUDE_MODEL),
                 'max_tokens' => (int)    ($opts['max_tokens']   ?? 1500),
                 'system'     => $system,
                 'messages'   => [
