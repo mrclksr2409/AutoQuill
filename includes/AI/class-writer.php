@@ -69,6 +69,7 @@ class Writer {
 
         Logger::info('writer', 'Blog-Post generiert', [
             'topic_id'     => $topic_id,
+            'title'        => $result['title'],
             'content_len'  => strlen($result['content']),
             'excerpt_len'  => strlen($result['excerpt']),
             'category_ids' => $result['category_ids'],
@@ -76,6 +77,7 @@ class Writer {
 
         return new \WP_REST_Response([
             'success'              => true,
+            'post_title'           => $result['title'],
             'post_content'         => $result['content'],
             'post_excerpt'         => $result['excerpt'],
             'category_ids'         => $result['category_ids'],
@@ -114,7 +116,7 @@ class Writer {
 
     /**
      * @param array<int, array{id:int,name:string}> $available_categories
-     * @return array{content:string, excerpt:string, category_ids:int[]}|\WP_Error
+     * @return array{title:string, content:string, excerpt:string, category_ids:int[]}|\WP_Error
      */
     private static function write_blog_post(array $topic, array $available_categories, $article = null) {
         $settings    = get_option(C::OPTION_KEY, C::defaults());
@@ -124,56 +126,234 @@ class Writer {
             return self::generate_basic_post($topic, $article);
         }
 
-        $categories_list = '';
-        foreach ($available_categories as $cat) {
-            $categories_list .= "- ID {$cat['id']}: {$cat['name']}\n";
-        }
-        if ($categories_list === '') {
-            $categories_list = "(keine Kategorien vorhanden)\n";
+        $source_block    = self::build_source_block($article, $topic);
+        $categories_list = self::format_categories_list($available_categories);
+        $defaults        = C::defaults();
+        $client          = new Client();
+        $system          = 'Du bist ein professioneller Blog-Autor und erstellst hochwertige, informative Inhalte. Antworte immer im geforderten JSON-Format.';
+
+        $title = self::run_title_step($client, $system, $settings, $defaults, $topic, $source_block);
+        if (is_wp_error($title)) {
+            return $title;
         }
 
-        $source_block = self::build_source_block($article, $topic);
+        $content = self::run_content_step($client, $system, $settings, $defaults, $title, $source_block);
+        if (is_wp_error($content)) {
+            return $content;
+        }
 
-        $placeholders = [
-            '{title}'           => (string) ($topic['title'] ?? ''),
-            '{source_block}'    => $source_block,
-            '{categories_list}' => $categories_list,
+        $excerpt = self::run_excerpt_step($client, $system, $settings, $defaults, $title, $content);
+        if (is_wp_error($excerpt)) {
+            return $excerpt;
+        }
+
+        $category_ids = self::run_category_step($client, $system, $settings, $defaults, $title, $content, $available_categories, $categories_list);
+        if (is_wp_error($category_ids)) {
+            return $category_ids;
+        }
+
+        return [
+            'title'        => $title,
+            'content'      => $content,
+            'excerpt'      => $excerpt,
+            'category_ids' => $category_ids,
         ];
+    }
 
-        $defaults       = C::defaults();
-        $body_tpl       = isset($settings['prompt_body']) && trim((string) $settings['prompt_body']) !== ''
-            ? (string) $settings['prompt_body']
-            : $defaults['prompt_body'];
-        $excerpt_tpl    = isset($settings['prompt_excerpt']) && trim((string) $settings['prompt_excerpt']) !== ''
-            ? (string) $settings['prompt_excerpt']
-            : $defaults['prompt_excerpt'];
+    /**
+     * @param array<int, array{id:int,name:string}> $available_categories
+     */
+    private static function format_categories_list(array $available_categories): string {
+        $list = '';
+        foreach ($available_categories as $cat) {
+            $list .= "- ID {$cat['id']}: {$cat['name']}\n";
+        }
+        if ($list === '') {
+            $list = "(keine Kategorien vorhanden)\n";
+        }
+        return $list;
+    }
 
-        $body_section    = strtr($body_tpl, $placeholders);
-        $excerpt_section = strtr($excerpt_tpl, $placeholders);
+    private static function resolve_prompt(array $settings, array $defaults, string $key): string {
+        $custom = isset($settings[$key]) ? trim((string) $settings[$key]) : '';
+        return $custom !== '' ? (string) $settings[$key] : (string) $defaults[$key];
+    }
 
-        $prompt = $body_section . "\n\n"
-            . "Auszug-Anweisungen:\n"
-            . $excerpt_section . "\n\n"
-            . "Verfügbare Kategorien (wähle 1-3 passende IDs aus dieser Liste):\n"
-            . $categories_list . "\n"
-            . "Antworte AUSSCHLIESSLICH mit einem gültigen JSON-Objekt (kein Markdown, kein Codeblock) mit folgenden Feldern:\n"
-            . "{\n"
-            . "  \"content\": \"<HTML des Blog-Posts gemäß den obigen Anweisungen>\",\n"
-            . "  \"excerpt\": \"<Auszug gemäß den obigen Auszug-Anweisungen>\",\n"
-            . "  \"category_ids\": [<1 bis 3 IDs aus der obigen Liste>]\n"
-            . "}";
+    private static function content_excerpt_for_prompt(string $content, int $max_chars = 3000): string {
+        $plain = wp_strip_all_tags($content);
+        if (function_exists('mb_substr') && function_exists('mb_strlen')) {
+            if (mb_strlen($plain) > $max_chars) {
+                $plain = mb_substr($plain, 0, $max_chars) . '…';
+            }
+        } elseif (strlen($plain) > $max_chars) {
+            $plain = substr($plain, 0, $max_chars) . '…';
+        }
+        return $plain;
+    }
 
-        $raw = (new Client())->chat(
-            'Du bist ein professioneller Blog-Autor und erstellst hochwertige, informative Inhalte. Antworte immer im geforderten JSON-Format.',
-            $prompt,
-            ['max_tokens' => 8000, 'temperature' => 0.8, 'timeout' => 60, 'json_shape' => 'object']
-        );
+    /**
+     * @return string|\WP_Error
+     */
+    private static function run_title_step(Client $client, string $system, array $settings, array $defaults, array $topic, string $source_block) {
+        $tpl    = self::resolve_prompt($settings, $defaults, 'prompt_title');
+        $prompt = strtr($tpl, [
+            '{topic_title}'  => (string) ($topic['title'] ?? ''),
+            '{source_block}' => $source_block,
+        ]);
 
+        $raw = $client->chat($system, $prompt, [
+            'max_tokens'  => 200,
+            'temperature' => 0.7,
+            'timeout'     => 30,
+            'json_shape'  => 'object',
+        ]);
         if (is_wp_error($raw)) {
             return $raw;
         }
 
-        return self::parse_ai_response($raw, $available_categories);
+        $decoded = JsonExtractor::extract_object($raw);
+        $title   = is_array($decoded) && isset($decoded['title']) && is_string($decoded['title'])
+            ? trim($decoded['title'])
+            : '';
+        if ($title === '') {
+            Logger::error('writer', 'KI-Titel konnte nicht geparst werden', [
+                'ai_step'     => 'title',
+                'json_error'  => JsonExtractor::last_error(),
+                'raw_excerpt' => mb_substr($raw, 0, 500),
+            ]);
+            return new \WP_Error('ai_parse_failed', 'Die KI-Antwort für den Titel konnte nicht verarbeitet werden.');
+        }
+
+        $title = sanitize_text_field($title);
+        Logger::info('writer', 'Titel generiert', ['ai_step' => 'title', 'len' => strlen($title)]);
+        return $title;
+    }
+
+    /**
+     * @return string|\WP_Error
+     */
+    private static function run_content_step(Client $client, string $system, array $settings, array $defaults, string $title, string $source_block) {
+        $tpl    = self::resolve_prompt($settings, $defaults, 'prompt_body');
+        $prompt = strtr($tpl, [
+            '{title}'        => $title,
+            '{source_block}' => $source_block,
+        ]);
+
+        $raw = $client->chat($system, $prompt, [
+            'max_tokens'  => 6000,
+            'temperature' => 0.8,
+            'timeout'     => 60,
+            'json_shape'  => 'object',
+        ]);
+        if (is_wp_error($raw)) {
+            return $raw;
+        }
+
+        $decoded = JsonExtractor::extract_object($raw);
+        $content = is_array($decoded) && isset($decoded['content']) && is_string($decoded['content'])
+            ? $decoded['content']
+            : '';
+        if (trim($content) === '') {
+            Logger::error('writer', 'KI-Content konnte nicht geparst werden', [
+                'ai_step'     => 'content',
+                'json_error'  => JsonExtractor::last_error(),
+                'raw_excerpt' => mb_substr($raw, 0, 1000),
+            ]);
+            return new \WP_Error('ai_parse_failed', 'Die KI-Antwort für den Beitragstext konnte nicht verarbeitet werden.');
+        }
+
+        $content = wp_kses_post($content);
+        Logger::info('writer', 'Beitragstext generiert', ['ai_step' => 'content', 'len' => strlen($content)]);
+        return $content;
+    }
+
+    /**
+     * @return string|\WP_Error
+     */
+    private static function run_excerpt_step(Client $client, string $system, array $settings, array $defaults, string $title, string $content) {
+        $tpl    = self::resolve_prompt($settings, $defaults, 'prompt_excerpt');
+        $prompt = strtr($tpl, [
+            '{title}'           => $title,
+            '{content_excerpt}' => self::content_excerpt_for_prompt($content),
+        ]);
+
+        $raw = $client->chat($system, $prompt, [
+            'max_tokens'  => 300,
+            'temperature' => 0.7,
+            'timeout'     => 30,
+            'json_shape'  => 'object',
+        ]);
+        if (is_wp_error($raw)) {
+            return $raw;
+        }
+
+        $decoded = JsonExtractor::extract_object($raw);
+        $excerpt = is_array($decoded) && isset($decoded['excerpt']) && is_string($decoded['excerpt'])
+            ? trim($decoded['excerpt'])
+            : '';
+        if ($excerpt === '') {
+            Logger::error('writer', 'KI-Auszug konnte nicht geparst werden', [
+                'ai_step'     => 'excerpt',
+                'json_error'  => JsonExtractor::last_error(),
+                'raw_excerpt' => mb_substr($raw, 0, 500),
+            ]);
+            return new \WP_Error('ai_parse_failed', 'Die KI-Antwort für den Auszug konnte nicht verarbeitet werden.');
+        }
+
+        $excerpt = sanitize_textarea_field($excerpt);
+        Logger::info('writer', 'Auszug generiert', ['ai_step' => 'excerpt', 'len' => strlen($excerpt)]);
+        return $excerpt;
+    }
+
+    /**
+     * @param array<int, array{id:int,name:string}> $available_categories
+     * @return int[]|\WP_Error
+     */
+    private static function run_category_step(Client $client, string $system, array $settings, array $defaults, string $title, string $content, array $available_categories, string $categories_list) {
+        if (empty($available_categories)) {
+            Logger::info('writer', 'Keine Kategorien verfügbar – Schritt übersprungen', ['ai_step' => 'category']);
+            return [];
+        }
+
+        $tpl    = self::resolve_prompt($settings, $defaults, 'prompt_category');
+        $prompt = strtr($tpl, [
+            '{title}'           => $title,
+            '{content_excerpt}' => self::content_excerpt_for_prompt($content),
+            '{categories_list}' => $categories_list,
+        ]);
+
+        $raw = $client->chat($system, $prompt, [
+            'max_tokens'  => 200,
+            'temperature' => 0.2,
+            'timeout'     => 30,
+            'json_shape'  => 'object',
+        ]);
+        if (is_wp_error($raw)) {
+            return $raw;
+        }
+
+        $decoded = JsonExtractor::extract_object($raw);
+        if (!is_array($decoded) || !isset($decoded['category_ids']) || !is_array($decoded['category_ids'])) {
+            Logger::error('writer', 'KI-Kategorien konnten nicht geparst werden', [
+                'ai_step'     => 'category',
+                'json_error'  => JsonExtractor::last_error(),
+                'raw_excerpt' => mb_substr($raw, 0, 500),
+            ]);
+            return new \WP_Error('ai_parse_failed', 'Die KI-Antwort für die Kategorien konnte nicht verarbeitet werden.');
+        }
+
+        $valid_ids = array_map(static fn($c) => (int) $c['id'], $available_categories);
+        $picked    = [];
+        foreach ($decoded['category_ids'] as $cid) {
+            $cid = (int) $cid;
+            if (in_array($cid, $valid_ids, true)) {
+                $picked[] = $cid;
+            }
+        }
+        $picked = array_values(array_unique($picked));
+
+        Logger::info('writer', 'Kategorien gewählt', ['ai_step' => 'category', 'category_ids' => $picked]);
+        return $picked;
     }
 
     private static function build_source_block($article, array $topic): string {
@@ -206,40 +386,7 @@ class Writer {
     }
 
     /**
-     * @param array<int, array{id:int,name:string}> $available_categories
-     * @return array{content:string, excerpt:string, category_ids:int[]}|\WP_Error
-     */
-    private static function parse_ai_response(string $raw, array $available_categories) {
-        $decoded = JsonExtractor::extract_object($raw);
-
-        if (!is_array($decoded) || !isset($decoded['content']) || !is_string($decoded['content']) || $decoded['content'] === '') {
-            Logger::error('writer', 'KI-Antwort konnte nicht als JSON-Post geparst werden', [
-                'json_error'  => JsonExtractor::last_error(),
-                'raw_excerpt' => mb_substr($raw, 0, 1000),
-            ]);
-            return new \WP_Error(
-                'ai_parse_failed',
-                'Die KI-Antwort konnte nicht verarbeitet werden. Bitte erneut versuchen oder Modell/Prompt prüfen.'
-            );
-        }
-
-        $valid_ids = array_map(static fn($c) => (int) $c['id'], $available_categories);
-        $picked    = [];
-        foreach ((array) ($decoded['category_ids'] ?? []) as $cid) {
-            $cid = (int) $cid;
-            if (in_array($cid, $valid_ids, true)) {
-                $picked[] = $cid;
-            }
-        }
-        return [
-            'content'      => wp_kses_post((string) $decoded['content']),
-            'excerpt'      => isset($decoded['excerpt']) ? sanitize_textarea_field((string) $decoded['excerpt']) : '',
-            'category_ids' => array_values(array_unique($picked)),
-        ];
-    }
-
-    /**
-     * @return array{content:string, excerpt:string, category_ids:int[]}
+     * @return array{title:string, content:string, excerpt:string, category_ids:int[]}
      */
     private static function generate_basic_post(array $topic, $article = null): array {
         $title   = (string) ($topic['title'] ?? '');
@@ -265,6 +412,7 @@ class Writer {
             : $title;
 
         return [
+            'title'        => $title,
             'content'      => $content,
             'excerpt'      => $excerpt,
             'category_ids' => [],

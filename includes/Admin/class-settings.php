@@ -74,6 +74,13 @@ class Settings {
             $clean['rss_lookback_days'] = $v;
         }
 
+        if (array_key_exists('prompt_title', $input)) {
+            $title_tpl = sanitize_textarea_field((string) $input['prompt_title']);
+            $clean['prompt_title'] = trim($title_tpl) !== ''
+                ? $title_tpl
+                : C::defaults()['prompt_title'];
+        }
+
         if (array_key_exists('prompt_body', $input)) {
             $body = sanitize_textarea_field((string) $input['prompt_body']);
             $clean['prompt_body'] = trim($body) !== ''
@@ -86,6 +93,13 @@ class Settings {
             $clean['prompt_excerpt'] = trim($excerpt) !== ''
                 ? $excerpt
                 : C::defaults()['prompt_excerpt'];
+        }
+
+        if (array_key_exists('prompt_category', $input)) {
+            $category_tpl = sanitize_textarea_field((string) $input['prompt_category']);
+            $clean['prompt_category'] = trim($category_tpl) !== ''
+                ? $category_tpl
+                : C::defaults()['prompt_category'];
         }
 
         $clean['debug_logging'] = !empty($input['debug_logging']);
@@ -237,6 +251,22 @@ class Settings {
 
                     <tr>
                         <th scope="row">
+                            <label for="prompt_title"><?php esc_html_e('Prompt: Titel', 'auto-quill'); ?></label>
+                        </th>
+                        <td>
+                            <textarea id="prompt_title" rows="8" class="large-text code"
+                                      name="<?php echo esc_attr(C::OPTION_KEY); ?>[prompt_title]"><?php
+                                echo esc_textarea($settings['prompt_title'] ?? C::defaults()['prompt_title']);
+                            ?></textarea>
+                            <p class="description">
+                                <?php esc_html_e('Anweisungen für die KI zur Erzeugung des Beitrags-Titels. Unterstützte Platzhalter:', 'auto-quill'); ?>
+                                <code>{topic_title}</code>, <code>{source_block}</code>
+                            </p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <th scope="row">
                             <label for="prompt_body"><?php esc_html_e('Prompt: Beitragstext', 'auto-quill'); ?></label>
                         </th>
                         <td>
@@ -246,7 +276,7 @@ class Settings {
                             ?></textarea>
                             <p class="description">
                                 <?php esc_html_e('Anweisungen für die KI zur Erstellung des Blog-Beitrags. Unterstützte Platzhalter:', 'auto-quill'); ?>
-                                <code>{title}</code>, <code>{source_block}</code>, <code>{categories_list}</code>
+                                <code>{title}</code>, <code>{source_block}</code>
                             </p>
                         </td>
                     </tr>
@@ -284,7 +314,23 @@ class Settings {
                             ?></textarea>
                             <p class="description">
                                 <?php esc_html_e('Anweisungen für die KI zur Erstellung des Auszugs. Unterstützte Platzhalter:', 'auto-quill'); ?>
-                                <code>{title}</code>, <code>{source_block}</code>, <code>{categories_list}</code>
+                                <code>{title}</code>, <code>{content_excerpt}</code>
+                            </p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <th scope="row">
+                            <label for="prompt_category"><?php esc_html_e('Prompt: Kategorie', 'auto-quill'); ?></label>
+                        </th>
+                        <td>
+                            <textarea id="prompt_category" rows="8" class="large-text code"
+                                      name="<?php echo esc_attr(C::OPTION_KEY); ?>[prompt_category]"><?php
+                                echo esc_textarea($settings['prompt_category'] ?? C::defaults()['prompt_category']);
+                            ?></textarea>
+                            <p class="description">
+                                <?php esc_html_e('Anweisungen für die KI zur Auswahl der Kategorien. Unterstützte Platzhalter:', 'auto-quill'); ?>
+                                <code>{title}</code>, <code>{content_excerpt}</code>, <code>{categories_list}</code>
                             </p>
                         </td>
                     </tr>

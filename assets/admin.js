@@ -114,6 +114,7 @@
                         this.currentTopic = response.topic;
                         this.currentTopicId = response.topic_id;
                         this.renderMetaFields(
+                            response.post_title || (response.topic && response.topic.title) || '',
                             response.post_excerpt || '',
                             response.available_categories || [],
                             response.category_ids || []
@@ -132,11 +133,13 @@
             });
         },
 
-        renderMetaFields: function(excerpt, availableCategories, selectedIds) {
+        renderMetaFields: function(title, excerpt, availableCategories, selectedIds) {
+            const $title   = $('#auto-quill-title');
             const $excerpt = $('#auto-quill-excerpt');
             const $select  = $('#auto-quill-categories');
             const selected = new Set((selectedIds || []).map((id) => parseInt(id, 10)));
 
+            $title.val(title);
             $excerpt.val(excerpt);
             $select.empty();
             (availableCategories || []).forEach((cat) => {
@@ -162,6 +165,8 @@
             }
 
             const postExcerpt = $('#auto-quill-excerpt').val() || '';
+            const postTitle   = ($('#auto-quill-title').val() || '').trim()
+                || this.currentTopic.title;
             const categoryIds = ($('#auto-quill-categories').val() || [])
                 .map((v) => parseInt(v, 10))
                 .filter((v) => !isNaN(v));
@@ -173,7 +178,7 @@
                 type: 'POST',
                 dataType: 'json',
                 data: JSON.stringify({
-                    post_title: this.currentTopic.title,
+                    post_title: postTitle,
                     post_content: postContent,
                     post_excerpt: postExcerpt,
                     category_ids: categoryIds,

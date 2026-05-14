@@ -147,6 +147,13 @@ class Dashboard {
 
                     <div id="auto-quill-meta-fields" class="auto-quill-meta-fields" style="display:none;">
                         <div class="auto-quill-field">
+                            <label for="auto-quill-title">
+                                <strong><?php esc_html_e('Titel', 'auto-quill'); ?></strong>
+                            </label>
+                            <input type="text" id="auto-quill-title" class="large-text"
+                                   placeholder="<?php esc_attr_e('Wird automatisch von der KI gefüllt', 'auto-quill'); ?>">
+                        </div>
+                        <div class="auto-quill-field">
                             <label for="auto-quill-excerpt">
                                 <strong><?php esc_html_e('Social-Media-Auszug', 'auto-quill'); ?></strong>
                             </label>
