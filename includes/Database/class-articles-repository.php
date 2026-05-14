@@ -42,6 +42,29 @@ class ArticlesRepository {
         return (int) $wpdb->insert_id;
     }
 
+    public function find(int $id) {
+        global $wpdb;
+        if ($id <= 0) {
+            return null;
+        }
+        return $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$this->table()} WHERE id = %d LIMIT 1",
+            $id
+        ));
+    }
+
+    public function find_by_title(string $title) {
+        global $wpdb;
+        $title = trim($title);
+        if ($title === '') {
+            return null;
+        }
+        return $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$this->table()} WHERE LOWER(title) = LOWER(%s) ORDER BY published_date DESC LIMIT 1",
+            $title
+        ));
+    }
+
     public function recent(int $hours = 24, int $limit = 50): array {
         global $wpdb;
         $time_ago = date('Y-m-d H:i:s', time() - ($hours * 3600));
