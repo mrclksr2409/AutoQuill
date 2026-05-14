@@ -166,7 +166,7 @@ class Writer {
         $raw = (new Client())->chat(
             'Du bist ein professioneller Blog-Autor und erstellst hochwertige, informative Inhalte. Antworte immer im geforderten JSON-Format.',
             $prompt,
-            ['max_tokens' => 4096, 'temperature' => 0.8, 'timeout' => 60]
+            ['max_tokens' => 8000, 'temperature' => 0.8, 'timeout' => 60, 'json_mode' => true]
         );
 
         if (is_wp_error($raw)) {
