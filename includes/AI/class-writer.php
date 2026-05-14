@@ -215,10 +215,9 @@ class Writer {
     }
 
     private static function call_openai_write(string $prompt) {
-        $settings = get_option(C::OPTION_KEY, C::defaults());
-        $api_key  = $settings['ai_api_key'] ?? '';
+        $api_key = C::ai_api_key();
 
-        if (empty($api_key)) {
+        if ($api_key === '') {
             return new \WP_Error('no_api_key', 'API Key nicht konfiguriert');
         }
 
@@ -252,10 +251,9 @@ class Writer {
     }
 
     private static function call_claude_write(string $prompt) {
-        $settings = get_option(C::OPTION_KEY, C::defaults());
-        $api_key  = $settings['ai_api_key'] ?? '';
+        $api_key = C::ai_api_key();
 
-        if (empty($api_key)) {
+        if ($api_key === '') {
             return new \WP_Error('no_api_key', 'API Key nicht konfiguriert');
         }
 

@@ -27,6 +27,21 @@ class Constants {
     const CRON_FETCH  = 'auto_quill_daily_fetch';
     const CRON_SELECT = 'auto_quill_daily_select';
 
+    public static function ai_api_key(): string {
+        if (defined('AUTO_QUILL_AI_KEY') && AUTO_QUILL_AI_KEY !== '') {
+            return (string) AUTO_QUILL_AI_KEY;
+        }
+        $settings = get_option(self::OPTION_KEY, self::defaults());
+        if (!is_array($settings)) {
+            return '';
+        }
+        return (string) ($settings['ai_api_key'] ?? '');
+    }
+
+    public static function ai_api_key_from_constant(): bool {
+        return defined('AUTO_QUILL_AI_KEY') && AUTO_QUILL_AI_KEY !== '';
+    }
+
     public static function defaults(): array {
         return [
             'ai_provider'   => 'openai',

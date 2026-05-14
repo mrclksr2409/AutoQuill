@@ -39,7 +39,10 @@ class Settings {
         }
 
         if (array_key_exists('ai_api_key', $input)) {
-            $clean['ai_api_key'] = sanitize_text_field((string) $input['ai_api_key']);
+            $new_key = sanitize_text_field((string) $input['ai_api_key']);
+            if ($new_key !== '') {
+                $clean['ai_api_key'] = $new_key;
+            }
         }
 
         if (isset($input['post_status'])) {
@@ -121,11 +124,27 @@ class Settings {
                             <label for="ai_api_key"><?php esc_html_e('API-Schlüssel', 'auto-quill'); ?></label>
                         </th>
                         <td>
+                            <?php
+                            $key_from_const = C::ai_api_key_from_constant();
+                            $has_stored_key = !empty($settings['ai_api_key']);
+                            $placeholder    = $has_stored_key
+                                ? esc_attr__('Gespeicherter Schlüssel — leer lassen, um ihn zu behalten', 'auto-quill')
+                                : esc_attr__('sk-…', 'auto-quill');
+                            ?>
                             <input type="password" id="ai_api_key"
                                    name="<?php echo esc_attr(C::OPTION_KEY); ?>[ai_api_key]"
-                                   value="<?php echo esc_attr($settings['ai_api_key'] ?? ''); ?>"
+                                   value=""
+                                   placeholder="<?php echo $placeholder; ?>"
+                                   autocomplete="new-password"
+                                   <?php disabled($key_from_const); ?>
                                    style="width: 300px;">
-                            <p class="description"><?php esc_html_e('Hier wird dein API-Schlüssel sicher gespeichert.', 'auto-quill'); ?></p>
+                            <p class="description">
+                                <?php if ($key_from_const): ?>
+                                    <?php esc_html_e('Schlüssel wird aus der Konstante AUTO_QUILL_AI_KEY in wp-config.php geladen und hat Vorrang vor diesem Feld.', 'auto-quill'); ?>
+                                <?php else: ?>
+                                    <?php esc_html_e('Für mehr Sicherheit kann der Schlüssel auch in wp-config.php als AUTO_QUILL_AI_KEY definiert werden.', 'auto-quill'); ?>
+                                <?php endif; ?>
+                            </p>
                         </td>
                     </tr>
 
