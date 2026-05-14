@@ -2,6 +2,7 @@
 namespace AutoQuill\Database;
 
 use AutoQuill\Core\Constants as C;
+use AutoQuill\Core\Logger;
 
 class SourcesRepository {
     private function table(): string {
@@ -21,7 +22,11 @@ class SourcesRepository {
             ['%s', '%s', '%d']
         );
         if ($ok === false) {
-            error_log('AutoQuill SourcesRepository::insert failed: ' . $wpdb->last_error);
+            Logger::error('db.sources', 'Insert fehlgeschlagen', [
+                'wpdb_error' => $wpdb->last_error,
+                'title'      => $title,
+                'feed_url'   => $feed_url,
+            ]);
             return false;
         }
         return (int) $wpdb->insert_id;
@@ -31,7 +36,10 @@ class SourcesRepository {
         global $wpdb;
         $ok = $wpdb->delete($this->table(), ['id' => $id], ['%d']);
         if ($ok === false) {
-            error_log('AutoQuill SourcesRepository::delete failed: ' . $wpdb->last_error);
+            Logger::error('db.sources', 'Delete fehlgeschlagen', [
+                'wpdb_error' => $wpdb->last_error,
+                'id'         => $id,
+            ]);
             return false;
         }
         return $ok > 0;

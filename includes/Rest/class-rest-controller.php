@@ -30,5 +30,18 @@ class RestController {
             'callback'            => ['\AutoQuill\Rest\PostsService', 'publish_post'],
             'permission_callback' => $can,
         ]);
+
+        register_rest_route(self::NS, '/logs', [
+            [
+                'methods'             => 'GET',
+                'callback'            => ['\AutoQuill\Rest\LogsService', 'list_logs'],
+                'permission_callback' => $can,
+            ],
+            [
+                'methods'             => 'DELETE',
+                'callback'            => ['\AutoQuill\Rest\LogsService', 'clear_logs'],
+                'permission_callback' => $can,
+            ],
+        ]);
     }
 }

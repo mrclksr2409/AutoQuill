@@ -12,7 +12,7 @@ class Schema {
         $checked = true;
 
         global $wpdb;
-        $needed = [C::TABLE_SOURCES, C::TABLE_ARTICLES, C::TABLE_TOPICS];
+        $needed = [C::TABLE_SOURCES, C::TABLE_ARTICLES, C::TABLE_TOPICS, C::TABLE_LOGS];
 
         foreach ($needed as $slug) {
             $full = $wpdb->prefix . $slug;
@@ -35,6 +35,7 @@ class Schema {
         $sources_table  = $wpdb->prefix . C::TABLE_SOURCES;
         $articles_table = $wpdb->prefix . C::TABLE_ARTICLES;
         $topics_table   = $wpdb->prefix . C::TABLE_TOPICS;
+        $logs_table     = $wpdb->prefix . C::TABLE_LOGS;
 
         $sources_sql = "CREATE TABLE $sources_table (
             id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -79,10 +80,24 @@ class Schema {
             KEY status (status)
         ) $charset_collate;";
 
+        $logs_sql = "CREATE TABLE $logs_table (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            level VARCHAR(10) NOT NULL,
+            source VARCHAR(40) NOT NULL,
+            message TEXT NOT NULL,
+            context LONGTEXT,
+            PRIMARY KEY  (id),
+            KEY level (level),
+            KEY source (source),
+            KEY created_at (created_at)
+        ) $charset_collate;";
+
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta($sources_sql);
         dbDelta($articles_sql);
         dbDelta($topics_sql);
+        dbDelta($logs_sql);
 
         update_option(C::DB_VERSION_KEY, C::DB_VERSION);
     }
@@ -92,6 +107,7 @@ class Schema {
         $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}" . C::TABLE_ARTICLES);
         $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}" . C::TABLE_SOURCES);
         $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}" . C::TABLE_TOPICS);
+        $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}" . C::TABLE_LOGS);
         delete_option(C::DB_VERSION_KEY);
     }
 
