@@ -107,21 +107,32 @@ class Writer {
 
         $source_block = self::build_source_block($article, $topic);
 
-        $prompt = "Schreibe einen ausführlichen, professionellen Blog-Post über das Thema: '{$topic['title']}'\n\n"
-            . $source_block
-            . "Der Post sollte:\n"
-            . "- 800-1200 Wörter lang sein\n"
-            . "- Mit einer ansprechenden Einleitung beginnen\n"
-            . "- 3-4 Hauptabschnitte mit Zwischenüberschriften (<h2>) haben\n"
-            . "- Mit einem Fazit enden\n"
-            . "- HTML-Formatierung verwenden (aber ohne <html>, <body> etc.)\n"
-            . "- Ausschließlich Fakten aus dem obigen Quelltext verwenden und paraphrasieren (kein wörtliches Kopieren)\n\n"
+        $placeholders = [
+            '{title}'           => (string) ($topic['title'] ?? ''),
+            '{source_block}'    => $source_block,
+            '{categories_list}' => $categories_list,
+        ];
+
+        $defaults       = C::defaults();
+        $body_tpl       = isset($settings['prompt_body']) && trim((string) $settings['prompt_body']) !== ''
+            ? (string) $settings['prompt_body']
+            : $defaults['prompt_body'];
+        $excerpt_tpl    = isset($settings['prompt_excerpt']) && trim((string) $settings['prompt_excerpt']) !== ''
+            ? (string) $settings['prompt_excerpt']
+            : $defaults['prompt_excerpt'];
+
+        $body_section    = strtr($body_tpl, $placeholders);
+        $excerpt_section = strtr($excerpt_tpl, $placeholders);
+
+        $prompt = $body_section . "\n\n"
+            . "Auszug-Anweisungen:\n"
+            . $excerpt_section . "\n\n"
             . "Verfügbare Kategorien (wähle 1-3 passende IDs aus dieser Liste):\n"
             . $categories_list . "\n"
             . "Antworte AUSSCHLIESSLICH mit einem gültigen JSON-Objekt (kein Markdown, kein Codeblock) mit folgenden Feldern:\n"
             . "{\n"
-            . "  \"content\": \"<HTML des Blog-Posts>\",\n"
-            . "  \"excerpt\": \"<kurzer, für Social Media optimierter Auszug, 1-2 Sätze, max. ~250 Zeichen, mit Hook auf Deutsch>\",\n"
+            . "  \"content\": \"<HTML des Blog-Posts gemäß den obigen Anweisungen>\",\n"
+            . "  \"excerpt\": \"<Auszug gemäß den obigen Auszug-Anweisungen>\",\n"
             . "  \"category_ids\": [<1 bis 3 IDs aus der obigen Liste>]\n"
             . "}";
 

@@ -14,6 +14,22 @@ class Dashboard {
         add_action('wp_ajax_' . C::ACTION_RESELECT, [self::class, 'handle_reselect']);
     }
 
+    public static function publish_button_label(array $settings): string {
+        if (!empty($settings['auto_publish'])) {
+            return __('Post veröffentlichen', 'auto-quill');
+        }
+        switch ($settings['post_status'] ?? 'draft') {
+            case 'draft':
+                return __('Als Entwurf speichern', 'auto-quill');
+            case 'pending':
+                return __('Zur Prüfung einreichen', 'auto-quill');
+            case 'publish':
+                return __('Post veröffentlichen', 'auto-quill');
+            default:
+                return __('Post veröffentlichen', 'auto-quill');
+        }
+    }
+
     public static function handle_fetch_now(): void {
         check_ajax_referer(C::NONCE_SCOPE, 'nonce');
         if (!current_user_can('manage_options')) {
@@ -64,6 +80,11 @@ class Dashboard {
         $today        = date('Y-m-d');
         $today_topics = (new TopicsRepository())->find_by_date($today);
         $sources      = (new SourcesRepository())->active();
+        $settings     = get_option(C::OPTION_KEY, C::defaults());
+        if (!is_array($settings)) {
+            $settings = C::defaults();
+        }
+        $publish_label = self::publish_button_label($settings);
         ?>
         <div class="wrap auto-quill-wrap">
             <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
@@ -142,7 +163,7 @@ class Dashboard {
                     </div>
 
                     <button class="button button-primary" id="publish-post-btn" style="display:none;">
-                        <?php esc_html_e('Post veröffentlichen', 'auto-quill'); ?>
+                        <?php echo esc_html($publish_label); ?>
                     </button>
                 </div>
             </div>

@@ -59,11 +59,17 @@ class AdminMenu {
             true
         );
 
+        $settings = get_option(C::OPTION_KEY, C::defaults());
+        if (!is_array($settings)) {
+            $settings = C::defaults();
+        }
+
         wp_localize_script('auto-quill-admin', 'autoQuill', [
-            'apiUrl'      => rest_url('auto-quill/v1/'),
-            'nonce'       => wp_create_nonce(C::NONCE_SCOPE),
-            'restNonce'   => wp_create_nonce('wp_rest'),
-            'fetchAction' => C::ACTION_FETCH,
+            'apiUrl'             => rest_url('auto-quill/v1/'),
+            'nonce'              => wp_create_nonce(C::NONCE_SCOPE),
+            'restNonce'          => wp_create_nonce('wp_rest'),
+            'fetchAction'        => C::ACTION_FETCH,
+            'publishButtonLabel' => Dashboard::publish_button_label($settings),
         ]);
     }
 }

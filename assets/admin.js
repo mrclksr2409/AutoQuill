@@ -164,7 +164,7 @@
                 .map((v) => parseInt(v, 10))
                 .filter((v) => !isNaN(v));
 
-            $btn.prop('disabled', true).text('Wird veröffentlicht...');
+            $btn.prop('disabled', true).text('Wird gespeichert...');
 
             $.ajax({
                 url: this.apiUrl + 'publish-post',
@@ -183,7 +183,7 @@
                 },
                 success: (response) => {
                     if (response.success) {
-                        this.showAlert('Post erfolgreich veröffentlicht!', 'success');
+                        this.showAlert('Post erfolgreich erstellt!', 'success');
                         setTimeout(() => {
                             location.reload();
                         }, 2000);
@@ -196,7 +196,8 @@
                     this.showAlert('Fehler beim Veröffentlichen', 'error');
                 },
                 complete: () => {
-                    $btn.prop('disabled', false).text('Post veröffentlichen');
+                    const label = (window.autoQuill && window.autoQuill.publishButtonLabel) || 'Post veröffentlichen';
+                    $btn.prop('disabled', false).text(label);
                 },
             });
         },
