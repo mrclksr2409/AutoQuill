@@ -16,6 +16,12 @@ class Fetcher {
             self::fetch_feed((int) $source->id, (string) $source->feed_url);
         }
 
+        $settings = get_option(C::OPTION_KEY, C::defaults());
+        $lookback = (int) ($settings['rss_lookback_days'] ?? 7);
+        if ($lookback > 0) {
+            (new ArticlesRepository())->delete_older_than($lookback);
+        }
+
         do_action(C::CRON_SELECT);
     }
 
@@ -34,9 +40,20 @@ class Fetcher {
         $articles = new ArticlesRepository();
         $items    = $feed->get_items(0, 20);
 
+        $settings = get_option(C::OPTION_KEY, C::defaults());
+        $lookback = (int) ($settings['rss_lookback_days'] ?? 7);
+        $cutoff   = $lookback > 0 ? (time() - $lookback * DAY_IN_SECONDS) : 0;
+
         foreach ($items as $item) {
             $link = (string) $item->get_link();
             $hash = md5($feed_url . $link);
+
+            if ($cutoff > 0) {
+                $ts = (int) $item->get_date('U');
+                if ($ts > 0 && $ts < $cutoff) {
+                    continue;
+                }
+            }
 
             if ($articles->exists_by_hash($hash)) {
                 continue;

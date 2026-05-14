@@ -54,6 +54,13 @@ class Settings {
             $clean['posts_per_day'] = max(1, min(10, (int) $input['posts_per_day']));
         }
 
+        if (isset($input['rss_lookback_days'])) {
+            $v = (int) $input['rss_lookback_days'];
+            if ($v < 0)   { $v = 0; }
+            if ($v > 365) { $v = 365; }
+            $clean['rss_lookback_days'] = $v;
+        }
+
         add_settings_error(
             C::OPTION_KEY,
             'auto_quill_settings_updated',
@@ -134,6 +141,19 @@ class Settings {
                                 <?php esc_html_e('Posts automatisch veröffentlichen', 'auto-quill'); ?>
                             </label>
                         </th>
+                    </tr>
+
+                    <tr>
+                        <th scope="row">
+                            <label for="rss_lookback_days"><?php esc_html_e('RSS-Rückblick (Tage)', 'auto-quill'); ?></label>
+                        </th>
+                        <td>
+                            <input type="number" id="rss_lookback_days" min="0" max="365" step="1"
+                                   name="<?php echo esc_attr(C::OPTION_KEY); ?>[rss_lookback_days]"
+                                   value="<?php echo esc_attr((string) ($settings['rss_lookback_days'] ?? 7)); ?>"
+                                   style="width: 100px;">
+                            <p class="description"><?php esc_html_e('Wie viele Tage zurück sollen Feed-Artikel berücksichtigt werden? 0 = unbegrenzt. Ältere Artikel werden auch aus der Datenbank entfernt.', 'auto-quill'); ?></p>
+                        </td>
                     </tr>
                 </table>
 
