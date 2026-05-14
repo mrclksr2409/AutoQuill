@@ -124,30 +124,33 @@ class Writer {
     private static function parse_ai_response(string $raw, array $topic, array $available_categories): array {
         $fallback = self::generate_basic_post($topic);
 
-        if (preg_match('/\{.*\}/s', $raw, $m)) {
+        $cleaned = trim($raw);
+        $cleaned = preg_replace('/^```(?:json)?\s*/i', '', $cleaned);
+        $cleaned = preg_replace('/\s*```$/', '', (string) $cleaned);
+        $cleaned = trim((string) $cleaned);
+
+        $decoded = json_decode($cleaned, true);
+        if (!is_array($decoded) && preg_match('/\{.*\}/s', $cleaned, $m)) {
             $decoded = json_decode($m[0], true);
-            if (is_array($decoded) && isset($decoded['content']) && is_string($decoded['content']) && $decoded['content'] !== '') {
-                $valid_ids = array_map(static fn($c) => (int) $c['id'], $available_categories);
-                $picked    = [];
-                foreach ((array) ($decoded['category_ids'] ?? []) as $cid) {
-                    $cid = (int) $cid;
-                    if (in_array($cid, $valid_ids, true)) {
-                        $picked[] = $cid;
-                    }
-                }
-                return [
-                    'content'      => (string) $decoded['content'],
-                    'excerpt'      => isset($decoded['excerpt']) ? (string) $decoded['excerpt'] : $fallback['excerpt'],
-                    'category_ids' => array_values(array_unique($picked)),
-                ];
-            }
         }
 
-        return [
-            'content'      => $raw !== '' ? $raw : $fallback['content'],
-            'excerpt'      => $fallback['excerpt'],
-            'category_ids' => [],
-        ];
+        if (is_array($decoded) && isset($decoded['content']) && is_string($decoded['content']) && $decoded['content'] !== '') {
+            $valid_ids = array_map(static fn($c) => (int) $c['id'], $available_categories);
+            $picked    = [];
+            foreach ((array) ($decoded['category_ids'] ?? []) as $cid) {
+                $cid = (int) $cid;
+                if (in_array($cid, $valid_ids, true)) {
+                    $picked[] = $cid;
+                }
+            }
+            return [
+                'content'      => (string) $decoded['content'],
+                'excerpt'      => isset($decoded['excerpt']) ? (string) $decoded['excerpt'] : $fallback['excerpt'],
+                'category_ids' => array_values(array_unique($picked)),
+            ];
+        }
+
+        return $fallback;
     }
 
     private static function call_openai_write(string $prompt) {
