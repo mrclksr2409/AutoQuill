@@ -6,7 +6,7 @@ use AutoQuill\Database\TopicsRepository;
 
 class PostsService {
     public static function get_today_topics(\WP_REST_Request $request): \WP_REST_Response {
-        $today = date('Y-m-d');
+        $today = current_time('Y-m-d');
         $row   = (new TopicsRepository())->find_by_date($today);
 
         if (!$row) {

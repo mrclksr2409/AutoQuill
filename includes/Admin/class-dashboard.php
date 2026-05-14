@@ -77,7 +77,7 @@ class Dashboard {
             wp_die(esc_html__('Zugriff verweigert', 'auto-quill'));
         }
 
-        $today        = date('Y-m-d');
+        $today        = current_time('Y-m-d');
         $today_topics = (new TopicsRepository())->find_by_date($today);
         $sources      = (new SourcesRepository())->active();
         $settings     = get_option(C::OPTION_KEY, C::defaults());

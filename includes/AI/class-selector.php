@@ -22,7 +22,7 @@ class Selector {
             return;
         }
 
-        $today = date('Y-m-d');
+        $today = current_time('Y-m-d');
         (new TopicsRepository())->upsert_for_date($today, $topics);
 
         do_action('auto_quill_topics_selected', $topics);
