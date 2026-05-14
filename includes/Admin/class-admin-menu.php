@@ -70,6 +70,20 @@ class AdminMenu {
             'restNonce'          => wp_create_nonce('wp_rest'),
             'fetchAction'        => C::ACTION_FETCH,
             'publishButtonLabel' => Dashboard::publish_button_label($settings),
+            'i18n' => [
+                'recrawling'         => __('Wird neu gecrawlt...', 'auto-quill'),
+                'recrawlInfo'        => __('Feeds werden geholt und Themen neu generiert...', 'auto-quill'),
+                'recrawlError'       => __('Fehler beim Neu-Crawlen', 'auto-quill'),
+                'reselecting'        => __('Themen werden neu gewählt...', 'auto-quill'),
+                'reselectInfo'       => __('Themen werden neu gewählt...', 'auto-quill'),
+                'reselectError'      => __('Fehler beim Neu-Wählen', 'auto-quill'),
+                'generating'         => __('Blog-Post wird generiert...', 'auto-quill'),
+                'generateError'      => __('Fehler beim Generieren des Posts', 'auto-quill'),
+                'noContent'          => __('Keine Post-Inhalte verfügbar', 'auto-quill'),
+                'saving'             => __('Wird gespeichert...', 'auto-quill'),
+                'publishSuccess'     => __('Post erfolgreich erstellt!', 'auto-quill'),
+                'publishError'       => __('Fehler beim Veröffentlichen', 'auto-quill'),
+            ],
         ]);
     }
 }
