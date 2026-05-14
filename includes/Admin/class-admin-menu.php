@@ -2,6 +2,7 @@
 namespace AutoQuill\Admin;
 
 use AutoQuill\Core\Constants as C;
+use AutoQuill\Core\Logger;
 
 class AdminMenu {
     public static function boot(): void {
@@ -37,6 +38,15 @@ class AdminMenu {
             C::SETTINGS_PAGE_SLUG,
             ['\AutoQuill\Admin\Settings', 'render']
         );
+
+        add_submenu_page(
+            C::MENU_SLUG,
+            __('Logs', 'auto-quill'),
+            __('Logs', 'auto-quill'),
+            'manage_options',
+            C::LOGS_PAGE_SLUG,
+            ['\AutoQuill\Admin\LogsPage', 'render']
+        );
     }
 
     public static function enqueue_assets(string $hook): void {
@@ -63,6 +73,21 @@ class AdminMenu {
         if (!is_array($settings)) {
             $settings = C::defaults();
         }
+
+        wp_enqueue_script(
+            'auto-quill-debug',
+            AUTO_QUILL_PLUGIN_URL . 'assets/auto-quill-debug.js',
+            ['jquery'],
+            AUTO_QUILL_VERSION,
+            true
+        );
+
+        wp_localize_script('auto-quill-debug', 'autoQuillDebug', [
+            'restUrl'      => rest_url('auto-quill/v1/logs'),
+            'restNonce'    => wp_create_nonce('wp_rest'),
+            'debugEnabled' => Logger::is_debug_enabled(),
+            'pollInterval' => 2000,
+        ]);
 
         wp_localize_script('auto-quill-admin', 'autoQuill', [
             'apiUrl'             => rest_url('auto-quill/v1/'),

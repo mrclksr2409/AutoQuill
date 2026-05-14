@@ -5,15 +5,17 @@ class Constants {
     const OPTION_KEY     = 'auto_quill_settings';
     const SETTINGS_GROUP = 'auto_quill_settings_group';
     const DB_VERSION_KEY = 'auto_quill_db_version';
-    const DB_VERSION     = '1.2';
+    const DB_VERSION     = '1.3';
 
     const TABLE_SOURCES  = 'auto_quill_sources';
     const TABLE_ARTICLES = 'auto_quill_articles';
     const TABLE_TOPICS   = 'auto_quill_topics';
+    const TABLE_LOGS     = 'auto_quill_logs';
 
     const MENU_SLUG          = 'auto-quill';
     const SOURCES_PAGE_SLUG  = 'auto-quill-sources';
     const SETTINGS_PAGE_SLUG = 'auto-quill-settings';
+    const LOGS_PAGE_SLUG     = 'auto-quill-logs';
 
     const ACTION_ADD      = 'auto_quill_add_source';
     const ACTION_DELETE   = 'auto_quill_delete_source';
@@ -57,6 +59,7 @@ class Constants {
             'rss_lookback_days' => 7,
             'prompt_body'    => self::default_prompt_body(),
             'prompt_excerpt' => self::default_prompt_excerpt(),
+            'debug_logging'  => false,
         ];
     }
 

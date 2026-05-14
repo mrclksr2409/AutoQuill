@@ -3,6 +3,7 @@ namespace AutoQuill\Core;
 
 use AutoQuill\Admin\AdminMenu;
 use AutoQuill\Admin\Dashboard;
+use AutoQuill\Admin\LogsPage;
 use AutoQuill\Admin\Settings;
 use AutoQuill\Admin\SourcesController;
 use AutoQuill\Database\Schema;
@@ -17,6 +18,7 @@ class Plugin {
         SourcesController::boot();
         Dashboard::boot();
         AdminMenu::boot();
+        LogsPage::boot();
         RestController::boot();
 
         add_action(Constants::CRON_FETCH,  ['\AutoQuill\RSS\Fetcher',  'fetch_feeds']);

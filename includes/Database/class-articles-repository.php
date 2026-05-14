@@ -2,6 +2,7 @@
 namespace AutoQuill\Database;
 
 use AutoQuill\Core\Constants as C;
+use AutoQuill\Core\Logger;
 
 class ArticlesRepository {
     private function table(): string {
@@ -36,7 +37,11 @@ class ArticlesRepository {
             ['%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s']
         );
         if ($ok === false) {
-            error_log('AutoQuill ArticlesRepository::insert failed: ' . $wpdb->last_error);
+            Logger::error('db.articles', 'Insert fehlgeschlagen', [
+                'wpdb_error' => $wpdb->last_error,
+                'source_id'  => $row['source_id'],
+                'title'      => $row['title'],
+            ]);
             return false;
         }
         return (int) $wpdb->insert_id;

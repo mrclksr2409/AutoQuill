@@ -2,28 +2,39 @@
 namespace AutoQuill\AI;
 
 use AutoQuill\Core\Constants as C;
+use AutoQuill\Core\Logger;
 use AutoQuill\Database\ArticlesRepository;
 use AutoQuill\Database\TopicsRepository;
 
 class Selector {
     public static function select_top_topics(): void {
+        Logger::info('selector', 'Topic-Selection startet');
+
         $articles = (new ArticlesRepository())->recent(24, 50);
 
         if (empty($articles)) {
-            error_log('AutoQuill: Keine neuen Artikel zum Analysieren gefunden');
+            Logger::warning('selector', 'Keine neuen Artikel zum Analysieren gefunden (Zeitfenster: 24h)');
             return;
         }
+
+        Logger::info('selector', 'Artikel geladen', ['count' => count($articles)]);
 
         $topics = self::analyze_articles($articles);
 
         if (!$topics || is_wp_error($topics)) {
             $msg = is_wp_error($topics) ? $topics->get_error_message() : 'leer';
-            error_log('AutoQuill: Fehler beim Analysieren der Artikel: ' . $msg);
+            Logger::error('selector', 'Fehler beim Analysieren der Artikel', ['reason' => $msg]);
             return;
         }
 
         $today = current_time('Y-m-d');
-        (new TopicsRepository())->upsert_for_date($today, $topics);
+        $ok    = (new TopicsRepository())->upsert_for_date($today, $topics);
+
+        Logger::info('selector', 'Topics gespeichert', [
+            'date'         => $today,
+            'topics_count' => count($topics),
+            'db_ok'        => (bool) $ok,
+        ]);
 
         do_action('auto_quill_topics_selected', $topics);
     }
@@ -33,6 +44,7 @@ class Selector {
         $ai_provider = is_array($settings) ? ($settings['ai_provider'] ?? 'openai') : 'openai';
 
         if ($ai_provider !== 'openai' && $ai_provider !== 'claude') {
+            Logger::warning('selector', 'Kein gültiger AI-Provider konfiguriert, Fallback-Selektion aktiv', ['ai_provider' => $ai_provider]);
             return self::fallback_analyze($articles);
         }
 
@@ -63,8 +75,13 @@ class Selector {
 
         $topics = self::extract_json_array((string) $raw);
         if (!is_array($topics)) {
+            Logger::error('selector', 'KI-Antwort konnte nicht als JSON-Array geparst werden', [
+                'raw_excerpt' => mb_substr((string) $raw, 0, 1000),
+            ]);
             return new \WP_Error('ai_parse_failed', 'KI-Antwort konnte nicht als JSON-Array geparst werden');
         }
+
+        Logger::info('selector', 'Topics aus KI-Antwort extrahiert', ['parsed_count' => count($topics)]);
 
         return self::attach_article_ids($topics, $articles);
     }

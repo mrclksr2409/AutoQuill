@@ -2,6 +2,7 @@
 namespace AutoQuill\Database;
 
 use AutoQuill\Core\Constants as C;
+use AutoQuill\Core\Logger;
 
 class TopicsRepository {
     private function table(): string {
@@ -55,7 +56,10 @@ class TopicsRepository {
             );
         }
         if ($ok === false) {
-            error_log('AutoQuill TopicsRepository::upsert_for_date failed: ' . $wpdb->last_error);
+            Logger::error('db.topics', 'upsert_for_date fehlgeschlagen', [
+                'wpdb_error' => $wpdb->last_error,
+                'date'       => $date,
+            ]);
             return false;
         }
         return true;
@@ -76,7 +80,10 @@ class TopicsRepository {
             ['%d']
         );
         if ($ok === false) {
-            error_log('AutoQuill TopicsRepository::mark_generated failed: ' . $wpdb->last_error);
+            Logger::error('db.topics', 'mark_generated fehlgeschlagen', [
+                'wpdb_error' => $wpdb->last_error,
+                'id'         => $id,
+            ]);
             return false;
         }
         return true;
@@ -96,7 +103,11 @@ class TopicsRepository {
             ['%d']
         );
         if ($ok === false) {
-            error_log('AutoQuill TopicsRepository::mark_published failed: ' . $wpdb->last_error);
+            Logger::error('db.topics', 'mark_published fehlgeschlagen', [
+                'wpdb_error' => $wpdb->last_error,
+                'id'         => $id,
+                'post_id'    => $post_id,
+            ]);
             return false;
         }
         return true;

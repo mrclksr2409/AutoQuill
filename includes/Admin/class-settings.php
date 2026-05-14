@@ -88,6 +88,8 @@ class Settings {
                 : C::defaults()['prompt_excerpt'];
         }
 
+        $clean['debug_logging'] = !empty($input['debug_logging']);
+
         add_settings_error(
             C::OPTION_KEY,
             'auto_quill_settings_updated',
@@ -245,6 +247,28 @@ class Settings {
                             <p class="description">
                                 <?php esc_html_e('Anweisungen für die KI zur Erstellung des Blog-Beitrags. Unterstützte Platzhalter:', 'auto-quill'); ?>
                                 <code>{title}</code>, <code>{source_block}</code>, <code>{categories_list}</code>
+                            </p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <th scope="row">
+                            <?php esc_html_e('Debug-Logging', 'auto-quill'); ?>
+                        </th>
+                        <td>
+                            <label>
+                                <input type="hidden"
+                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[debug_logging]"
+                                       value="0">
+                                <input type="checkbox"
+                                       id="debug_logging"
+                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[debug_logging]"
+                                       value="1"
+                                       <?php checked(!empty($settings['debug_logging'])); ?>>
+                                <?php esc_html_e('Ausführliches Logging aktivieren (Info/Debug)', 'auto-quill'); ?>
+                            </label>
+                            <p class="description">
+                                <?php esc_html_e('Wenn aktiv, werden auch Info- und Debug-Einträge inkl. (gekürzter) API-Payloads aufgezeichnet. Standard: nur Warnungen und Fehler. Logs sind unter „AutoQuill → Logs" und in der Browser-Konsole sichtbar.', 'auto-quill'); ?>
                             </p>
                         </td>
                     </tr>

@@ -2,6 +2,7 @@
 namespace AutoQuill\AI;
 
 use AutoQuill\Core\Constants as C;
+use AutoQuill\Core\Logger;
 use AutoQuill\Database\ArticlesRepository;
 use AutoQuill\Database\TopicsRepository;
 
@@ -11,7 +12,10 @@ class Writer {
         $topic_id = (int) ($params['topic_id'] ?? 0);
         $title    = (string) ($params['title'] ?? '');
 
+        Logger::info('writer', 'generate_post-Request', ['topic_id' => $topic_id, 'title' => $title]);
+
         if ($topic_id <= 0) {
+            Logger::warning('writer', 'Topic ID fehlt im Request');
             return new \WP_REST_Response(['error' => 'Topic ID erforderlich'], 400);
         }
 
@@ -19,6 +23,7 @@ class Writer {
         $topic = $repo->find($topic_id);
 
         if (!$topic) {
+            Logger::warning('writer', 'Topic nicht gefunden', ['topic_id' => $topic_id]);
             return new \WP_REST_Response(['error' => 'Topic nicht gefunden'], 404);
         }
 
@@ -32,20 +37,42 @@ class Writer {
         }
 
         if (!$selected_topic) {
+            Logger::warning('writer', 'Ausgewähltes Thema nicht in topics-Daten gefunden', [
+                'topic_id'         => $topic_id,
+                'title'            => $title,
+                'available_titles' => array_map(static fn($t) => $t['title'] ?? '', $topics_data),
+            ]);
             return new \WP_REST_Response(['error' => 'Ausgewähltes Thema nicht gefunden'], 404);
         }
 
         $article = self::load_source_article($selected_topic);
+        Logger::info('writer', 'Quellartikel geladen', [
+            'topic_id'   => $topic_id,
+            'article_id' => $article ? (int) $article->id : 0,
+            'has_content' => $article && !empty($article->content),
+        ]);
 
         $available_categories = self::get_available_categories();
         $result = self::write_blog_post($selected_topic, $available_categories, $article);
 
         if (is_wp_error($result)) {
             $code = $result->get_error_code() === 'no_api_key' ? 400 : 502;
+            Logger::error('writer', 'Blog-Post-Generierung fehlgeschlagen', [
+                'topic_id' => $topic_id,
+                'code'     => $result->get_error_code(),
+                'message'  => $result->get_error_message(),
+            ]);
             return new \WP_REST_Response(['error' => $result->get_error_message()], $code);
         }
 
         $repo->mark_generated($topic_id, $topic_id, (string) $selected_topic['title']);
+
+        Logger::info('writer', 'Blog-Post generiert', [
+            'topic_id'     => $topic_id,
+            'content_len'  => strlen($result['content']),
+            'excerpt_len'  => strlen($result['excerpt']),
+            'category_ids' => $result['category_ids'],
+        ]);
 
         return new \WP_REST_Response([
             'success'              => true,
@@ -194,7 +221,9 @@ class Writer {
         }
 
         if (!is_array($decoded) || !isset($decoded['content']) || !is_string($decoded['content']) || $decoded['content'] === '') {
-            error_log('AutoQuill Writer: KI-Antwort konnte nicht als JSON-Post geparst werden: ' . substr($raw, 0, 500));
+            Logger::error('writer', 'KI-Antwort konnte nicht als JSON-Post geparst werden', [
+                'raw_excerpt' => mb_substr($raw, 0, 1000),
+            ]);
             return new \WP_Error(
                 'ai_parse_failed',
                 'Die KI-Antwort konnte nicht verarbeitet werden. Bitte erneut versuchen oder Modell/Prompt prüfen.'

@@ -2,6 +2,7 @@
 namespace AutoQuill\Rest;
 
 use AutoQuill\Core\Constants as C;
+use AutoQuill\Core\Logger;
 use AutoQuill\Database\TopicsRepository;
 
 class PostsService {
@@ -26,7 +27,15 @@ class PostsService {
         $category_ids = (array)  ($params['category_ids'] ?? []);
         $topic_id     = (int)    ($params['topic_id']     ?? 0);
 
+        Logger::info('posts', 'publish_post-Request', [
+            'topic_id'     => $topic_id,
+            'title_len'    => strlen($post_title),
+            'content_len'  => strlen($post_content),
+            'category_ids' => $category_ids,
+        ]);
+
         if ($post_content === '' || $post_title === '') {
+            Logger::warning('posts', 'Publish abgebrochen: Titel oder Inhalt leer', ['topic_id' => $topic_id]);
             return new \WP_REST_Response(['error' => __('Post-Titel und Inhalt erforderlich', 'auto-quill')], 400);
         }
 
@@ -52,15 +61,26 @@ class PostsService {
             $insert_args['post_category'] = $category_ids;
         }
 
-        $post_id = wp_insert_post($insert_args);
+        $post_id = wp_insert_post($insert_args, true);
 
         if (is_wp_error($post_id)) {
+            Logger::error('posts', 'wp_insert_post fehlgeschlagen', [
+                'topic_id' => $topic_id,
+                'code'     => $post_id->get_error_code(),
+                'message'  => $post_id->get_error_message(),
+            ]);
             return new \WP_REST_Response(['error' => $post_id->get_error_message()], 500);
         }
 
         if ($topic_id > 0) {
             (new TopicsRepository())->mark_published($topic_id, (int) $post_id);
         }
+
+        Logger::info('posts', 'Post erstellt', [
+            'post_id'     => (int) $post_id,
+            'topic_id'    => $topic_id,
+            'post_status' => $post_status,
+        ]);
 
         return new \WP_REST_Response([
             'success' => true,
