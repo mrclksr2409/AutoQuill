@@ -34,22 +34,64 @@ class Selector {
 
         $articles_text = '';
         foreach ($articles as $article) {
+            $description = (string) $article->description;
+            if (function_exists('mb_substr')) {
+                $description = mb_substr($description, 0, 400);
+            } else {
+                $description = substr($description, 0, 400);
+            }
+            $articles_text .= "ID: {$article->id}\n";
             $articles_text .= "Titel: {$article->title}\n";
-            $articles_text .= "Beschreibung: {$article->description}\n";
+            $articles_text .= "Beschreibung: {$description}\n";
             $articles_text .= "---\n\n";
         }
 
         $prompt = "Analysiere die folgenden Artikel und wähle die 5 interessantesten Themen aus.\n"
-            . "Antworte als JSON-Array mit Struktur: [{\"title\": \"...\", \"summary\": \"...\", \"reason\": \"...\"}]\n\n"
+            . "Wähle für jedes Thema genau einen Artikel aus der Liste und gib dessen ID zurück.\n"
+            . "Antworte AUSSCHLIESSLICH mit einem gültigen JSON-Array (kein Markdown, kein Codeblock) mit der Struktur:\n"
+            . "[{\"article_id\": <int aus der obigen Liste>, \"title\": \"...\", \"summary\": \"...\", \"reason\": \"...\"}]\n\n"
             . $articles_text;
 
         if ($ai_provider === 'openai') {
-            return self::call_openai($prompt);
+            $topics = self::call_openai($prompt);
+        } elseif ($ai_provider === 'claude') {
+            $topics = self::call_claude($prompt);
+        } else {
+            return self::fallback_analyze($articles);
         }
-        if ($ai_provider === 'claude') {
-            return self::call_claude($prompt);
+
+        if (!is_array($topics)) {
+            return $topics;
         }
-        return self::fallback_analyze($articles);
+
+        return self::attach_article_ids($topics, $articles);
+    }
+
+    /**
+     * Stellt sicher, dass jedes Topic eine gültige article_id hat.
+     * Fällt bei fehlender/ungültiger ID auf Title-Match zurück.
+     */
+    private static function attach_article_ids(array $topics, array $articles): array {
+        $by_id = [];
+        foreach ($articles as $a) {
+            $by_id[(int) $a->id] = $a;
+        }
+        $repo = new ArticlesRepository();
+
+        $normalized = [];
+        foreach ($topics as $topic) {
+            if (!is_array($topic)) {
+                continue;
+            }
+            $article_id = (int) ($topic['article_id'] ?? 0);
+            if ($article_id <= 0 || !isset($by_id[$article_id])) {
+                $matched = $repo->find_by_title((string) ($topic['title'] ?? ''));
+                $article_id = $matched ? (int) $matched->id : 0;
+            }
+            $topic['article_id'] = $article_id;
+            $normalized[] = $topic;
+        }
+        return $normalized;
     }
 
     private static function call_openai(string $prompt) {
