@@ -166,7 +166,7 @@ class Writer {
         $raw = (new Client())->chat(
             'Du bist ein professioneller Blog-Autor und erstellst hochwertige, informative Inhalte. Antworte immer im geforderten JSON-Format.',
             $prompt,
-            ['max_tokens' => 8000, 'temperature' => 0.8, 'timeout' => 60, 'json_mode' => true]
+            ['max_tokens' => 8000, 'temperature' => 0.8, 'timeout' => 60, 'json_shape' => 'object']
         );
 
         if (is_wp_error($raw)) {
@@ -210,18 +210,11 @@ class Writer {
      * @return array{content:string, excerpt:string, category_ids:int[]}|\WP_Error
      */
     private static function parse_ai_response(string $raw, array $available_categories) {
-        $cleaned = trim($raw);
-        $cleaned = preg_replace('/^```(?:json)?\s*/i', '', $cleaned);
-        $cleaned = preg_replace('/\s*```$/', '', (string) $cleaned);
-        $cleaned = trim((string) $cleaned);
-
-        $decoded = json_decode($cleaned, true);
-        if (!is_array($decoded) && preg_match('/\{.*\}/s', $cleaned, $m)) {
-            $decoded = json_decode($m[0], true);
-        }
+        $decoded = JsonExtractor::extract_object($raw);
 
         if (!is_array($decoded) || !isset($decoded['content']) || !is_string($decoded['content']) || $decoded['content'] === '') {
             Logger::error('writer', 'KI-Antwort konnte nicht als JSON-Post geparst werden', [
+                'json_error'  => JsonExtractor::last_error(),
                 'raw_excerpt' => mb_substr($raw, 0, 1000),
             ]);
             return new \WP_Error(

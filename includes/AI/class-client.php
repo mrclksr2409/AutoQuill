@@ -13,6 +13,7 @@ class Client {
      *     openai_model?: string,
      *     claude_model?: string,
      *     json_mode?: bool,
+     *     json_shape?: string,
      * } $opts
      * @return string|\WP_Error
      */
@@ -34,6 +35,11 @@ class Client {
         }
         if (!isset($opts['claude_model'])) {
             $opts['claude_model'] = $settings['claude_model'] ?? C::DEFAULT_CLAUDE_MODEL;
+        }
+
+        // Backwards-compat: legacy json_mode bool implies object shape.
+        if (!isset($opts['json_shape']) && !empty($opts['json_mode'])) {
+            $opts['json_shape'] = 'object';
         }
 
         if ($provider === 'claude') {
@@ -67,7 +73,10 @@ class Client {
             'temperature' => (float) ($opts['temperature'] ?? 0.7),
             'max_tokens'  => (int)   ($opts['max_tokens']  ?? 1500),
         ];
-        if (!empty($opts['json_mode'])) {
+        // OpenAI's response_format=json_object only supports objects, not
+        // top-level arrays. The Selector now wraps array results in an
+        // object, so json_shape='object' is the only mode we activate here.
+        if (($opts['json_shape'] ?? null) === 'object') {
             $payload['response_format'] = ['type' => 'json_object'];
         }
 
@@ -95,11 +104,12 @@ class Client {
         $raw_body = (string) wp_remote_retrieve_body($response);
         $body     = json_decode($raw_body, true);
 
-        if ($status >= 400 || !isset($body['choices'][0]['message']['content'])) {
+        if ($status >= 400 || !is_array($body) || !isset($body['choices'][0]['message']['content'])) {
             Logger::error('client', 'OpenAI API-Fehler', [
-                'model'       => $model,
-                'status'      => $status,
-                'duration_ms' => $duration_ms,
+                'model'        => $model,
+                'status'       => $status,
+                'duration_ms'  => $duration_ms,
+                'json_error'   => json_last_error_msg(),
                 'body_excerpt' => mb_substr($raw_body, 0, 1000),
             ]);
             return new \WP_Error('api_error', 'OpenAI API-Fehler (HTTP ' . $status . ')');
@@ -143,6 +153,9 @@ class Client {
             'user_len'   => strlen($user),
         ]);
 
+        // No assistant prefill: Sonnet 4.6 rejects requests whose messages
+        // array ends with role=assistant. JSON shape is enforced via prompt
+        // plus tolerant parsing in JsonExtractor.
         $messages = [
             ['role' => 'user', 'content' => $user],
         ];
@@ -177,11 +190,12 @@ class Client {
         $raw_body = (string) wp_remote_retrieve_body($response);
         $body     = json_decode($raw_body, true);
 
-        if ($status >= 400 || !isset($body['content'][0]['text'])) {
+        if ($status >= 400 || !is_array($body) || !isset($body['content'][0]['text'])) {
             Logger::error('client', 'Claude API-Fehler', [
                 'model'        => $model,
                 'status'       => $status,
                 'duration_ms'  => $duration_ms,
+                'json_error'   => json_last_error_msg(),
                 'body_excerpt' => mb_substr($raw_body, 0, 1000),
             ]);
             return new \WP_Error('api_error', 'Claude API-Fehler (HTTP ' . $status . ')');
