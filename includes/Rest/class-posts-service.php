@@ -22,6 +22,8 @@ class PostsService {
         $params       = $request->get_json_params() ?: [];
         $post_title   = (string) ($params['post_title']   ?? '');
         $post_content = (string) ($params['post_content'] ?? '');
+        $post_excerpt = (string) ($params['post_excerpt'] ?? '');
+        $category_ids = (array)  ($params['category_ids'] ?? []);
         $topic_id     = (int)    ($params['topic_id']     ?? 0);
 
         if ($post_content === '' || $post_title === '') {
@@ -36,13 +38,21 @@ class PostsService {
             ? 'publish'
             : ($settings['post_status'] ?? 'draft');
 
-        $post_id = wp_insert_post([
+        $insert_args = [
             'post_title'   => sanitize_text_field($post_title),
             'post_content' => wp_kses_post($post_content),
+            'post_excerpt' => sanitize_textarea_field($post_excerpt),
             'post_status'  => $post_status,
             'post_type'    => 'post',
             'post_author'  => get_current_user_id(),
-        ]);
+        ];
+
+        $category_ids = array_values(array_filter(array_map('intval', $category_ids)));
+        if (!empty($category_ids)) {
+            $insert_args['post_category'] = $category_ids;
+        }
+
+        $post_id = wp_insert_post($insert_args);
 
         if (is_wp_error($post_id)) {
             return new \WP_REST_Response(['error' => $post_id->get_error_message()], 500);

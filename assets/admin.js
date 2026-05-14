@@ -111,6 +111,11 @@
                         $('#publish-post-btn').show().data('post-content', response.post_content);
                         this.currentTopic = response.topic;
                         this.currentTopicId = response.topic_id;
+                        this.renderMetaFields(
+                            response.post_excerpt || '',
+                            response.available_categories || [],
+                            response.category_ids || []
+                        );
                     } else {
                         const msg = (response && response.error) || 'Fehler beim Generieren des Posts';
                         this.showAlert(msg, 'error');
@@ -125,6 +130,25 @@
             });
         },
 
+        renderMetaFields: function(excerpt, availableCategories, selectedIds) {
+            const $excerpt = $('#auto-quill-excerpt');
+            const $select  = $('#auto-quill-categories');
+            const selected = new Set((selectedIds || []).map((id) => parseInt(id, 10)));
+
+            $excerpt.val(excerpt);
+            $select.empty();
+            (availableCategories || []).forEach((cat) => {
+                const id = parseInt(cat.id, 10);
+                const $opt = $('<option></option>').val(id).text(cat.name);
+                if (selected.has(id)) {
+                    $opt.prop('selected', true);
+                }
+                $select.append($opt);
+            });
+
+            $('#auto-quill-meta-fields').show();
+        },
+
         publishPost: function(e) {
             e.preventDefault();
             const $btn = $(e.target);
@@ -135,6 +159,11 @@
                 return;
             }
 
+            const postExcerpt = $('#auto-quill-excerpt').val() || '';
+            const categoryIds = ($('#auto-quill-categories').val() || [])
+                .map((v) => parseInt(v, 10))
+                .filter((v) => !isNaN(v));
+
             $btn.prop('disabled', true).text('Wird veröffentlicht...');
 
             $.ajax({
@@ -144,6 +173,8 @@
                 data: JSON.stringify({
                     post_title: this.currentTopic.title,
                     post_content: postContent,
+                    post_excerpt: postExcerpt,
+                    category_ids: categoryIds,
                     topic_id: this.currentTopicId,
                 }),
                 headers: {

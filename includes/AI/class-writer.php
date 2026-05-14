@@ -34,25 +34,56 @@ class Writer {
             return new \WP_REST_Response(['error' => 'Ausgewähltes Thema nicht gefunden'], 404);
         }
 
-        $post_content = self::write_blog_post($selected_topic);
+        $available_categories = self::get_available_categories();
+        $result = self::write_blog_post($selected_topic, $available_categories);
 
-        if (is_wp_error($post_content)) {
-            return new \WP_REST_Response(['error' => $post_content->get_error_message()], 500);
+        if (is_wp_error($result)) {
+            return new \WP_REST_Response(['error' => $result->get_error_message()], 500);
         }
 
         $repo->mark_generated($topic_id, $topic_id, (string) $selected_topic['title']);
 
         return new \WP_REST_Response([
-            'success'      => true,
-            'post_content' => $post_content,
-            'topic'        => $selected_topic,
-            'topic_id'     => $topic_id,
+            'success'              => true,
+            'post_content'         => $result['content'],
+            'post_excerpt'         => $result['excerpt'],
+            'category_ids'         => $result['category_ids'],
+            'available_categories' => $available_categories,
+            'topic'                => $selected_topic,
+            'topic_id'             => $topic_id,
         ]);
     }
 
-    private static function write_blog_post(array $topic) {
+    /**
+     * @return array<int, array{id:int,name:string}>
+     */
+    private static function get_available_categories(): array {
+        $terms = get_categories(['hide_empty' => false]);
+        $out   = [];
+        foreach ($terms as $term) {
+            $out[] = [
+                'id'   => (int) $term->term_id,
+                'name' => (string) $term->name,
+            ];
+        }
+        return $out;
+    }
+
+    /**
+     * @param array<int, array{id:int,name:string}> $available_categories
+     * @return array{content:string, excerpt:string, category_ids:int[]}|\WP_Error
+     */
+    private static function write_blog_post(array $topic, array $available_categories) {
         $settings    = get_option(C::OPTION_KEY, C::defaults());
         $ai_provider = $settings['ai_provider'] ?? 'openai';
+
+        $categories_list = '';
+        foreach ($available_categories as $cat) {
+            $categories_list .= "- ID {$cat['id']}: {$cat['name']}\n";
+        }
+        if ($categories_list === '') {
+            $categories_list = "(keine Kategorien vorhanden)\n";
+        }
 
         $prompt = "Schreibe einen ausführlichen, professionellen Blog-Post über das Thema: '{$topic['title']}'\n\n"
             . "Kontext: " . ($topic['summary'] ?? '') . "\n\n"
@@ -62,15 +93,61 @@ class Writer {
             . "- 3-4 Hauptabschnitte mit Zwischenüberschriften haben\n"
             . "- Mit einem Fazit enden\n"
             . "- HTML-Formatierung verwenden (aber ohne <html>, <body> etc.)\n\n"
-            . "Antworte nur mit dem Blog-Post-Inhalt, keine zusätzlichen Erklärungen.";
+            . "Verfügbare Kategorien (wähle 1-3 passende IDs aus dieser Liste):\n"
+            . $categories_list . "\n"
+            . "Antworte AUSSCHLIESSLICH mit einem gültigen JSON-Objekt (kein Markdown, kein Codeblock) mit folgenden Feldern:\n"
+            . "{\n"
+            . "  \"content\": \"<HTML des Blog-Posts>\",\n"
+            . "  \"excerpt\": \"<kurzer, für Social Media optimierter Auszug, 1-2 Sätze, max. ~250 Zeichen, mit Hook auf Deutsch>\",\n"
+            . "  \"category_ids\": [<1 bis 3 IDs aus der obigen Liste>]\n"
+            . "}";
 
         if ($ai_provider === 'openai') {
-            return self::call_openai_write($prompt);
+            $raw = self::call_openai_write($prompt);
+        } elseif ($ai_provider === 'claude') {
+            $raw = self::call_claude_write($prompt);
+        } else {
+            return self::generate_basic_post($topic);
         }
-        if ($ai_provider === 'claude') {
-            return self::call_claude_write($prompt);
+
+        if (is_wp_error($raw)) {
+            return $raw;
         }
-        return self::generate_basic_post($topic);
+
+        return self::parse_ai_response($raw, $topic, $available_categories);
+    }
+
+    /**
+     * @param array<int, array{id:int,name:string}> $available_categories
+     * @return array{content:string, excerpt:string, category_ids:int[]}
+     */
+    private static function parse_ai_response(string $raw, array $topic, array $available_categories): array {
+        $fallback = self::generate_basic_post($topic);
+
+        if (preg_match('/\{.*\}/s', $raw, $m)) {
+            $decoded = json_decode($m[0], true);
+            if (is_array($decoded) && isset($decoded['content']) && is_string($decoded['content']) && $decoded['content'] !== '') {
+                $valid_ids = array_map(static fn($c) => (int) $c['id'], $available_categories);
+                $picked    = [];
+                foreach ((array) ($decoded['category_ids'] ?? []) as $cid) {
+                    $cid = (int) $cid;
+                    if (in_array($cid, $valid_ids, true)) {
+                        $picked[] = $cid;
+                    }
+                }
+                return [
+                    'content'      => (string) $decoded['content'],
+                    'excerpt'      => isset($decoded['excerpt']) ? (string) $decoded['excerpt'] : $fallback['excerpt'],
+                    'category_ids' => array_values(array_unique($picked)),
+                ];
+            }
+        }
+
+        return [
+            'content'      => $raw !== '' ? $raw : $fallback['content'],
+            'excerpt'      => $fallback['excerpt'],
+            'category_ids' => [],
+        ];
     }
 
     private static function call_openai_write(string $prompt) {
@@ -90,11 +167,11 @@ class Writer {
             'body' => wp_json_encode([
                 'model'       => 'gpt-3.5-turbo',
                 'messages'    => [
-                    ['role' => 'system', 'content' => 'Du bist ein professioneller Blog-Autor und erstellst hochwertige, informative Inhalte.'],
+                    ['role' => 'system', 'content' => 'Du bist ein professioneller Blog-Autor und erstellst hochwertige, informative Inhalte. Antworte immer im geforderten JSON-Format.'],
                     ['role' => 'user',   'content' => $prompt],
                 ],
                 'temperature' => 0.8,
-                'max_tokens'  => 2000,
+                'max_tokens'  => 2500,
             ]),
         ]);
 
@@ -104,7 +181,7 @@ class Writer {
 
         $body = json_decode(wp_remote_retrieve_body($response), true);
         if (isset($body['choices'][0]['message']['content'])) {
-            return $body['choices'][0]['message']['content'];
+            return (string) $body['choices'][0]['message']['content'];
         }
 
         return new \WP_Error('api_error', 'OpenAI API-Fehler beim Schreiben des Posts');
@@ -128,7 +205,7 @@ class Writer {
             'body' => wp_json_encode([
                 'model'      => 'claude-sonnet-4-6',
                 'max_tokens' => 4096,
-                'system'     => 'Du bist ein professioneller Blog-Autor und erstellst hochwertige, informative Inhalte.',
+                'system'     => 'Du bist ein professioneller Blog-Autor und erstellst hochwertige, informative Inhalte. Antworte immer im geforderten JSON-Format.',
                 'messages'   => [
                     ['role' => 'user', 'content' => $prompt],
                 ],
@@ -141,16 +218,30 @@ class Writer {
 
         $body = json_decode(wp_remote_retrieve_body($response), true);
         if (isset($body['content'][0]['text'])) {
-            return $body['content'][0]['text'];
+            return (string) $body['content'][0]['text'];
         }
 
         return new \WP_Error('api_error', 'Claude API-Fehler beim Schreiben des Posts');
     }
 
-    private static function generate_basic_post(array $topic): string {
-        $post  = '<h1>' . esc_html((string) $topic['title']) . '</h1>';
-        $post .= '<p><strong>Einleitung:</strong> ' . esc_html((string) ($topic['summary'] ?? '')) . '</p>';
-        $post .= '<p>Dies ist ein automatisch erstellter Blog-Post basierend auf aktuellen Nachrichten.</p>';
-        return $post;
+    /**
+     * @return array{content:string, excerpt:string, category_ids:int[]}
+     */
+    private static function generate_basic_post(array $topic): array {
+        $title   = (string) ($topic['title'] ?? '');
+        $summary = (string) ($topic['summary'] ?? '');
+        $content  = '<h1>' . esc_html($title) . '</h1>';
+        $content .= '<p><strong>Einleitung:</strong> ' . esc_html($summary) . '</p>';
+        $content .= '<p>Dies ist ein automatisch erstellter Blog-Post basierend auf aktuellen Nachrichten.</p>';
+
+        $excerpt = $summary !== ''
+            ? mb_substr($summary, 0, 240)
+            : $title;
+
+        return [
+            'content'      => $content,
+            'excerpt'      => $excerpt,
+            'category_ids' => [],
+        ];
     }
 }
