@@ -34,6 +34,7 @@ class Constants {
             'post_status'   => 'draft',
             'auto_publish'  => false,
             'posts_per_day' => 1,
+            'rss_lookback_days' => 7,
         ];
     }
 }

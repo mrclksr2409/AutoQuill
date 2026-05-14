@@ -57,4 +57,17 @@ class ArticlesRepository {
         global $wpdb;
         return (int) $wpdb->get_var("SELECT COUNT(*) FROM {$this->table()}");
     }
+
+    public function delete_older_than(int $days): int {
+        if ($days <= 0) {
+            return 0;
+        }
+        global $wpdb;
+        $cutoff = date('Y-m-d H:i:s', time() - ($days * DAY_IN_SECONDS));
+        $n = $wpdb->query($wpdb->prepare(
+            "DELETE FROM {$this->table()} WHERE published_date < %s",
+            $cutoff
+        ));
+        return (int) $n;
+    }
 }
