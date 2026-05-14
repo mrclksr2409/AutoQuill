@@ -202,10 +202,16 @@
     font-size: 13px;
 }
 
+.auto-quill-meta-fields input[type="text"],
 .auto-quill-meta-fields textarea,
 .auto-quill-meta-fields select {
     width: 100%;
     box-sizing: border-box;
+}
+
+.auto-quill-field--body .post-preview {
+    margin: 0;
+    min-height: 240px;
 }
 
 .auto-quill-meta-fields textarea[readonly] {
@@ -223,4 +229,21 @@
 
 #publish-post-btn {
     margin-top: 15px;
+}
+
+/* Settings tabs */
+.auto-quill-settings-tabs {
+    margin-bottom: 0;
+}
+
+.auto-quill-tab-panel {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-top: 0;
+    padding: 10px 20px;
+    margin-bottom: 20px;
+}
+
+.auto-quill-tab-panel .form-table {
+    margin-top: 0;
 }

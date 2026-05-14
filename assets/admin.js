@@ -150,8 +150,6 @@
                 }
                 $select.append($opt);
             });
-
-            $('#auto-quill-meta-fields').show();
         },
 
         publishPost: function(e) {
@@ -225,8 +223,34 @@
         },
     };
 
+    const SettingsTabs = {
+        init: function() {
+            const $tabs = $('.auto-quill-settings-tabs .nav-tab');
+            if (!$tabs.length) {
+                return;
+            }
+            const activate = (tab) => {
+                $tabs.removeClass('nav-tab-active')
+                     .filter('[data-tab="' + tab + '"]').addClass('nav-tab-active');
+                $('.auto-quill-tab-panel').hide()
+                     .filter('[data-tab="' + tab + '"]').show();
+            };
+            $tabs.on('click', function(e) {
+                e.preventDefault();
+                const tab = $(this).data('tab');
+                activate(tab);
+                history.replaceState(null, '', '#tab-' + tab);
+            });
+            const initial = (window.location.hash || '').replace(/^#tab-/, '');
+            if (initial && $tabs.filter('[data-tab="' + initial + '"]').length) {
+                activate(initial);
+            }
+        },
+    };
+
     // Initialize when document is ready
     $(document).ready(() => {
         AutoQuill.init();
+        SettingsTabs.init();
     });
 })(jQuery);
