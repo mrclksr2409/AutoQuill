@@ -59,26 +59,27 @@ class Selector {
 
         $prompt = "Analysiere die folgenden Artikel und wähle die 5 interessantesten Themen aus.\n"
             . "Wähle für jedes Thema genau einen Artikel aus der Liste und gib dessen ID zurück.\n"
-            . "Antworte AUSSCHLIESSLICH mit einem gültigen JSON-Array (kein Markdown, kein Codeblock) mit der Struktur:\n"
-            . "[{\"article_id\": <int aus der obigen Liste>, \"title\": \"...\", \"summary\": \"...\", \"reason\": \"...\"}]\n\n"
+            . "Antworte AUSSCHLIESSLICH mit einem gültigen JSON-Objekt (kein Markdown, kein Codeblock) mit der Struktur:\n"
+            . "{\"topics\": [{\"article_id\": <int aus der obigen Liste>, \"title\": \"...\", \"summary\": \"...\", \"reason\": \"...\"}]}\n\n"
             . $articles_text;
 
         $raw = (new Client())->chat(
             'Du bist ein hilfreicher Content-Analyzer. Antworte ausschließlich mit gültigem JSON.',
             $prompt,
-            ['max_tokens' => 1500, 'temperature' => 0.7, 'timeout' => 30]
+            ['max_tokens' => 1500, 'temperature' => 0.7, 'timeout' => 30, 'json_shape' => 'object']
         );
 
         if (is_wp_error($raw)) {
             return $raw;
         }
 
-        $topics = self::extract_json_array((string) $raw);
+        $topics = self::parse_topics((string) $raw);
         if (!is_array($topics)) {
-            Logger::error('selector', 'KI-Antwort konnte nicht als JSON-Array geparst werden', [
+            Logger::error('selector', 'KI-Antwort konnte nicht als JSON geparst werden', [
+                'json_error'  => JsonExtractor::last_error(),
                 'raw_excerpt' => mb_substr((string) $raw, 0, 1000),
             ]);
-            return new \WP_Error('ai_parse_failed', 'KI-Antwort konnte nicht als JSON-Array geparst werden');
+            return new \WP_Error('ai_parse_failed', 'KI-Antwort konnte nicht als JSON geparst werden');
         }
 
         Logger::info('selector', 'Topics aus KI-Antwort extrahiert', ['parsed_count' => count($topics)]);
@@ -86,12 +87,15 @@ class Selector {
         return self::attach_article_ids($topics, $articles);
     }
 
-    private static function extract_json_array(string $content): ?array {
-        if (preg_match('/\[.*\]/s', $content, $matches)) {
-            $decoded = json_decode($matches[0], true);
-            if (is_array($decoded)) {
-                return $decoded;
-            }
+    private static function parse_topics(string $content): ?array {
+        $obj = JsonExtractor::extract_object($content);
+        if (is_array($obj) && isset($obj['topics']) && is_array($obj['topics'])) {
+            return $obj['topics'];
+        }
+        // Fallback: some providers may still return a top-level array.
+        $arr = JsonExtractor::extract_array($content);
+        if (is_array($arr)) {
+            return $arr;
         }
         return null;
     }
