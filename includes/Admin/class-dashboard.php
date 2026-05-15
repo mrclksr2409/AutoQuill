@@ -3,6 +3,7 @@ namespace AutoQuill\Admin;
 
 use AutoQuill\AI\Selector;
 use AutoQuill\Core\Constants as C;
+use AutoQuill\Database\ArticlesRepository;
 use AutoQuill\Database\SourcesRepository;
 use AutoQuill\Database\TopicsRepository;
 use AutoQuill\RSS\Fetcher;
@@ -116,16 +117,53 @@ class Dashboard {
                     </div>
 
                     <?php if ($today_topics): ?>
-                        <?php $topics = json_decode($today_topics->topics, true) ?: []; ?>
+                        <?php
+                        $topics            = json_decode($today_topics->topics, true) ?: [];
+                        $articles_repo     = new ArticlesRepository();
+                        $sources_repo      = new SourcesRepository();
+                        $source_name_cache = [];
+                        ?>
                         <div id="topics-list" class="topics-list">
                             <?php foreach ($topics as $idx => $topic): ?>
+                                <?php
+                                $article_id  = (int) ($topic['article_id'] ?? 0);
+                                $article_url = '';
+                                $source_name = '';
+                                if ($article_id > 0) {
+                                    $article = $articles_repo->find($article_id);
+                                    if ($article) {
+                                        $article_url = (string) $article->article_url;
+                                        $source_id   = (int) $article->source_id;
+                                        if ($source_id > 0) {
+                                            if (!array_key_exists($source_id, $source_name_cache)) {
+                                                $source = $sources_repo->find($source_id);
+                                                $source_name_cache[$source_id] = $source ? (string) $source->title : '';
+                                            }
+                                            $source_name = $source_name_cache[$source_id];
+                                        }
+                                    }
+                                }
+                                ?>
                                 <div class="topic-card"
                                      data-topic-id="<?php echo (int) $today_topics->id; ?>"
                                      data-topic-index="<?php echo (int) $idx; ?>">
                                     <h3><?php echo esc_html($topic['title'] ?? ''); ?></h3>
-                                    <p><strong><?php esc_html_e('Begründung:', 'auto-quill'); ?></strong>
-                                       <?php echo esc_html($topic['reason'] ?? ''); ?></p>
                                     <p><?php echo esc_html(substr((string) ($topic['summary'] ?? ''), 0, 200)); ?></p>
+                                    <?php if ($source_name !== '' || $article_url !== ''): ?>
+                                        <p class="auto-quill-topic-source">
+                                            <strong><?php esc_html_e('Quelle:', 'auto-quill'); ?></strong>
+                                            <?php if ($source_name !== ''): ?>
+                                                <?php echo esc_html($source_name); ?>
+                                            <?php endif; ?>
+                                            <?php if ($article_url !== ''): ?>
+                                                <?php if ($source_name !== ''): ?> &ndash; <?php endif; ?>
+                                                <a href="<?php echo esc_url($article_url); ?>"
+                                                   target="_blank" rel="noopener noreferrer">
+                                                    <?php esc_html_e('Originalartikel', 'auto-quill'); ?>
+                                                </a>
+                                            <?php endif; ?>
+                                        </p>
+                                    <?php endif; ?>
                                     <button class="button button-primary auto-quill-select-topic"
                                             data-topic-id="<?php echo (int) $today_topics->id; ?>"
                                             data-topic-index="<?php echo (int) $idx; ?>">

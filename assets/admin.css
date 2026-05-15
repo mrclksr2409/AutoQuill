@@ -75,6 +75,15 @@
     color: #333;
 }
 
+.topic-card .auto-quill-topic-source {
+    font-size: 0.9em;
+    color: #555;
+}
+
+.topic-card .auto-quill-topic-source a {
+    text-decoration: none;
+}
+
 .auto-quill-select-topic {
     margin-top: 10px;
 }
