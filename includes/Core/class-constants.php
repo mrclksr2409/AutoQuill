@@ -51,12 +51,28 @@ class Constants {
         return defined('AUTO_QUILL_AI_KEY') && AUTO_QUILL_AI_KEY !== '';
     }
 
+    public static function pixabay_api_key(): string {
+        if (defined('AUTO_QUILL_PIXABAY_KEY') && AUTO_QUILL_PIXABAY_KEY !== '') {
+            return (string) AUTO_QUILL_PIXABAY_KEY;
+        }
+        $settings = get_option(self::OPTION_KEY, self::defaults());
+        if (!is_array($settings)) {
+            return '';
+        }
+        return (string) ($settings['pixabay_api_key'] ?? '');
+    }
+
+    public static function pixabay_api_key_from_constant(): bool {
+        return defined('AUTO_QUILL_PIXABAY_KEY') && AUTO_QUILL_PIXABAY_KEY !== '';
+    }
+
     public static function defaults(): array {
         return [
-            'ai_provider'   => 'openai',
-            'ai_api_key'    => '',
-            'openai_model'  => self::DEFAULT_OPENAI_MODEL,
-            'claude_model'  => self::DEFAULT_CLAUDE_MODEL,
+            'ai_provider'     => 'openai',
+            'ai_api_key'      => '',
+            'openai_model'    => self::DEFAULT_OPENAI_MODEL,
+            'claude_model'    => self::DEFAULT_CLAUDE_MODEL,
+            'pixabay_api_key' => '',
             'post_status'   => 'draft',
             'auto_publish'  => false,
             'posts_per_day' => 1,

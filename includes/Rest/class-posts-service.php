@@ -26,6 +26,8 @@ class PostsService {
         $post_excerpt = (string) ($params['post_excerpt'] ?? '');
         $category_ids = (array)  ($params['category_ids'] ?? []);
         $topic_id     = (int)    ($params['topic_id']     ?? 0);
+        $image_url    = esc_url_raw((string) ($params['image_url'] ?? ''));
+        $image_alt    = sanitize_text_field((string) ($params['image_alt'] ?? ''));
 
         Logger::info('posts', 'publish_post-Request', [
             'topic_id'     => $topic_id,
@@ -76,10 +78,39 @@ class PostsService {
             (new TopicsRepository())->mark_published($topic_id, (int) $post_id);
         }
 
+        $attachment_id = 0;
+        if ($image_url !== '' && wp_http_validate_url($image_url)) {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+            require_once ABSPATH . 'wp-admin/includes/media.php';
+            require_once ABSPATH . 'wp-admin/includes/image.php';
+
+            $sideload = media_sideload_image($image_url, (int) $post_id, $image_alt !== '' ? $image_alt : null, 'id');
+
+            if (is_wp_error($sideload)) {
+                Logger::warning('posts', 'Featured-Image-Sideload fehlgeschlagen', [
+                    'post_id'   => (int) $post_id,
+                    'image_url' => $image_url,
+                    'code'      => $sideload->get_error_code(),
+                    'message'   => $sideload->get_error_message(),
+                ]);
+            } else {
+                $attachment_id = (int) $sideload;
+                set_post_thumbnail((int) $post_id, $attachment_id);
+                if ($image_alt !== '') {
+                    update_post_meta($attachment_id, '_wp_attachment_image_alt', $image_alt);
+                }
+                Logger::info('posts', 'Featured Image gesetzt', [
+                    'post_id'       => (int) $post_id,
+                    'attachment_id' => $attachment_id,
+                ]);
+            }
+        }
+
         Logger::info('posts', 'Post erstellt', [
-            'post_id'     => (int) $post_id,
-            'topic_id'    => $topic_id,
-            'post_status' => $post_status,
+            'post_id'       => (int) $post_id,
+            'topic_id'      => $topic_id,
+            'post_status'   => $post_status,
+            'attachment_id' => $attachment_id,
         ]);
 
         return new \WP_REST_Response([

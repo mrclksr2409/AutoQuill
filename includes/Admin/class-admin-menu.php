@@ -108,6 +108,16 @@ class AdminMenu {
                 'saving'             => __('Wird gespeichert...', 'auto-quill'),
                 'publishSuccess'     => __('Post erfolgreich erstellt!', 'auto-quill'),
                 'publishError'       => __('Fehler beim Veröffentlichen', 'auto-quill'),
+                'pickImage'          => __('Bild auswählen', 'auto-quill'),
+                'clearImage'         => __('Bild entfernen', 'auto-quill'),
+                'noImageSelected'    => __('Kein Bild ausgewählt', 'auto-quill'),
+                'searchingImages'    => __('Bilder werden geladen…', 'auto-quill'),
+                'noImagesFound'      => __('Keine Bilder gefunden.', 'auto-quill'),
+                'imageSearchError'   => __('Bildsuche fehlgeschlagen.', 'auto-quill'),
+                'enterSearchQuery'   => __('Bitte einen Suchbegriff eingeben.', 'auto-quill'),
+                /* translators: 1: current page, 2: total pages */
+                'imagePageInfo'      => __('Seite %1$d von %2$d', 'auto-quill'),
+                'suggestingKeywords' => __('Suchbegriffe werden vorgeschlagen…', 'auto-quill'),
             ],
         ]);
     }

@@ -210,11 +210,66 @@ class Dashboard {
                             </label>
                             <select id="auto-quill-categories" multiple size="5"></select>
                         </div>
+                        <div class="auto-quill-field">
+                            <label>
+                                <strong><?php esc_html_e('Beitragsbild', 'auto-quill'); ?></strong>
+                                <span class="description"><?php esc_html_e('(optional, via Pixabay)', 'auto-quill'); ?></span>
+                            </label>
+                            <div id="auto-quill-image-preview" class="auto-quill-image-preview is-empty">
+                                <span class="placeholder"><?php esc_html_e('Kein Bild ausgewählt', 'auto-quill'); ?></span>
+                            </div>
+                            <p class="auto-quill-image-actions">
+                                <button type="button" class="button" id="auto-quill-pick-image-btn">
+                                    <?php esc_html_e('Bild auswählen', 'auto-quill'); ?>
+                                </button>
+                                <button type="button" class="button-link" id="auto-quill-clear-image-btn" hidden>
+                                    <?php esc_html_e('Bild entfernen', 'auto-quill'); ?>
+                                </button>
+                            </p>
+                        </div>
                     </div>
 
                     <button class="button button-primary" id="publish-post-btn" style="display:none;">
                         <?php echo esc_html($publish_label); ?>
                     </button>
+                </div>
+            </div>
+
+            <div id="auto-quill-image-modal" class="auto-quill-modal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="auto-quill-image-modal-title">
+                <div class="auto-quill-modal-overlay" data-modal-close></div>
+                <div class="auto-quill-modal-content">
+                    <div class="auto-quill-modal-header">
+                        <h2 id="auto-quill-image-modal-title"><?php esc_html_e('Beitragsbild auswählen', 'auto-quill'); ?></h2>
+                        <button type="button" class="auto-quill-modal-close" data-modal-close aria-label="<?php esc_attr_e('Schließen', 'auto-quill'); ?>">&times;</button>
+                    </div>
+                    <form class="auto-quill-modal-search" id="auto-quill-image-search-form">
+                        <input type="text" id="auto-quill-image-query"
+                               placeholder="<?php esc_attr_e('Suchbegriff…', 'auto-quill'); ?>"
+                               class="regular-text" autocomplete="off">
+                        <button type="submit" class="button button-primary">
+                            <?php esc_html_e('Suchen', 'auto-quill'); ?>
+                        </button>
+                    </form>
+                    <div class="auto-quill-modal-body">
+                        <div id="auto-quill-image-status" class="auto-quill-image-status" hidden></div>
+                        <div id="auto-quill-image-grid" class="auto-quill-image-grid"></div>
+                        <div id="auto-quill-image-pagination" class="auto-quill-image-pagination" hidden>
+                            <button type="button" class="button" id="auto-quill-image-prev">&laquo; <?php esc_html_e('Zurück', 'auto-quill'); ?></button>
+                            <span id="auto-quill-image-page-info"></span>
+                            <button type="button" class="button" id="auto-quill-image-next"><?php esc_html_e('Weiter', 'auto-quill'); ?> &raquo;</button>
+                        </div>
+                    </div>
+                    <div class="auto-quill-modal-footer">
+                        <small>
+                            <?php
+                            printf(
+                                /* translators: %s: link to Pixabay */
+                                esc_html__('Bilder von %s — Pixabay Content License', 'auto-quill'),
+                                '<a href="https://pixabay.com/" target="_blank" rel="noopener noreferrer">Pixabay</a>'
+                            );
+                            ?>
+                        </small>
+                    </div>
                 </div>
             </div>
         </div>
