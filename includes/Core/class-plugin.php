@@ -20,6 +20,7 @@ class Plugin {
         AdminMenu::boot();
         LogsPage::boot();
         RestController::boot();
+        Updater::boot();
 
         add_action(Constants::CRON_FETCH,  ['\AutoQuill\RSS\Fetcher',  'fetch_feeds']);
         add_action(Constants::CRON_SELECT, ['\AutoQuill\AI\Selector',  'select_top_topics']);

@@ -32,6 +32,10 @@ class Constants {
     const DEFAULT_OPENAI_MODEL = 'gpt-4o-mini';
     const DEFAULT_CLAUDE_MODEL = 'claude-sonnet-4-6';
 
+    const UPDATE_REPO_URL    = 'https://github.com/mrclksr2409/autoquill/';
+    const UPDATE_MAIN_BRANCH = 'main';
+    const UPDATE_SLUG        = 'auto-quill';
+
     public static function ai_api_key(): string {
         if (defined('AUTO_QUILL_AI_KEY') && AUTO_QUILL_AI_KEY !== '') {
             return (string) AUTO_QUILL_AI_KEY;
@@ -62,6 +66,7 @@ class Constants {
             'prompt_excerpt'  => self::default_prompt_excerpt(),
             'prompt_category' => self::default_prompt_category(),
             'debug_logging'   => false,
+            'beta_mode'       => false,
         ];
     }
 
