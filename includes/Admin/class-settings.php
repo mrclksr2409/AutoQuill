@@ -103,6 +103,7 @@ class Settings {
         }
 
         $clean['debug_logging'] = !empty($input['debug_logging']);
+        $clean['beta_mode']     = !empty($input['beta_mode']);
 
         add_settings_error(
             C::OPTION_KEY,
@@ -136,6 +137,7 @@ class Settings {
                     <a href="#tab-ki"      class="nav-tab nav-tab-active" data-tab="ki"><?php esc_html_e('KI-Provider', 'auto-quill'); ?></a>
                     <a href="#tab-publish" class="nav-tab"                data-tab="publish"><?php esc_html_e('Veröffentlichung', 'auto-quill'); ?></a>
                     <a href="#tab-prompts" class="nav-tab"                data-tab="prompts"><?php esc_html_e('Prompts', 'auto-quill'); ?></a>
+                    <a href="#tab-updates" class="nav-tab"                data-tab="updates"><?php esc_html_e('Updates', 'auto-quill'); ?></a>
                     <a href="#tab-debug"   class="nav-tab"                data-tab="debug"><?php esc_html_e('Debug', 'auto-quill'); ?></a>
                 </h2>
 
@@ -325,6 +327,41 @@ class Settings {
                                 <p class="description">
                                     <?php esc_html_e('Anweisungen für die KI zur Auswahl der Kategorien. Unterstützte Platzhalter:', 'auto-quill'); ?>
                                     <code>{title}</code>, <code>{content_excerpt}</code>, <code>{categories_list}</code>
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="auto-quill-tab-panel" data-tab="updates" style="display:none;">
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row">
+                                <?php esc_html_e('Beta-Modus', 'auto-quill'); ?>
+                            </th>
+                            <td>
+                                <label>
+                                    <input type="hidden"
+                                           name="<?php echo esc_attr(C::OPTION_KEY); ?>[beta_mode]"
+                                           value="0">
+                                    <input type="checkbox"
+                                           id="beta_mode"
+                                           name="<?php echo esc_attr(C::OPTION_KEY); ?>[beta_mode]"
+                                           value="1"
+                                           <?php checked(!empty($settings['beta_mode'])); ?>>
+                                    <?php esc_html_e('Beta-Updates aktivieren (folgt dem main-Branch)', 'auto-quill'); ?>
+                                </label>
+                                <p class="description">
+                                    <?php esc_html_e('Bei aktiviertem Beta-Modus prüft AutoQuill den main-Branch auf neue Commits und installiert diese als Updates. Ist der Beta-Modus deaktiviert, werden ausschließlich offizielle Releases als Updates angeboten.', 'auto-quill'); ?>
+                                </p>
+                                <p class="description">
+                                    <?php
+                                    printf(
+                                        /* translators: %s: repository URL */
+                                        esc_html__('Quelle: %s', 'auto-quill'),
+                                        '<code>' . esc_html(C::UPDATE_REPO_URL) . '</code>'
+                                    );
+                                    ?>
                                 </p>
                             </td>
                         </tr>
