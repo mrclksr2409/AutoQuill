@@ -31,6 +31,18 @@ class RestController {
             'permission_callback' => $can,
         ]);
 
+        register_rest_route(self::NS, '/suggest-image-keywords', [
+            'methods'             => 'POST',
+            'callback'            => ['\AutoQuill\Rest\ImagesService', 'suggest_keywords'],
+            'permission_callback' => $can,
+        ]);
+
+        register_rest_route(self::NS, '/search-images', [
+            'methods'             => 'GET',
+            'callback'            => ['\AutoQuill\Rest\ImagesService', 'search'],
+            'permission_callback' => $can,
+        ]);
+
         register_rest_route(self::NS, '/logs', [
             [
                 'methods'             => 'GET',

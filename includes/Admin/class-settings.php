@@ -55,6 +55,13 @@ class Settings {
             $clean['claude_model'] = $model !== '' ? $model : C::DEFAULT_CLAUDE_MODEL;
         }
 
+        if (array_key_exists('pixabay_api_key', $input)) {
+            $new_key = sanitize_text_field((string) $input['pixabay_api_key']);
+            if ($new_key !== '') {
+                $clean['pixabay_api_key'] = $new_key;
+            }
+        }
+
         if (isset($input['post_status'])) {
             $clean['post_status'] = in_array($input['post_status'], ['draft', 'publish', 'pending'], true)
                 ? $input['post_status']
@@ -215,6 +222,41 @@ class Settings {
                                     /* translators: %s: default model name */
                                     printf(esc_html__('Standard: %s', 'auto-quill'), '<code>' . esc_html(C::DEFAULT_CLAUDE_MODEL) . '</code>');
                                 ?></p>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <th scope="row">
+                                <label for="pixabay_api_key"><?php esc_html_e('Pixabay-API-Key', 'auto-quill'); ?></label>
+                            </th>
+                            <td>
+                                <?php
+                                $pixabay_from_const = C::pixabay_api_key_from_constant();
+                                $has_pixabay_key    = !empty($settings['pixabay_api_key']);
+                                $pixabay_placeholder = $has_pixabay_key
+                                    ? esc_attr__('Gespeicherter Schlüssel — leer lassen, um ihn zu behalten', 'auto-quill')
+                                    : esc_attr__('z. B. 12345678-abcdef…', 'auto-quill');
+                                ?>
+                                <input type="password" id="pixabay_api_key"
+                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[pixabay_api_key]"
+                                       value=""
+                                       placeholder="<?php echo $pixabay_placeholder; ?>"
+                                       autocomplete="new-password"
+                                       <?php disabled($pixabay_from_const); ?>
+                                       style="width: 300px;">
+                                <p class="description">
+                                    <?php if ($pixabay_from_const): ?>
+                                        <?php esc_html_e('Schlüssel wird aus der Konstante AUTO_QUILL_PIXABAY_KEY in wp-config.php geladen und hat Vorrang vor diesem Feld.', 'auto-quill'); ?>
+                                    <?php else: ?>
+                                        <?php
+                                        printf(
+                                            /* translators: %s: link to Pixabay API docs */
+                                            esc_html__('Optional. Wird für die Beitragsbild-Suche im Dashboard verwendet. Kostenlosen Key anfordern unter %s.', 'auto-quill'),
+                                            '<a href="https://pixabay.com/api/docs/" target="_blank" rel="noopener noreferrer">pixabay.com/api/docs</a>'
+                                        );
+                                        ?>
+                                    <?php endif; ?>
+                                </p>
                             </td>
                         </tr>
                     </table>
