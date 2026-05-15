@@ -60,7 +60,7 @@ class Selector {
         $prompt = "Analysiere die folgenden Artikel und wähle die 5 interessantesten Themen aus.\n"
             . "Wähle für jedes Thema genau einen Artikel aus der Liste und gib dessen ID zurück.\n"
             . "Antworte AUSSCHLIESSLICH mit einem gültigen JSON-Objekt (kein Markdown, kein Codeblock) mit der Struktur:\n"
-            . "{\"topics\": [{\"article_id\": <int aus der obigen Liste>, \"title\": \"...\", \"summary\": \"...\", \"reason\": \"...\"}]}\n\n"
+            . "{\"topics\": [{\"article_id\": <int aus der obigen Liste>, \"title\": \"...\", \"summary\": \"...\"}]}\n\n"
             . $articles_text;
 
         $raw = (new Client())->chat(
@@ -133,7 +133,6 @@ class Selector {
             $topics[] = [
                 'title'      => $article->title,
                 'summary'    => substr((string) $article->description, 0, 200),
-                'reason'     => 'Hochaktueller Artikel',
                 'article_id' => (int) $article->id,
             ];
         }
