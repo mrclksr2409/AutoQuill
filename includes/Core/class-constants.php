@@ -71,53 +71,36 @@ class Constants {
     }
 
     public static function default_prompt_title(): string {
-        return "Erzeuge einen prägnanten, klickstarken Blog-Titel auf Deutsch.\n\n"
-            . "Ausgangsthema (vorläufig): '{topic_title}'\n\n"
-            . "{source_block}"
-            . "Vorgaben:\n"
+        return "Vorgaben für das Feld \"title\":\n"
+            . "- prägnant und klickstark, auf Deutsch\n"
             . "- maximal ~70 Zeichen\n"
             . "- keine Anführungszeichen, keine Emojis, kein Punkt am Ende\n"
             . "- spiegelt den Inhalt des Quelltexts wider, kein Clickbait ohne Substanz\n"
-            . "- darf vom vorläufigen Titel abweichen, wenn dadurch ein besserer Titel entsteht\n\n"
-            . "Antworte AUSSCHLIESSLICH mit einem gültigen JSON-Objekt (kein Markdown, kein Codeblock):\n"
-            . "{\n  \"title\": \"<dein Titel>\"\n}";
+            . "- darf vom Ausgangsthema \"{topic_title}\" abweichen, wenn dadurch ein besserer Titel entsteht";
     }
 
     public static function default_prompt_body(): string {
-        return "Schreibe einen ausführlichen, professionellen Blog-Post mit dem Titel: '{title}'\n\n"
-            . "{source_block}"
-            . "Der Post sollte:\n"
-            . "- 800-1200 Wörter lang sein\n"
-            . "- Mit einer ansprechenden Einleitung beginnen\n"
-            . "- 3-4 Hauptabschnitte mit Zwischenüberschriften (<h2>) haben\n"
-            . "- Mit einem Fazit enden\n"
+        return "Vorgaben für das Feld \"content\":\n"
+            . "- ausführlicher, professioneller Blog-Post, 800-1200 Wörter\n"
+            . "- mit einer ansprechenden Einleitung beginnen\n"
+            . "- 3-4 Hauptabschnitte mit Zwischenüberschriften (<h2>)\n"
+            . "- mit einem Fazit enden\n"
             . "- HTML-Formatierung verwenden (aber ohne <html>, <body> etc.)\n"
-            . "- Ausschließlich Fakten aus dem obigen Quelltext verwenden und paraphrasieren (kein wörtliches Kopieren)\n\n"
-            . "Antworte AUSSCHLIESSLICH mit einem gültigen JSON-Objekt (kein Markdown, kein Codeblock):\n"
-            . "{\n  \"content\": \"<HTML-Inhalt des Blog-Posts>\"\n}";
+            . "- ausschließlich Fakten aus dem obigen Quelltext verwenden und paraphrasieren (kein wörtliches Kopieren)";
     }
 
     public static function default_prompt_excerpt(): string {
-        return "Erstelle einen kurzen, für Social Media optimierten Auszug zum Beitrag mit dem Titel '{title}'.\n\n"
-            . "Beitragstext (Auszug):\n{content_excerpt}\n\n"
-            . "Vorgaben:\n"
+        return "Vorgaben für das Feld \"excerpt\":\n"
+            . "- kurzer, für Social Media optimierter Auszug auf Deutsch\n"
             . "- 1-2 Sätze\n"
             . "- maximal ~250 Zeichen\n"
-            . "- mit einem Hook, der zum Klicken animiert\n"
-            . "- auf Deutsch\n\n"
-            . "Antworte AUSSCHLIESSLICH mit einem gültigen JSON-Objekt (kein Markdown, kein Codeblock):\n"
-            . "{\n  \"excerpt\": \"<Auszug>\"\n}";
+            . "- mit einem Hook, der zum Klicken animiert";
     }
 
     public static function default_prompt_category(): string {
-        return "Ordne den folgenden Blog-Beitrag den passenden Kategorien zu.\n\n"
-            . "Titel: {title}\n\n"
-            . "Beitragstext (Auszug):\n{content_excerpt}\n\n"
-            . "Verfügbare Kategorien:\n{categories_list}\n"
-            . "Vorgaben:\n"
+        return "Vorgaben für das Feld \"category_ids\":\n"
             . "- wähle 1 bis 3 IDs, die thematisch wirklich passen\n"
-            . "- ausschließlich IDs aus der obigen Liste\n\n"
-            . "Antworte AUSSCHLIESSLICH mit einem gültigen JSON-Objekt (kein Markdown, kein Codeblock):\n"
-            . "{\n  \"category_ids\": [<IDs>]\n}";
+            . "- ausschließlich IDs aus der Liste der verfügbaren Kategorien ({categories_list})\n"
+            . "- als Array von Integer-IDs";
     }
 }

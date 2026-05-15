@@ -266,6 +266,9 @@ class Settings {
                 </div>
 
                 <div class="auto-quill-tab-panel" data-tab="prompts" style="display:none;">
+                    <p class="description" style="margin: 1em 0;">
+                        <?php esc_html_e('Die vier Vorgaben unten werden zu einer einzigen KI-Anfrage zusammengeführt. Die KI antwortet mit einem gemeinsamen JSON-Objekt, das Titel, Beitragstext, Auszug und Kategorien enthält. Quelltext und Kategorienliste werden automatisch ergänzt – die Felder unten sollten nur die inhaltlichen Vorgaben pro Bestandteil beschreiben (kein eigenes JSON-Schema und keine "Antworte mit JSON …"-Hinweise mehr nötig).', 'auto-quill'); ?>
+                    </p>
                     <table class="form-table">
                         <tr>
                             <th scope="row">
@@ -277,8 +280,8 @@ class Settings {
                                     echo esc_textarea($settings['prompt_title'] ?? C::defaults()['prompt_title']);
                                 ?></textarea>
                                 <p class="description">
-                                    <?php esc_html_e('Anweisungen für die KI zur Erzeugung des Beitrags-Titels. Unterstützte Platzhalter:', 'auto-quill'); ?>
-                                    <code>{topic_title}</code>, <code>{source_block}</code>
+                                    <?php esc_html_e('Inhaltliche Vorgaben für den Beitragstitel. Unterstützter Platzhalter:', 'auto-quill'); ?>
+                                    <code>{topic_title}</code>
                                 </p>
                             </td>
                         </tr>
@@ -293,8 +296,7 @@ class Settings {
                                     echo esc_textarea($settings['prompt_body'] ?? C::defaults()['prompt_body']);
                                 ?></textarea>
                                 <p class="description">
-                                    <?php esc_html_e('Anweisungen für die KI zur Erstellung des Blog-Beitrags. Unterstützte Platzhalter:', 'auto-quill'); ?>
-                                    <code>{title}</code>, <code>{source_block}</code>
+                                    <?php esc_html_e('Inhaltliche Vorgaben für den Beitragstext (Länge, Struktur, Stil). Quelltext wird automatisch in der kombinierten Anfrage ergänzt.', 'auto-quill'); ?>
                                 </p>
                             </td>
                         </tr>
@@ -309,8 +311,7 @@ class Settings {
                                     echo esc_textarea($settings['prompt_excerpt'] ?? C::defaults()['prompt_excerpt']);
                                 ?></textarea>
                                 <p class="description">
-                                    <?php esc_html_e('Anweisungen für die KI zur Erstellung des Auszugs. Unterstützte Platzhalter:', 'auto-quill'); ?>
-                                    <code>{title}</code>, <code>{content_excerpt}</code>
+                                    <?php esc_html_e('Inhaltliche Vorgaben für den Social-Media-Auszug (Länge, Tonalität, Hook).', 'auto-quill'); ?>
                                 </p>
                             </td>
                         </tr>
@@ -325,8 +326,8 @@ class Settings {
                                     echo esc_textarea($settings['prompt_category'] ?? C::defaults()['prompt_category']);
                                 ?></textarea>
                                 <p class="description">
-                                    <?php esc_html_e('Anweisungen für die KI zur Auswahl der Kategorien. Unterstützte Platzhalter:', 'auto-quill'); ?>
-                                    <code>{title}</code>, <code>{content_excerpt}</code>, <code>{categories_list}</code>
+                                    <?php esc_html_e('Vorgaben für die Kategorienzuordnung. Unterstützter Platzhalter:', 'auto-quill'); ?>
+                                    <code>{categories_list}</code>
                                 </p>
                             </td>
                         </tr>
