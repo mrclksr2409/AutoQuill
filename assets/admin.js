@@ -39,6 +39,14 @@
             $(document).on('click', '#auto-quill-image-next', this.nextImagePage.bind(this));
             $(document).on('click', '.auto-quill-image-card', this.onImageCardClick.bind(this));
             $(document).on('keydown', this.onKeydown.bind(this));
+
+            console.log('[AutoQuill] bindEvents ran. pick-image-btn count:',
+                $('#auto-quill-pick-image-btn').length,
+                'modal count:', $('#auto-quill-image-modal').length);
+
+            $('#auto-quill-pick-image-btn')
+                .off('click.aqDirect')
+                .on('click.aqDirect', this.openImagePicker.bind(this));
         },
 
         onKeydown: function(e) {
@@ -250,9 +258,15 @@
 
         openImagePicker: function(e) {
             if (e && e.preventDefault) { e.preventDefault(); }
+            console.log('[AutoQuill] openImagePicker fired',
+                e && e.type, e && e.target && e.target.id);
 
             const $modal = $('#auto-quill-image-modal');
+            console.log('[AutoQuill] modal found:', $modal.length,
+                'hidden before:', $modal.prop('hidden'));
             $modal.prop('hidden', false).attr('aria-hidden', 'false');
+            console.log('[AutoQuill] hidden after:', $modal.prop('hidden'),
+                'computed display:', $modal.length ? getComputedStyle($modal[0]).display : 'n/a');
 
             $('#auto-quill-image-grid').empty();
             $('#auto-quill-image-pagination').prop('hidden', true);
