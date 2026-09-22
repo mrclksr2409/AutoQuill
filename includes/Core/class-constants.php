@@ -29,13 +29,25 @@ class Constants {
     const ACTION_FETCH    = 'auto_quill_fetch_now';
     const ACTION_RECRAWL  = 'auto_quill_recrawl_topics';
     const ACTION_RESELECT = 'auto_quill_reselect_topics';
+    const ACTION_TEST_MAIL = 'auto_quill_test_mail';
 
     const NONCE_SCOPE    = 'auto-quill-nonce';
     const NONCE_GENERATE = 'auto_quill_generate';
+    const NONCE_TEST_MAIL = 'auto_quill_test_mail_nonce';
     const NOTICE_KEY_FMT = 'auto_quill_notice_%d';
 
     const CRON_FETCH  = 'auto_quill_daily_fetch';
     const CRON_SELECT = 'auto_quill_daily_select';
+    const CRON_DIGEST = 'auto_quill_daily_digest';
+
+    /** UTC timestamp of the last sent digest. */
+    const OPTION_LAST_DIGEST = 'auto_quill_last_digest';
+
+    /** Sections a digest can contain. */
+    const NOTIFY_EVENTS = ['topics', 'errors', 'posts'];
+
+    /** How far back a digest may ever look, bounded by the log retention. */
+    const DIGEST_MAX_WINDOW_DAYS = 7;
 
     const DEFAULT_SOURCE_LINK_TEMPLATE = 'Quelle: {source_link}';
 
@@ -44,6 +56,16 @@ class Constants {
     const META_SOURCE_URL    = '_auto_quill_source_url';
     const META_ARTICLE_TITLE = '_auto_quill_article_title';
     const META_FEED_NAME     = '_auto_quill_feed_name';
+
+    /**
+     * UTC timestamp, written for EVERY post AutoQuill creates.
+     *
+     * The provenance keys above are skipped when no source article resolves,
+     * and topics.post_id / articles.post_id are both lossy (one topics row per
+     * day, and articles are pruned by the retention pass), so this is the only
+     * reliable marker for "AutoQuill made this post".
+     */
+    const META_GENERATED_AT  = '_auto_quill_generated_at';
 
     const DEFAULT_OPENAI_MODEL = 'gpt-4o-mini';
     const DEFAULT_CLAUDE_MODEL = 'claude-sonnet-4-6';
@@ -101,6 +123,14 @@ class Constants {
             'prompt_category' => self::default_prompt_category(),
             'debug_logging'   => false,
             'beta_mode'       => false,
+            // Off by default: a plugin that starts mailing after an update is a
+            // nuisance. Existing installs never receive new default keys, so
+            // every read must fall back through defaults() explicitly.
+            'notify_enabled' => false,
+            'notify_time'    => '08:00',
+            'notify_users'   => [],
+            'notify_emails'  => [],
+            'notify_events'  => self::NOTIFY_EVENTS,
         ];
     }
 

@@ -714,3 +714,36 @@
     gap: 8px;
     margin: 10px 0 0;
 }
+
+/* Notification recipients */
+.auto-quill-user-list {
+    max-height: 220px;
+    overflow-y: auto;
+    padding: 8px 10px;
+    background: #fff;
+    border: 1px solid #dcdcde;
+    border-radius: 4px;
+}
+
+.auto-quill-user-list label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 13px;
+}
+
+.auto-quill-user-list .description {
+    margin-left: 6px;
+    color: #666;
+}
+
+.auto-quill-test-mail {
+    margin-top: 20px;
+    padding: 15px 20px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.auto-quill-test-mail h2 {
+    margin-top: 0;
+}

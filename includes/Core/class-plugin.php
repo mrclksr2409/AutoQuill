@@ -21,6 +21,7 @@ class Plugin {
         AdminMenu::boot();
         LogsPage::boot();
         PostMetaBox::boot();
+        Notifier::boot();
         RestController::boot();
         Updater::boot();
 
@@ -33,6 +34,10 @@ class Plugin {
         if (!wp_next_scheduled(Constants::CRON_SELECT)) {
             wp_schedule_event(time() + 3600, 'daily', Constants::CRON_SELECT);
         }
+
+        // Gated on the setting, unlike the two above: an upgrade must never
+        // start sending mail on its own.
+        Notifier::ensure_scheduled();
     }
 
     public static function load_textdomain(): void {

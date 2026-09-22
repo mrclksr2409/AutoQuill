@@ -2,7 +2,7 @@
 
 # Entwicklungs-Notizen
 
-Stand: Version 1.3.1 / DB-Version 1.4
+Stand: Version 1.4.0 / DB-Version 1.4
 
 ## Projektstruktur
 
@@ -22,6 +22,7 @@ auto-quill/
 │   │   ├── class-activator.php
 │   │   ├── class-deactivator.php
 │   │   ├── class-logger.php            # Logging in wp_auto_quill_logs
+│   │   ├── class-notifier.php         # Tagesbericht per E-Mail
 │   │   └── class-updater.php           # Plugin Update Checker (GitHub Releases / main)
 │   │
 │   ├── Database/
@@ -119,6 +120,68 @@ Client liefert dann `WP_Error('truncated')` und die tägliche Selektion bricht k
 - `resolve_linked_posts(array $items)` — Beiträge im Bulk auflösen (eine Meta-Query, ein `get_posts()`)
 - `rating_class(int $rating)` — `is-rating-high|mid|low`
 
+## Tagesbericht (`Core/class-notifier.php`)
+
+**Kein Ereignis-Speicher.** Der Bericht wird zum Sendezeitpunkt aus vorhandenen Daten gebaut:
+
+| Abschnitt | Quelle |
+|---|---|
+| Top-Themen | `TopicsRepository::since()` über `updated_at` |
+| Fehler/Warnungen | `Logger::query(['levels' => ['error','warning'], 'since' => …])` |
+| Erstellte Posts | `get_posts()` mit `meta_query` auf `_auto_quill_generated_at` |
+
+Warum nicht anders herum:
+- `Logger::info()` schreibt **nur bei aktivem `debug_logging`**, und genau dort liegt „Post erstellt".
+  Ein Bericht aus der Log-Tabelle wäre im Standardfall immer ohne Posts. `error()`/`warning()`
+  schreiben immer — deshalb ist nur der Fehler-Abschnitt aus dem Log ableitbar.
+- `topics.post_id` ist wegen `UNIQUE KEY topic_date` eine Zeile pro Tag und wird überschrieben;
+  `articles.post_id` verschwindet mit dem Retention-Lauf; die Provenienz-Meta wird übersprungen,
+  wenn kein Quellartikel auflösbar ist. `_auto_quill_generated_at` wird deshalb **bedingungslos**
+  geschrieben, direkt nach dem `is_wp_error($post_id)`-Check.
+
+### Zeitzonen-Vertrag
+
+Drei Werte, drei Bezugssysteme — hier gehen die Fehler los:
+
+| Wert | Bezug | Formatierung |
+|---|---|---|
+| `logs.created_at`, `topics.updated_at` | **lokal** (`current_time('mysql')`) | `wp_date('Y-m-d H:i:s')` |
+| `_auto_quill_generated_at`, `auto_quill_last_digest` | **UTC-Integer** | `time()` |
+| `wp_schedule_single_event()` | **UTC-Epoch** | `next_run_timestamp()` |
+
+`gmdate()` für einen `since`-Vergleich gegen `created_at` wäre um den UTC-Versatz der Seite daneben
+und würde täglich bereits versendete Einträge erneut melden. Die UTC-Integer bei Meta und Option
+sind bewusst so gewählt: Sie brauchen gar keine Umrechnung und überstehen eine Zeitzonen-Umstellung.
+
+### Terminplanung
+
+`CRON_DIGEST` läuft **nicht** als `daily`-Event. WordPress' `daily` ist ein fester
+86400-Sekunden-Takt; nach der Zeitumstellung würde aus 08:00 dauerhaft 07:00. Stattdessen
+`wp_schedule_single_event()` mit Neuverkettung: Der nächste Termin wird **am Anfang** von
+`run_digest()` gesetzt, bevor irgendeine Arbeit passiert, damit ein Fehler die Kette nicht reißt.
+
+Anders als `CRON_FETCH`/`CRON_SELECT` ist die Planung auf `notify_enabled` **gated** —
+`Notifier::ensure_scheduled()` räumt den Termin ab, wenn abgeschaltet wird. Jeder Schreibzugriff auf
+die Option löst `reschedule()` aus, weil der `wp_next_scheduled`-Guard eine *geänderte Uhrzeit*
+nicht erkennen kann.
+
+### Robustheit
+
+- Fenster auf `DIGEST_MAX_WINDOW_DAYS` (7) begrenzt — länger kann das Log ohnehin nicht antworten.
+- `auto_quill_last_digest` wird **vor** dem Versand fortgeschrieben, auch wenn nichts zu berichten
+  war. `wp_mail()` kann unter SMTP-Plugins werfen, und im Cron sieht das niemand.
+- Doppelauslösungs-Guard: Läuft der letzte Bericht weniger als eine Stunde zurück, Abbruch.
+- `cleanup()` löscht bei `MAX_ENTRIES` **älteste zuerst, unabhängig vom Level**. Der Bericht
+  vergleicht `Logger::count()` mit der Trefferzahl und schreibt „mindestens N", wenn abgeschnitten.
+
+### Mail
+
+Reiner Text — HTML bräuchte den globalen Filter `wp_mail_content_type`, der fremde Plugin-Mails
+mitreißt, wenn er hängen bleibt. Der Body wird **nicht** escaped, sonst stünden Entities wörtlich
+drin. **Eine Mail pro Empfänger**, sonst sieht jeder Admin die Adressen aller anderen.
+`get_edit_post_link()` ist im Cron unbrauchbar (es prüft `current_user_can`), Links werden deshalb
+von Hand gebaut. Kein globaler `wp_mail_from`-Filter.
+
 ## Verträge, die man kennen muss
 
 ### Eingabe der Post-Generierung
@@ -159,6 +222,7 @@ haben weder `rating` noch `rating_reason` — jeder Leser muss das aushalten.
 | `_auto_quill_article_id` | ID der Artikel-Zeile (darf verwaisen) |
 | `_auto_quill_article_title` | Titel des Originalartikels |
 | `_auto_quill_feed_name` | Name der RSS-Quelle |
+| `_auto_quill_generated_at` | UTC-Zeitstempel, **bedingungslos** für jeden erzeugten Beitrag |
 
 Alle mit Unterstrich, also protected meta, nicht in REST. Geschrieben in
 `PostsService::link_source_article()`, entfernt in `uninstall.php` per `delete_post_meta_by_key()`.
@@ -326,6 +390,7 @@ unbemerkt nie geschrieben wird.
 ### Actions
 - `auto_quill_daily_fetch` — RSS-Fetch
 - `auto_quill_daily_select` — Themen-Selektion
+- `auto_quill_daily_digest` — Tagesbericht (nur geplant, wenn aktiviert)
 - `auto_quill_topics_selected` — nach der Selektion, Parameter `$topics`
 
 ### Filters
@@ -426,6 +491,7 @@ zeigt einen Erfolgskasten statt neu zu laden. Ein Reload würde die Generierung 
 - [ ] WP-CLI-Kommandos
 - [ ] `posts_per_day` ist in den Defaults vorhanden, hat aber keine UI und wird nirgends gelesen
 - [ ] `autoQuill.fetchAction` wird lokalisiert, aber von keinem Skript gelesen
+- [ ] `StatusPanel` maskiert im Options-Dump nur `ai_api_key`, nicht `pixabay_api_key`
 - [ ] `Fetcher::fetch_feeds()` ruft am Ende `do_action(CRON_SELECT)` auf, wodurch die Selektion an
       einem Cron-Tag zweimal läuft
 - [ ] `fetch_article_content()` speichert rohes HTML ohne Readability-Extraktion

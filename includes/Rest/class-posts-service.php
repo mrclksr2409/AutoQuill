@@ -84,6 +84,12 @@ class PostsService {
             return new \WP_REST_Response(['error' => $post_id->get_error_message()], 500);
         }
 
+        // Written before mark_published() and link_source_article() so the
+        // marker survives either of them failing, and unconditionally because
+        // the provenance meta below is skipped when no article resolves.
+        // A UTC integer keeps the digest query free of timezone reasoning.
+        update_post_meta((int) $post_id, C::META_GENERATED_AT, time());
+
         if ($topic_id > 0) {
             (new TopicsRepository())->mark_published($topic_id, (int) $post_id);
         }

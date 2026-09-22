@@ -15,6 +15,7 @@ Ein intelligentes WordPress-Plugin, das automatisch RSS-Feeds überwacht, tägli
 ✅ **REST API** - Volle API-Integration  
 ✅ **OpenAI & Claude Support** - Flexible KI-Provider  
 ✅ **Sichere Konfiguration** - Sichere Speicherung von API-Keys  
+✅ **Tagesbericht per E-Mail** - Einmal täglich, mit einstellbaren Empfängern und Uhrzeit  
 
 ## Installation
 
@@ -75,7 +76,8 @@ Ein intelligentes WordPress-Plugin, das automatisch RSS-Feeds überwacht, tägli
   Links steht der Originaltext, rechts entsteht der Beitrag. Während die KI arbeitet, läuft ein
   Spinner mit Sekundenzähler.
 - **RSS Quellen**: Feed-Verwaltung (hinzufügen/löschen)
-- **Einstellungen**: KI-Provider, API-Keys, Veröffentlichung, Quellenangabe, Prompts, Updates, Debug
+- **Einstellungen**: KI-Provider, API-Keys, Veröffentlichung, Quellenangabe, Prompts,
+  Benachrichtigungen, Updates, Debug
 
 ## Konfiguration
 
@@ -94,6 +96,30 @@ Ein intelligentes WordPress-Plugin, das automatisch RSS-Feeds überwacht, tägli
 | **Prompts** | Prompts | Vorgaben für Titel, Beitragstext, Auszug, Kategorie | siehe Tab |
 | **Beta-Modus** | Updates | Updates vom `main`-Branch statt nur aus Releases | Aus |
 | **Debug-Logging** | Debug | Info-/Debug-Einträge mitschreiben | Aus |
+| **Tagesbericht** | Benachrichtigungen | Täglich eine Zusammenfassung per E-Mail | Aus |
+| **Uhrzeit** | Benachrichtigungen | Wann der Bericht verschickt wird (Ortszeit) | 08:00 |
+| **Inhalte** | Benachrichtigungen | Top-Themen, Fehler und Warnungen, erstellte Posts | alle drei |
+| **Empfänger: Benutzer** | Benachrichtigungen | Auswahl aus den Administratoren | – |
+| **Weitere Adressen** | Benachrichtigungen | Zusätzliche Adressen, eine pro Zeile | – |
+
+#### Tagesbericht
+
+Der Bericht fasst zusammen, was seit der letzten Mail passiert ist. **Gibt es nichts zu berichten,
+wird auch nichts verschickt.** Wiederholte Fehlermeldungen werden gebündelt („13× OpenAI API-Fehler")
+statt einzeln aufgelistet.
+
+Zwei Dinge sind gut zu wissen:
+
+- Die Empfängerauswahl speichert **Benutzer-IDs**, nicht Adressen — eine geänderte Mailadresse wirkt
+  also sofort, und gelöschte oder degradierte Benutzer fallen automatisch heraus. Für Verteiler ohne
+  WordPress-Konto ist das Freitextfeld da.
+- Der Fehler-Abschnitt kann nur berichten, was noch im Log steht. Das Log hält maximal 7 Tage bzw.
+  500 Einträge und räumt **älteste zuerst** ab, unabhängig vom Level — bei aktivem Debug-Logging
+  kann das die Fehlerhistorie verdrängen. Der Bericht weist darauf hin, wenn er abgeschnitten wurde.
+
+Ob die Mail tatsächlich ankommt, hängt an der Mail-Konfiguration der Seite. Der Knopf
+**„Test-Mail an alle Empfänger senden"** im selben Tab prüft das sofort, statt bis zum nächsten
+Morgen zu warten.
 
 #### Platzhalter im Quellenhinweis
 
@@ -221,6 +247,7 @@ define('ALTERNATE_WP_CRON', true);
 | `auto_quill_daily_fetch` | – | Startet den RSS-Abruf |
 | `auto_quill_daily_select` | – | Startet die Themen-Selektion |
 | `auto_quill_topics_selected` | `$topics` | Läuft nach der Themen-Selektion |
+| `auto_quill_daily_digest` | – | Versendet den Tagesbericht |
 
 ### Filter
 
@@ -236,6 +263,24 @@ und bezieht Updates aus GitHub Releases. WordPress prüft automatisch und zeigt 
 stattdessen dem `main`-Branch.
 
 ## Changelog
+
+### [1.4.0] — 2026-09-22
+
+#### Added
+- Tagesbericht per E-Mail mit neuem Einstellungs-Tab „Benachrichtigungen": Empfänger als Auswahl
+  aus den Administratoren plus Freitextfeld für weitere Adressen, frei wählbare Uhrzeit und
+  Auswahl der Inhalte (neue Top-Themen, Fehler und Warnungen, erstellte Blog-Posts).
+- Knopf „Test-Mail an alle Empfänger senden", damit sich der Versand sofort prüfen lässt.
+- Das Status-Panel zeigt die nächste Berichts-Laufzeit und die Zahl der gültigen Empfänger.
+- Neue Post-Meta `_auto_quill_generated_at` als verlässlicher Marker für „von AutoQuill erstellt".
+  **Nicht rückwirkend** — der erste Bericht kennt nur Beiträge, die nach diesem Update entstanden sind.
+
+#### Changed
+- `Logger::query()` versteht jetzt eine Level-Liste und eine Sortierrichtung; neu ist `Logger::count()`.
+
+#### Fixed
+- `Logger::cleanup()` bildete die Altersgrenze mit `gmdate()`, verglich sie aber gegen lokal
+  geschriebene Zeitstempel — Einträge wurden um den UTC-Versatz der Seite zu spät gelöscht.
 
 ### [1.3.1] — 2026-09-22
 
@@ -334,7 +379,7 @@ GPL v2 oder später. Siehe `LICENSE` für Details.
 - [ ] Mehrere KI-Provider gleichzeitig
 - [ ] Social-Media-Sharing
 - [ ] Custom Prompt-Templates
-- [ ] Admin-Benachrichtigungen per Email
+- [x] Admin-Benachrichtigungen per Email
 - [ ] Artikel-Kategorisierung
 - [ ] Multi-Language-Support
 

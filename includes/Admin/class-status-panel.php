@@ -2,6 +2,7 @@
 namespace AutoQuill\Admin;
 
 use AutoQuill\Core\Constants as C;
+use AutoQuill\Core\Notifier;
 use AutoQuill\Database\Schema;
 
 class StatusPanel {
@@ -19,6 +20,9 @@ class StatusPanel {
 
         $next_fetch  = wp_next_scheduled(C::CRON_FETCH);
         $next_select = wp_next_scheduled(C::CRON_SELECT);
+        $next_digest = wp_next_scheduled(C::CRON_DIGEST);
+        $notify_on   = Notifier::is_enabled();
+        $recipients  = $notify_on ? Notifier::recipients() : [];
         ?>
         <h2 style="margin-top:2em;"><?php esc_html_e('Status', 'auto-quill'); ?></h2>
         <table class="widefat striped" style="max-width:720px;">
@@ -63,6 +67,31 @@ class StatusPanel {
                     <th><?php esc_html_e('Nächste Themen-Auswahl', 'auto-quill'); ?></th>
                     <td>
                         <?php echo $next_select ? esc_html(date_i18n('Y-m-d H:i', $next_select)) : esc_html__('nicht geplant', 'auto-quill'); ?>
+                    </td>
+                </tr>
+                <tr>
+                    <th><?php esc_html_e('Nächster Tagesbericht', 'auto-quill'); ?></th>
+                    <td>
+                        <?php if (!$notify_on): ?>
+                            <?php esc_html_e('Benachrichtigungen sind deaktiviert', 'auto-quill'); ?>
+                        <?php elseif ($next_digest): ?>
+                            <?php echo esc_html(date_i18n('Y-m-d H:i', $next_digest)); ?>
+                            <?php if (empty($recipients)): ?>
+                                <span style="color:#a00;">
+                                    (<?php esc_html_e('kein gültiger Empfänger', 'auto-quill'); ?>)
+                                </span>
+                            <?php else: ?>
+                                <span class="description">
+                                    <?php echo esc_html(sprintf(
+                                        /* translators: %d: number of recipients */
+                                        _n('%d Empfänger', '%d Empfänger', count($recipients), 'auto-quill'),
+                                        count($recipients)
+                                    )); ?>
+                                </span>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            <span style="color:#a00;"><?php esc_html_e('nicht geplant', 'auto-quill'); ?></span>
+                        <?php endif; ?>
                     </td>
                 </tr>
             </tbody>

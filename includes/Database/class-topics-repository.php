@@ -113,6 +113,29 @@ class TopicsRepository {
         return true;
     }
 
+    /**
+     * Topic rows touched since a point in time.
+     *
+     * Filters on updated_at (DATETIME) rather than topic_date (a DATE, which
+     * would silently truncate a timestamp comparison). updated_at is also what
+     * actually moves on both insert and re-selection.
+     *
+     * @param string $local_datetime Local 'Y-m-d H:i:s' - the column is written
+     *                               with current_time('mysql').
+     */
+    public function since(string $local_datetime, int $limit = 20): array {
+        global $wpdb;
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$this->table()}
+             WHERE updated_at >= %s
+             ORDER BY topic_date DESC
+             LIMIT %d",
+            $local_datetime,
+            max(1, min(100, $limit))
+        ));
+        return $rows ?: [];
+    }
+
     public function count(): int {
         global $wpdb;
         return (int) $wpdb->get_var("SELECT COUNT(*) FROM {$this->table()}");
