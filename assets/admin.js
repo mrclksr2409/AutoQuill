@@ -16,11 +16,17 @@
         restNonce: autoQuill.restNonce || autoQuill.nonce,
         currentTopic: null,
         currentTopicId: null,
+        currentTopicIndex: -1,
+        currentArticleId: 0,
         selectedImage: null,
         imageQuery: '',
         imagePage: 1,
         imageTotalHits: 0,
         imagePerPage: 20,
+        feedPage: 1,
+        feedPerPage: 20,
+        feedPages: 1,
+        feedLoaded: false,
 
         init: function() {
             this.bindEvents();
@@ -28,6 +34,11 @@
 
         bindEvents: function() {
             $(document).on('click', '.auto-quill-select-topic', this.selectTopic.bind(this));
+            $(document).on('click', '.auto-quill-select-article', this.selectArticle.bind(this));
+            $(document).on('click', '#auto-quill-feed-apply', this.applyFeedFilters.bind(this));
+            $(document).on('click', '#auto-quill-feed-prev', this.prevFeedPage.bind(this));
+            $(document).on('click', '#auto-quill-feed-next', this.nextFeedPage.bind(this));
+            $(document).on('keydown', '#auto-quill-feed-search', this.onFeedSearchKeydown.bind(this));
             $(document).on('click', '#publish-post-btn', this.publishPost.bind(this));
             $(document).on('click', '#auto-quill-recrawl-btn', this.recrawl.bind(this));
             $(document).on('click', '#auto-quill-reselect-btn', this.reselect.bind(this));
@@ -110,13 +121,34 @@
         selectTopic: function(e) {
             e.preventDefault();
             const $card = $(e.target).closest('.topic-card');
-            const topicId = parseInt($card.data('topic-id'), 10);
-            const title = $card.find('h3').text();
+            const topicIndex = parseInt($card.data('topic-index'), 10);
 
-            this.generateBlogPost(topicId, title);
+            // topic_index is the exact key into the stored topics array; the
+            // old title match broke on whitespace and duplicate titles.
+            this.generateBlogPost({
+                topic_id: parseInt($card.data('topic-id'), 10),
+                topic_index: isNaN(topicIndex) ? -1 : topicIndex,
+            });
         },
 
-        generateBlogPost: function(topicId, title) {
+        selectArticle: function(e) {
+            e.preventDefault();
+            const articleId = parseInt($(e.currentTarget).data('article-id'), 10);
+            if (isNaN(articleId) || articleId <= 0) {
+                return;
+            }
+            this.generateBlogPost({ article_id: articleId });
+
+            const $preview = $('#post-preview');
+            if ($preview.length && $preview[0].scrollIntoView) {
+                $preview[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        },
+
+        /**
+         * @param {{topic_id?: number, topic_index?: number, article_id?: number}} params
+         */
+        generateBlogPost: function(params) {
             const $preview = $('#post-preview');
             $preview.empty().append(
                 $('<p>').addClass('auto-quill-loading').text(t('generating'))
@@ -126,10 +158,7 @@
                 url: this.apiUrl + 'generate-post',
                 type: 'POST',
                 dataType: 'json',
-                data: JSON.stringify({
-                    topic_id: topicId,
-                    title: title,
-                }),
+                data: JSON.stringify(params),
                 headers: {
                     'X-WP-Nonce': this.restNonce,
                     'Content-Type': 'application/json',
@@ -140,6 +169,10 @@
                         $('#publish-post-btn').show().data('post-content', response.post_content);
                         this.currentTopic = response.topic;
                         this.currentTopicId = response.topic_id;
+                        this.currentTopicIndex = typeof response.topic_index === 'number'
+                            ? response.topic_index
+                            : -1;
+                        this.currentArticleId = parseInt(response.article_id, 10) || 0;
                         this.renderMetaFields(
                             response.post_title || (response.topic && response.topic.title) || '',
                             response.post_excerpt || '',
@@ -154,11 +187,28 @@
                 },
                 error: (xhr, status, error) => {
                     console.error('Error:', error);
-                    const msg = (xhr && xhr.responseJSON && xhr.responseJSON.error)
-                        || t('generateError');
-                    this.showAlert(msg, 'error');
+                    this.showAlert(this.errorMessage(xhr, 'generateError'), 'error');
                 },
             });
+        },
+
+        /**
+         * Picks the most useful message for a failed REST call. An expired
+         * cookie nonce comes back as a bare 403 and used to surface as a
+         * generic error.
+         */
+        errorMessage: function(xhr, fallbackKey) {
+            const json = xhr && xhr.responseJSON;
+            if (json && json.code === 'rest_cookie_invalid_nonce') {
+                return t('sessionExpired');
+            }
+            if (json && json.error) {
+                return json.error;
+            }
+            if (xhr && xhr.status === 403) {
+                return t('sessionExpired');
+            }
+            return t(fallbackKey);
         },
 
         renderMetaFields: function(title, excerpt, availableCategories, selectedIds) {
@@ -205,6 +255,7 @@
                 post_excerpt: postExcerpt,
                 category_ids: categoryIds,
                 topic_id: this.currentTopicId,
+                article_id: this.currentArticleId,
             };
             if (this.selectedImage && this.selectedImage.url) {
                 payload.image_url = this.selectedImage.url;
@@ -232,13 +283,94 @@
                 },
                 error: (xhr, status, error) => {
                     console.error('Error:', error);
-                    this.showAlert(t('publishError'), 'error');
+                    this.showAlert(this.errorMessage(xhr, 'publishError'), 'error');
                 },
                 complete: () => {
                     const label = (window.autoQuill && window.autoQuill.publishButtonLabel) || t('publishSuccess');
                     $btn.prop('disabled', false).text(label);
                 },
             });
+        },
+
+        applyFeedFilters: function(e) {
+            if (e && e.preventDefault) { e.preventDefault(); }
+            this.loadFeed(1);
+        },
+
+        onFeedSearchKeydown: function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.loadFeed(1);
+            }
+        },
+
+        prevFeedPage: function(e) {
+            e.preventDefault();
+            if (this.feedPage > 1) {
+                this.loadFeed(this.feedPage - 1);
+            }
+        },
+
+        nextFeedPage: function(e) {
+            e.preventDefault();
+            if (this.feedPage < this.feedPages) {
+                this.loadFeed(this.feedPage + 1);
+            }
+        },
+
+        loadFeed: function(page) {
+            const $body = $('#auto-quill-feed-body');
+            if (!$body.length) {
+                return;
+            }
+
+            this.setFeedStatus(t('loadingFeed'), false);
+            $('#auto-quill-feed-pagination').prop('hidden', true);
+
+            $.ajax({
+                url: this.apiUrl + 'articles',
+                type: 'GET',
+                dataType: 'json',
+                data: {
+                    page: page,
+                    per_page: this.feedPerPage,
+                    source_id: parseInt($('#auto-quill-feed-source').val(), 10) || 0,
+                    search: ($('#auto-quill-feed-search').val() || '').trim(),
+                    linked: $('#auto-quill-feed-unlinked').is(':checked') ? 'unlinked' : 'all',
+                },
+                headers: { 'X-WP-Nonce': this.restNonce },
+            }).done((response) => {
+                // The markup is rendered and escaped server-side; see
+                // Dashboard::render_feed_rows().
+                $body.html((response && response.html) || '');
+
+                this.feedLoaded = true;
+                this.feedPage = (response && response.page) || 1;
+                this.feedPages = (response && response.pages) || 1;
+
+                this.setFeedStatus('', false);
+
+                $('#auto-quill-feed-page-info').text(
+                    (t('feedPageInfo') || 'Seite %1$d von %2$d')
+                        .replace('%1$d', this.feedPage)
+                        .replace('%2$d', this.feedPages)
+                        .replace('%3$d', (response && response.total) || 0)
+                );
+                $('#auto-quill-feed-prev').prop('disabled', this.feedPage <= 1);
+                $('#auto-quill-feed-next').prop('disabled', this.feedPage >= this.feedPages);
+                $('#auto-quill-feed-pagination').prop('hidden', this.feedPages <= 1);
+            }).fail((xhr) => {
+                this.setFeedStatus(this.errorMessage(xhr, 'feedLoadError'), true);
+            });
+        },
+
+        setFeedStatus: function(message, isError) {
+            const $status = $('#auto-quill-feed-status');
+            if (!message) {
+                $status.prop('hidden', true).removeClass('is-error').text('');
+                return;
+            }
+            $status.prop('hidden', false).toggleClass('is-error', !!isError).text(message);
         },
 
         resetImageSelection: function() {
@@ -449,6 +581,38 @@
         },
     };
 
+    /**
+     * Deliberately separate from SettingsTabs and scoped to its own classes:
+     * SettingsTabs hides '.auto-quill-tab-panel' globally, and the settings
+     * page relies on that (its StatusPanel sits outside the form). Reusing
+     * those class names here would make the two pages hide each other.
+     */
+    const DashboardTabs = {
+        init: function(onActivate) {
+            const $tabs = $('.auto-quill-dashboard-tabs .nav-tab');
+            if (!$tabs.length) {
+                return;
+            }
+
+            const activate = (tab) => {
+                $tabs.removeClass('nav-tab-active')
+                     .filter('[data-tab="' + tab + '"]').addClass('nav-tab-active');
+                $('.auto-quill-dash-panel').hide()
+                     .filter('[data-tab="' + tab + '"]').show();
+                if (typeof onActivate === 'function') {
+                    onActivate(tab);
+                }
+            };
+
+            $tabs.on('click', function(e) {
+                e.preventDefault();
+                activate($(this).data('tab'));
+            });
+
+            this.activate = activate;
+        },
+    };
+
     const SettingsTabs = {
         init: function() {
             const $tabs = $('.auto-quill-settings-tabs .nav-tab');
@@ -478,5 +642,13 @@
     $(document).ready(() => {
         AutoQuill.init();
         SettingsTabs.init();
+        DashboardTabs.init((tab) => {
+            // Loaded lazily so opening the dashboard costs nothing extra, and
+            // switching tabs never reloads the page - an unpublished generated
+            // post lives only in the browser and would be lost.
+            if (tab === 'articles' && !AutoQuill.feedLoaded) {
+                AutoQuill.loadFeed(1);
+            }
+        });
     });
 })(jQuery);

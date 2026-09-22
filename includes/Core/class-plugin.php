@@ -4,6 +4,7 @@ namespace AutoQuill\Core;
 use AutoQuill\Admin\AdminMenu;
 use AutoQuill\Admin\Dashboard;
 use AutoQuill\Admin\LogsPage;
+use AutoQuill\Admin\PostMetaBox;
 use AutoQuill\Admin\Settings;
 use AutoQuill\Admin\SourcesController;
 use AutoQuill\Database\Schema;
@@ -19,6 +20,7 @@ class Plugin {
         Dashboard::boot();
         AdminMenu::boot();
         LogsPage::boot();
+        PostMetaBox::boot();
         RestController::boot();
         Updater::boot();
 

@@ -424,3 +424,145 @@
     color: #555;
     background: #fafafa;
 }
+
+/* Dashboard tabs */
+.auto-quill-dashboard-tabs {
+    border-bottom: 1px solid #ccc;
+    margin: 0 0 15px 0;
+    padding-bottom: 0;
+    color: inherit;
+}
+
+.auto-quill-panel .auto-quill-dashboard-tabs {
+    border-bottom-width: 1px;
+    border-bottom-color: #ccc;
+}
+
+/* Topic rating */
+.auto-quill-rating-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 8px 0;
+}
+
+.auto-quill-rating {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.6;
+    color: #fff;
+    background: #8c8f94;
+}
+
+.auto-quill-rating.is-rating-high {
+    background: #1a7f37;
+}
+
+.auto-quill-rating.is-rating-mid {
+    background: #bb8800;
+}
+
+.auto-quill-rating.is-rating-low {
+    background: #8c8f94;
+}
+
+.auto-quill-rating-reason {
+    font-size: 12px;
+    color: #555;
+    line-height: 1.4;
+}
+
+/* Feed list */
+.auto-quill-feed-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.auto-quill-feed-filters select,
+.auto-quill-feed-filters input[type="search"] {
+    min-width: 170px;
+}
+
+.auto-quill-feed-unlinked-label {
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.auto-quill-feed-status {
+    padding: 8px 0;
+    color: #555;
+}
+
+.auto-quill-feed-status.is-error {
+    color: #b32d2e;
+}
+
+.auto-quill-feed-table {
+    margin-top: 0;
+}
+
+.auto-quill-feed-table th,
+.auto-quill-feed-table td {
+    vertical-align: top;
+}
+
+.auto-quill-feed-table tr.is-linked {
+    background: #f6fbf7;
+}
+
+.auto-quill-feed-title a {
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.auto-quill-feed-excerpt {
+    display: block;
+    margin-top: 3px;
+    font-size: 12px;
+    color: #666;
+    line-height: 1.4;
+}
+
+.auto-quill-feed-date,
+.auto-quill-feed-post {
+    white-space: nowrap;
+    font-size: 12px;
+}
+
+.auto-quill-post-status {
+    display: block;
+    color: #666;
+}
+
+.auto-quill-feed-empty td {
+    padding: 20px 10px;
+    color: #666;
+}
+
+.auto-quill-feed-pagination {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    margin-top: 12px;
+    font-size: 12px;
+}
+
+/* Source note appended to generated posts */
+.post-preview .auto-quill-source {
+    margin-top: 20px;
+    padding-top: 10px;
+    border-top: 1px solid #ddd;
+    font-size: 13px;
+}

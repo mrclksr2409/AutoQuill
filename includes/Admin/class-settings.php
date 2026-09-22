@@ -70,6 +70,15 @@ class Settings {
 
         $clean['auto_publish'] = !empty($input['auto_publish']);
 
+        $clean['source_link_enabled'] = !empty($input['source_link_enabled']);
+
+        if (array_key_exists('source_link_template', $input)) {
+            $template = sanitize_textarea_field((string) $input['source_link_template']);
+            $clean['source_link_template'] = trim($template) !== ''
+                ? $template
+                : C::DEFAULT_SOURCE_LINK_TEMPLATE;
+        }
+
         if (isset($input['posts_per_day'])) {
             $clean['posts_per_day'] = max(1, min(10, (int) $input['posts_per_day']));
         }
@@ -290,6 +299,55 @@ class Settings {
                                     <?php esc_html_e('Posts automatisch veröffentlichen', 'auto-quill'); ?>
                                 </label>
                             </th>
+                        </tr>
+
+                        <tr>
+                            <th scope="row">
+                                <?php esc_html_e('Link zum Originalartikel', 'auto-quill'); ?>
+                            </th>
+                            <td>
+                                <label>
+                                    <input type="hidden"
+                                           name="<?php echo esc_attr(C::OPTION_KEY); ?>[source_link_enabled]"
+                                           value="0">
+                                    <input type="checkbox"
+                                           id="source_link_enabled"
+                                           name="<?php echo esc_attr(C::OPTION_KEY); ?>[source_link_enabled]"
+                                           value="1"
+                                           <?php checked($settings['source_link_enabled'] ?? true); ?>>
+                                    <?php esc_html_e('Jedem Blog-Beitrag einen Quellenhinweis anhängen', 'auto-quill'); ?>
+                                </label>
+                                <p class="description">
+                                    <?php esc_html_e('Der Hinweis wird serverseitig ans Ende des Beitrags gesetzt und ist damit garantiert vorhanden – unabhängig davon, ob die KI einen Link ausgibt. Er erscheint bereits in der Vorschau.', 'auto-quill'); ?>
+                                </p>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <th scope="row">
+                                <label for="source_link_template"><?php esc_html_e('Text des Quellenhinweises', 'auto-quill'); ?></label>
+                            </th>
+                            <td>
+                                <textarea id="source_link_template" rows="2" class="large-text code"
+                                          name="<?php echo esc_attr(C::OPTION_KEY); ?>[source_link_template]"><?php
+                                    echo esc_textarea($settings['source_link_template'] ?? C::DEFAULT_SOURCE_LINK_TEMPLATE);
+                                ?></textarea>
+                                <p class="description">
+                                    <?php esc_html_e('Reiner Text mit Platzhaltern (kein HTML – das Markup liefert der Platzhalter):', 'auto-quill'); ?>
+                                    <code>{source_link}</code> <?php esc_html_e('(fertiger Link auf den Artikeltitel)', 'auto-quill'); ?>,
+                                    <code>{article_title}</code>,
+                                    <code>{source_url}</code>,
+                                    <code>{feed_name}</code>.
+                                    <br>
+                                    <?php
+                                    printf(
+                                        /* translators: %s: default template string */
+                                        esc_html__('Standard: %s', 'auto-quill'),
+                                        '<code>' . esc_html(C::DEFAULT_SOURCE_LINK_TEMPLATE) . '</code>'
+                                    );
+                                    ?>
+                                </p>
+                            </td>
                         </tr>
 
                         <tr>

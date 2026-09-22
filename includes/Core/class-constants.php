@@ -5,7 +5,7 @@ class Constants {
     const OPTION_KEY     = 'auto_quill_settings';
     const SETTINGS_GROUP = 'auto_quill_settings_group';
     const DB_VERSION_KEY = 'auto_quill_db_version';
-    const DB_VERSION     = '1.3';
+    const DB_VERSION     = '1.4';
 
     const TABLE_SOURCES  = 'auto_quill_sources';
     const TABLE_ARTICLES = 'auto_quill_articles';
@@ -28,6 +28,14 @@ class Constants {
 
     const CRON_FETCH  = 'auto_quill_daily_fetch';
     const CRON_SELECT = 'auto_quill_daily_select';
+
+    const DEFAULT_SOURCE_LINK_TEMPLATE = 'Quelle: {source_link}';
+
+    /** Post meta carrying the provenance of a generated post. */
+    const META_ARTICLE_ID    = '_auto_quill_article_id';
+    const META_SOURCE_URL    = '_auto_quill_source_url';
+    const META_ARTICLE_TITLE = '_auto_quill_article_title';
+    const META_FEED_NAME     = '_auto_quill_feed_name';
 
     const DEFAULT_OPENAI_MODEL = 'gpt-4o-mini';
     const DEFAULT_CLAUDE_MODEL = 'claude-sonnet-4-6';
@@ -75,6 +83,8 @@ class Constants {
             'pixabay_api_key' => '',
             'post_status'   => 'draft',
             'auto_publish'  => false,
+            'source_link_enabled'  => true,
+            'source_link_template' => self::DEFAULT_SOURCE_LINK_TEMPLATE,
             'posts_per_day' => 1,
             'rss_lookback_days' => 7,
             'prompt_title'    => self::default_prompt_title(),

@@ -3,6 +3,9 @@ namespace AutoQuill\Rest;
 
 use AutoQuill\Core\Constants as C;
 use AutoQuill\Core\Logger;
+use AutoQuill\Database\ArticlesRepository;
+use AutoQuill\Database\Schema;
+use AutoQuill\Database\SourcesRepository;
 use AutoQuill\Database\TopicsRepository;
 
 class PostsService {
@@ -20,17 +23,24 @@ class PostsService {
     }
 
     public static function publish_post(\WP_REST_Request $request): \WP_REST_Response {
+        // REST requests do not fire admin_init, where the schema check is
+        // hooked, and this method writes to the articles.post_id column added
+        // in DB version 1.4. The static guard inside makes repeats a no-op.
+        Schema::ensure_tables();
+
         $params       = $request->get_json_params() ?: [];
         $post_title   = (string) ($params['post_title']   ?? '');
         $post_content = (string) ($params['post_content'] ?? '');
         $post_excerpt = (string) ($params['post_excerpt'] ?? '');
         $category_ids = (array)  ($params['category_ids'] ?? []);
         $topic_id     = (int)    ($params['topic_id']     ?? 0);
+        $article_id   = (int)    ($params['article_id']   ?? 0);
         $image_url    = esc_url_raw((string) ($params['image_url'] ?? ''));
         $image_alt    = sanitize_text_field((string) ($params['image_alt'] ?? ''));
 
         Logger::info('posts', 'publish_post-Request', [
             'topic_id'     => $topic_id,
+            'article_id'   => $article_id,
             'title_len'    => strlen($post_title),
             'content_len'  => strlen($post_content),
             'category_ids' => $category_ids,
@@ -78,6 +88,8 @@ class PostsService {
             (new TopicsRepository())->mark_published($topic_id, (int) $post_id);
         }
 
+        self::link_source_article($article_id, (int) $post_id);
+
         $attachment_id = 0;
         if ($image_url !== '' && wp_http_validate_url($image_url)) {
             require_once ABSPATH . 'wp-admin/includes/file.php';
@@ -114,14 +126,59 @@ class PostsService {
         ]);
 
         return new \WP_REST_Response([
-            'success' => true,
-            'post_id' => (int) $post_id,
-            'message' => sprintf(
+            'success'    => true,
+            'post_id'    => (int) $post_id,
+            'article_id' => $article_id,
+            'message'    => sprintf(
                 /* translators: 1: post ID, 2: post status */
                 __('Post %1$s erstellt und als %2$s gespeichert', 'auto-quill'),
                 $post_id,
                 $post_status
             ),
         ], 201);
+    }
+
+    /**
+     * Records where a generated post came from, in both directions.
+     *
+     * Post meta is the durable side: articles are hard-deleted by the retention
+     * job, so the row can disappear while the post stays. The article row keeps
+     * post_id so the dashboard feed list can show what was already used.
+     */
+    private static function link_source_article(int $article_id, int $post_id): void {
+        if ($article_id <= 0 || $post_id <= 0) {
+            return;
+        }
+
+        $articles = new ArticlesRepository();
+        $article  = $articles->find($article_id);
+        if (!$article) {
+            Logger::warning('posts', 'Quellartikel für Verknüpfung nicht gefunden', [
+                'article_id' => $article_id,
+                'post_id'    => $post_id,
+            ]);
+            return;
+        }
+
+        $feed_name = '';
+        $source_id = (int) $article->source_id;
+        if ($source_id > 0) {
+            $source = (new SourcesRepository())->find($source_id);
+            if ($source) {
+                $feed_name = (string) $source->title;
+            }
+        }
+
+        update_post_meta($post_id, C::META_ARTICLE_ID, $article_id);
+        update_post_meta($post_id, C::META_SOURCE_URL, esc_url_raw((string) $article->article_url));
+        update_post_meta($post_id, C::META_ARTICLE_TITLE, sanitize_text_field((string) $article->title));
+        update_post_meta($post_id, C::META_FEED_NAME, sanitize_text_field($feed_name));
+
+        $articles->set_post_id($article_id, $post_id);
+
+        Logger::info('posts', 'Post mit Quellartikel verknüpft', [
+            'post_id'    => $post_id,
+            'article_id' => $article_id,
+        ]);
     }
 }

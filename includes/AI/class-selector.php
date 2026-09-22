@@ -59,14 +59,21 @@ class Selector {
 
         $prompt = "Analysiere die folgenden Artikel und wähle die 5 interessantesten Themen aus.\n"
             . "Wähle für jedes Thema genau einen Artikel aus der Liste und gib dessen ID zurück.\n"
+            . "Bewerte jedes Thema mit \"rating\" von 0 bis 100 danach, wie lohnend ein eigener Blog-Beitrag dazu wäre "
+            . "(Relevanz für ein breites Publikum, Aktualität, inhaltliche Substanz). "
+            . "Begründe die Bewertung in \"rating_reason\" mit einem kurzen Satz.\n"
             . "Antworte AUSSCHLIESSLICH mit einem gültigen JSON-Objekt (kein Markdown, kein Codeblock) mit der Struktur:\n"
-            . "{\"topics\": [{\"article_id\": <int aus der obigen Liste>, \"title\": \"...\", \"summary\": \"...\"}]}\n\n"
+            . "{\"topics\": [{\"article_id\": <int aus der obigen Liste>, \"title\": \"...\", \"summary\": \"...\", "
+            . "\"rating\": <int 0-100>, \"rating_reason\": \"...\"}]}\n\n"
             . $articles_text;
 
+        // 2500, not 1500: rating + rating_reason across five topics would blow
+        // the old ceiling, and Client turns that into WP_Error('truncated'),
+        // which would silently stop the daily topic selection altogether.
         $raw = (new Client())->chat(
             'Du bist ein hilfreicher Content-Analyzer. Antworte ausschließlich mit gültigem JSON.',
             $prompt,
-            ['max_tokens' => 1500, 'temperature' => 0.7, 'timeout' => 30, 'json_shape' => 'object']
+            ['max_tokens' => 2500, 'temperature' => 0.7, 'timeout' => 30, 'json_shape' => 'object']
         );
 
         if (is_wp_error($raw)) {
@@ -84,7 +91,7 @@ class Selector {
 
         Logger::info('selector', 'Topics aus KI-Antwort extrahiert', ['parsed_count' => count($topics)]);
 
-        return self::attach_article_ids($topics, $articles);
+        return self::normalize_topics($topics, $articles);
     }
 
     private static function parse_topics(string $content): ?array {
@@ -101,10 +108,10 @@ class Selector {
     }
 
     /**
-     * Stellt sicher, dass jedes Topic eine gültige article_id hat.
-     * Fällt bei fehlender/ungültiger ID auf Title-Match zurück.
+     * Guarantees a valid article_id and a normalized rating on every topic, and
+     * returns them in display order.
      */
-    private static function attach_article_ids(array $topics, array $articles): array {
+    private static function normalize_topics(array $topics, array $articles): array {
         $by_id = [];
         foreach ($articles as $a) {
             $by_id[(int) $a->id] = $a;
@@ -116,26 +123,112 @@ class Selector {
             if (!is_array($topic)) {
                 continue;
             }
+
             $article_id = (int) ($topic['article_id'] ?? 0);
             if ($article_id <= 0 || !isset($by_id[$article_id])) {
                 $matched = $repo->find_by_title((string) ($topic['title'] ?? ''));
                 $article_id = $matched ? (int) $matched->id : 0;
             }
             $topic['article_id'] = $article_id;
+
+            $topic['rating'] = self::normalize_rating($topic['rating'] ?? null);
+
+            $reason = sanitize_text_field((string) ($topic['rating_reason'] ?? ''));
+            $topic['rating_reason'] = mb_substr($reason, 0, 200);
+
             $normalized[] = $topic;
         }
-        return $normalized;
+
+        return self::sort_by_rating($normalized);
+    }
+
+    /**
+     * Accepts 85, "85", 85.0 and "85%". A missing rating stays null rather than
+     * becoming 0 - an unrated topic is not a badly rated one.
+     */
+    private static function normalize_rating($raw): ?int {
+        if ($raw === null || $raw === '' || is_array($raw) || is_bool($raw)) {
+            return null;
+        }
+
+        if (is_string($raw)) {
+            if (!preg_match('/-?\d+(?:[.,]\d+)?/', $raw, $m)) {
+                return null;
+            }
+            $raw = str_replace(',', '.', $m[0]);
+        }
+
+        if (!is_numeric($raw)) {
+            return null;
+        }
+
+        return max(0, min(100, (int) round((float) $raw)));
+    }
+
+    /**
+     * Sorted here, before persisting, so the stored order is also the displayed
+     * order. Sorting at render time instead would desynchronize the array index
+     * the dashboard sends back as topic_index, and the wrong topic would be
+     * generated.
+     *
+     * @param array<int, array> $topics
+     * @return array<int, array>
+     */
+    public static function sort_by_rating(array $topics): array {
+        $indexed = [];
+        foreach ($topics as $i => $topic) {
+            $indexed[] = [$i, $topic];
+        }
+
+        usort($indexed, static function ($a, $b) {
+            $ra = $a[1]['rating'] ?? null;
+            $rb = $b[1]['rating'] ?? null;
+
+            // Unrated entries go last but keep their original relative order.
+            if ($ra === null && $rb === null) {
+                return $a[0] <=> $b[0];
+            }
+            if ($ra === null) {
+                return 1;
+            }
+            if ($rb === null) {
+                return -1;
+            }
+            if ($ra === $rb) {
+                return $a[0] <=> $b[0];
+            }
+            return $rb <=> $ra;
+        });
+
+        return array_map(static fn($pair) => $pair[1], $indexed);
     }
 
     private static function fallback_analyze(array $articles): array {
+        $now    = time();
         $topics = [];
+
         foreach (array_slice($articles, 0, 5) as $article) {
+            $published = strtotime((string) $article->published_date);
+            $age       = $published ? $now - $published : PHP_INT_MAX;
+
+            if ($age <= 6 * HOUR_IN_SECONDS) {
+                $rating = 85;
+            } elseif ($age <= DAY_IN_SECONDS) {
+                $rating = 70;
+            } else {
+                $rating = 55;
+            }
+
             $topics[] = [
                 'title'      => $article->title,
                 'summary'    => substr((string) $article->description, 0, 200),
                 'article_id' => (int) $article->id,
+                'rating'     => $rating,
+                // Spelled out so the UI never passes recency off as an AI verdict.
+                'rating_reason' => __('Automatische Auswahl nach Aktualität (kein KI-Provider konfiguriert)', 'auto-quill'),
             ];
         }
-        return $topics;
+
+        return self::sort_by_rating($topics);
     }
 }

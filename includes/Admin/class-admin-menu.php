@@ -104,6 +104,11 @@ class AdminMenu {
                 'reselectError'      => __('Fehler beim Neu-Wählen', 'auto-quill'),
                 'generating'         => __('Blog-Post wird generiert...', 'auto-quill'),
                 'generateError'      => __('Fehler beim Generieren des Posts', 'auto-quill'),
+                'sessionExpired'     => __('Die Sitzung ist abgelaufen. Bitte die Seite neu laden und erneut versuchen.', 'auto-quill'),
+                'loadingFeed'        => __('Feed-Einträge werden geladen…', 'auto-quill'),
+                'feedLoadError'      => __('Feed-Einträge konnten nicht geladen werden.', 'auto-quill'),
+                /* translators: 1: current page, 2: total pages, 3: total entries */
+                'feedPageInfo'       => __('Seite %1$d von %2$d (%3$d Einträge)', 'auto-quill'),
                 'noContent'          => __('Keine Post-Inhalte verfügbar', 'auto-quill'),
                 'saving'             => __('Wird gespeichert...', 'auto-quill'),
                 'publishSuccess'     => __('Post erfolgreich erstellt!', 'auto-quill'),
