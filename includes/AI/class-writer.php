@@ -17,7 +17,15 @@ class Writer {
     /** Stays under gpt-4o-mini's 16384 output cap. */
     const MAX_TOKENS_CAP = 16000;
 
+    /** How much of the scraped article text is handed to the model. */
+    const SOURCE_CONTENT_LIMIT = 8000;
+
     public static function generate_post(\WP_REST_Request $request): \WP_REST_Response {
+        // One call runs with a 90s timeout and can be retried once on
+        // truncation, so PHP needs more headroom than a default
+        // max_execution_time of 30. Best effort - hosts may disable this.
+        @set_time_limit(200);
+
         $params = $request->get_json_params() ?: [];
 
         $source = self::resolve_source($params);
@@ -92,6 +100,40 @@ class Writer {
             // re-running the fragile title match against the topics JSON blob.
             'article_id'           => $article ? (int) $article->id : 0,
         ]);
+    }
+
+    /**
+     * Everything the generate screen needs to show what the model works from.
+     *
+     * The only public seam into the source pipeline: resolve_source() and
+     * build_source_block() stay private, because the latter is prompt-assembly
+     * detail (field labels, the character cut) that moves whenever the prompt
+     * moves. One purpose-shaped method is the stabler contract.
+     *
+     * @param array{article_id?:int, topic_id?:int, topic_index?:int, title?:string} $params
+     * @return array{article: ?object, topic: array, topic_id: int, topic_index: int,
+     *               ai_source: string, raw_html: string, truncated: bool}|\WP_Error
+     */
+    public static function source_preview(array $params) {
+        $source = self::resolve_source($params);
+        if (is_wp_error($source)) {
+            return $source;
+        }
+
+        $article  = $source['article'];
+        $raw_html = $article ? (string) $article->content : '';
+        $stripped = wp_strip_all_tags($raw_html);
+        $length   = function_exists('mb_strlen') ? mb_strlen($stripped) : strlen($stripped);
+
+        return [
+            'article'     => $article,
+            'topic'       => $source['topic'],
+            'topic_id'    => $source['topic_id'],
+            'topic_index' => $source['topic_index'],
+            'ai_source'   => self::build_source_block($article, $source['topic']),
+            'raw_html'    => $raw_html,
+            'truncated'   => $length > self::SOURCE_CONTENT_LIMIT,
+        ];
     }
 
     /**
@@ -586,9 +628,9 @@ class Writer {
         $content     = wp_strip_all_tags($content);
 
         if (function_exists('mb_substr')) {
-            $content = mb_substr($content, 0, 8000);
+            $content = mb_substr($content, 0, self::SOURCE_CONTENT_LIMIT);
         } else {
-            $content = substr($content, 0, 8000);
+            $content = substr($content, 0, self::SOURCE_CONTENT_LIMIT);
         }
 
         $block  = "Quelltext (Originalartikel):\n";

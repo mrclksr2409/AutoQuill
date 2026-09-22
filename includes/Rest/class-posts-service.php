@@ -126,10 +126,14 @@ class PostsService {
         ]);
 
         return new \WP_REST_Response([
-            'success'    => true,
-            'post_id'    => (int) $post_id,
-            'article_id' => $article_id,
-            'message'    => sprintf(
+            'success'     => true,
+            'post_id'     => (int) $post_id,
+            'article_id'  => $article_id,
+            'post_status' => $post_status,
+            // 'raw' context: the default HTML-escapes "&", which would then be
+            // double-escaped once the client puts it in an href.
+            'edit_url'    => (string) get_edit_post_link((int) $post_id, 'raw'),
+            'message'     => sprintf(
                 /* translators: 1: post ID, 2: post status */
                 __('Post %1$s erstellt und als %2$s gespeichert', 'auto-quill'),
                 $post_id,

@@ -51,19 +51,28 @@ Ein intelligentes WordPress-Plugin, das automatisch RSS-Feeds überwacht, tägli
 3. **Manuelle Auswahl** (Benutzer im Admin)
    - Du siehst die Top-Themen im Dashboard, jeweils mit Bewertung (0–100) und kurzer Begründung
    - Alternativ wechselst du auf den Tab *Alle Feed-Einträge* und wählst einen beliebigen gecrawlten Artikel
-   - Klickst auf einen Button, um einen Blog-Post zu generieren
+   - Ein Klick auf „Blog-Post generieren" öffnet die Generierungs-Seite und startet die KI
    - Die KI schreibt einen vollständigen, originalen Post (~800-1200 Wörter, über den Prompt einstellbar)
    - Am Ende des Beitrags wird automatisch ein Link auf den Originalartikel gesetzt
 
-4. **Veröffentlichung**
+4. **Gegenprüfen** (auf der Generierungs-Seite)
+   - Links steht der Originaltext, umschaltbar zwischen *Quelltext für die KI* (exakt das, was das
+     Modell bekommen hat) und *Roh-HTML* (der gespeicherte Seitenquelltext)
+   - So lässt sich Satz für Satz prüfen, ob im Beitrag nur steht, was auch in der Quelle steht
+
+5. **Veröffentlichung**
    - Vorschau des generierten Posts
    - Klicke "Veröffentlichen" → Post wird als Entwurf oder direkt veröffentlicht
 
 ### Admin-Seiten
 
-- **Startseite**: Zwei Tabs — *Top-Themen* (bewertet, absteigend sortiert) und *Alle Feed-Einträge*
-  (Tabelle mit Quellen-Filter, Suche, „nur ohne Blog-Post" und Paginierung). Aus beiden Tabs lässt sich
-  direkt ein Blog-Post erzeugen; die Vorschau rechts bleibt beim Tab-Wechsel erhalten.
+- **Startseite**: Die Übersicht über die volle Breite, mit zwei Tabs — *Top-Themen* (bewertet,
+  absteigend sortiert) und *Alle Feed-Einträge* (Tabelle mit Quellen-Filter, Suche,
+  „nur ohne Blog-Post" und Paginierung). Aus beiden Tabs führt ein Klick auf
+  „Blog-Post generieren" zur Generierungs-Seite.
+- **Blog-Post erstellen**: Eigene Seite ohne Menüeintrag, nur über die Übersicht erreichbar.
+  Links steht der Originaltext, rechts entsteht der Beitrag. Während die KI arbeitet, läuft ein
+  Spinner mit Sekundenzähler.
 - **RSS Quellen**: Feed-Verwaltung (hinzufügen/löschen)
 - **Einstellungen**: KI-Provider, API-Keys, Veröffentlichung, Quellenangabe, Prompts, Updates, Debug
 
@@ -226,6 +235,39 @@ und bezieht Updates aus GitHub Releases. WordPress prüft automatisch und zeigt 
 stattdessen dem `main`-Branch.
 
 ## Changelog
+
+### [1.3.0] — 2026-09-22
+
+#### Added
+- Eigene Seite für die Post-Generierung. Links der Originaltext, rechts der entstehende Beitrag,
+  darunter Titel, Auszug, Kategorien und Beitragsbild.
+- Umschaltbare Quellansicht: *Quelltext für die KI* zeigt exakt den Text, den das Modell erhalten
+  hat, *Roh-HTML* den gespeicherten Seitenquelltext. Beides als Text, damit nichts Fremdes im
+  Backend ausgeführt oder nachgeladen wird.
+- Sichtbarer Fortschritt während der Generierung: rotierender Ring, Statuszeile und Sekundenzähler,
+  mit `prefers-reduced-motion`-Unterstützung.
+- Hinweis, wenn zu einem Feed-Eintrag kein Seiteninhalt gespeichert wurde — das erklärt einen
+  dünnen oder ungenauen Beitrag.
+- Warnung beim Verlassen der Seite, solange ein generierter Beitrag noch nicht gespeichert ist.
+
+#### Changed
+- Die Übersicht nutzt die volle Bildschirmbreite; die Themen-Karten stehen nebeneinander.
+- „Blog-Post generieren" ist jetzt ein echter Link statt eines JavaScript-Buttons — Mittelklick und
+  „In neuem Tab öffnen" funktionieren.
+- Nach dem Veröffentlichen lädt die Seite nicht mehr neu, sondern zeigt einen Kasten mit
+  „Post bearbeiten" und „Zurück zur Übersicht". Ein Reload hätte die Generierung erneut ausgelöst.
+- Die Generierungs-Anfrage bricht clientseitig nach 120 Sekunden mit eigener Meldung ab, und PHP
+  bekommt für den Aufruf mehr Zeit (`set_time_limit`, soweit der Host das zulässt).
+- Das Admin-JavaScript ist aufgeteilt: `admin.js` für die Übersicht, `generate.js` nur auf der
+  Generierungs-Seite.
+
+#### Fixed
+- Der Ladeindikator war unsichtbar: Die zugehörige CSS-Animation enthielt ein fehlerhaftes
+  Inline-SVG (unbalancierte Tags, konstante Animationswerte) und rendert in gängigen Browsern
+  nichts. Ersetzt durch einen reinen CSS-Ring.
+- Das Öffnen der Bildauswahl löste **zwei** KI-Aufrufe für die Suchbegriffe aus: Der Handler war
+  sowohl delegiert als auch direkt an den Button gebunden. Der doppelte Bind stammte aus einem
+  Diagnose-Commit und ist entfernt.
 
 ### [1.2.0] — 2026-09-22
 

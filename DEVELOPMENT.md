@@ -2,7 +2,7 @@
 
 # Entwicklungs-Notizen
 
-Stand: Version 1.2.0 / DB-Version 1.4
+Stand: Version 1.3.0 / DB-Version 1.4
 
 ## Projektstruktur
 
@@ -52,7 +52,8 @@ auto-quill/
 │   │
 │   └── Admin/
 │       ├── class-admin-menu.php        # Menü + Asset-Enqueue + wp_localize_script
-│       ├── class-dashboard.php         # Dashboard (Tabs, Themen, Feed-Liste)
+│       ├── class-dashboard.php         # Übersicht (Tabs, Themen, Feed-Liste)
+│       ├── class-generate-page.php     # Generierungs-Seite (versteckt)
 │       ├── class-settings.php          # Settings-API, 5 Tabs
 │       ├── class-sources-controller.php
 │       ├── class-post-meta-box.php     # Box „AutoQuill-Quelle" im Post-Editor
@@ -62,7 +63,8 @@ auto-quill/
 │
 ├── assets/
 │   ├── admin.css
-│   ├── admin.js                        # AutoQuill, DashboardTabs, SettingsTabs
+│   ├── admin.js                        # Übersicht: AutoQuill, DashboardTabs, SettingsTabs
+│   ├── generate.js                     # nur auf der Generierungs-Seite: Generate, SourceTabs
 │   └── auto-quill-debug.js
 │
 └── lib/plugin-update-checker/          # vendored, YahnisElsts
@@ -112,7 +114,7 @@ Client liefert dann `WP_Error('truncated')` und die tägliche Selektion bricht k
 - `generate_basic_post()` — Fallback ohne gültigen KI-Provider
 
 ### Admin Dashboard (`Admin/class-dashboard.php`)
-- `render()` — zwei Tabs im linken Panel, Vorschau-Panel rechts
+- `render()` — die Übersicht über die volle Breite, zwei Tabs in einem Panel
 - `render_feed_rows(array $items)` — `<tbody>`-Zeilen; von `render()` **und** vom REST-Endpoint genutzt
 - `resolve_linked_posts(array $items)` — Beiträge im Bulk auflösen (eine Meta-Query, ein `get_posts()`)
 - `rating_class(int $rating)` — `is-rating-high|mid|low`
@@ -297,15 +299,22 @@ in handgebauten DOM-Code im Browser.
 `AdminMenu::enqueue_assets()` lädt CSS/JS auf allen Plugin-Seiten und legt zwei Objekte an:
 `autoQuill` (`apiUrl`, `nonce`, `restNonce`, `publishButtonLabel`, `i18n`) und `autoQuillDebug`.
 
-`admin.js` enthält drei Objekte:
-- `AutoQuill` — Generierung, Veröffentlichung, Bildauswahl, Feed-Liste
-- `DashboardTabs` — Tabs auf dem Dashboard, gebunden an `.auto-quill-dashboard-tabs` / `.auto-quill-dash-panel`
-- `SettingsTabs` — Tabs auf der Einstellungsseite, gebunden an `.auto-quill-settings-tabs` / `.auto-quill-tab-panel`
+`admin.js` (alle Plugin-Seiten) enthält:
+- `AutoQuill` — Feed-Liste, Recrawl/Reselect, `showAlert`, `errorMessage`
+- `DashboardTabs` — `.auto-quill-dashboard-tabs` / `.auto-quill-dash-panel`, wertet `#dash-<tab>` aus
+- `SettingsTabs` — `.auto-quill-settings-tabs` / `.auto-quill-tab-panel`
 
-**Die beiden Tab-Objekte dürfen keine Klassennamen teilen.** `SettingsTabs.activate()` versteckt
+`generate.js` (nur auf der Generierungs-Seite, mit `admin.js` als Dependency) enthält:
+- `Generate` — Auto-Start, Busy-Overlay, Veröffentlichen, Bildauswahl
+- `SourceTabs` — `.auto-quill-source-tabs` / `.auto-quill-source-panel`
+
+Geteilt wird über eine kleine, explizite Oberfläche, die `admin.js` setzt:
+`window.AutoQuill = { t, showAlert, errorMessage, apiUrl, restNonce }`.
+
+**Die drei Tab-Objekte dürfen keine Klassennamen teilen.** `SettingsTabs.activate()` versteckt
 `.auto-quill-tab-panel` global, worauf die Einstellungsseite angewiesen ist (ihr StatusPanel liegt
-außerhalb des `<form>`). Würde das Dashboard dieselbe Klasse verwenden, versteckten sich beide
-Seiten gegenseitig.
+außerhalb des `<form>`). Würden sich zwei Seiten dieselbe Klasse teilen, versteckten sie sich
+gegenseitig — deshalb hat jedes Widget ein eigenes Klassenpaar.
 
 **Cache-Busting:** `AUTO_QUILL_VERSION` ist der Versions-Parameter der Assets. Wer JS-seitige
 Änderungen ohne Versions-Bump ausliefert, bekommt bei Nutzern die alte `admin.js` — und die lässt
@@ -363,12 +372,52 @@ Dazu prüfen, ob Klassenname und Dateiname zur Autoloader-Konvention passen.
 7. **Länge** — Body-Prompt auf `2000-2500 Wörter` ändern; im Log steht bei „OpenAI Request startet"
    ein `max_tokens` von ~11000 statt 6500, kein `truncated`-Fehler.
 
+## Generierungs-Seite (`Admin/class-generate-page.php`)
+
+Erreichbar unter `admin.php?page=auto-quill-generate` mit `article_id` **oder**
+`topic_id` + `topic_index`, nie über das Menü.
+
+**Versteckt, aber korrekt eingebunden.** `AdminMenu::register()` legt die Seite als echtes
+Submenu an und `hide_generate_page()` entfernt den Eintrag auf `admin_menu` mit Priorität 999.
+`remove_submenu_page()` löscht nur den `$submenu`-Eintrag; `$_registered_pages` und
+`$_parent_pages` bleiben, deshalb routet die Seite weiter. Eine Registrierung mit `null` als
+Parent wäre schlechter: Dann liefert `get_admin_page_parent()` einen Leerstring und das
+AutoQuill-Menü hebt sich gar nicht mehr hervor.
+
+Daraus folgen drei Dinge, die bewusst mitgelöst sind:
+- `submenu_file`-Filter, damit überhaupt ein Eintrag als aktiv markiert wird.
+- Das `<h1>` ist **hartkodiert**; `get_admin_page_title()` fiele ohne `$submenu`-Eintrag auf den
+  Titel des Elternmenüs („AutoQuill") zurück. Für den Browser-Tab tut das der `admin_title`-Filter.
+- Der explizite `current_user_can('manage_options')`-Check bleibt Pflicht, weil die Absicherung
+  über das Elternmenü nur ein Nebeneffekt ist.
+
+**Quelltext serverseitig.** `Writer::source_preview()` ist der einzige öffentliche Zugang zur
+Quell-Pipeline; `resolve_source()` und `build_source_block()` bleiben privat. Der Text wird beim
+Seitenaufbau gerendert, nicht per REST geholt — nur so steht er schon da, während die KI noch
+schreibt. Die Quelle ist ohnehin unveränderlich: `articles.content` schreibt der Fetcher einmal.
+
+**Beide Quell-Tabs zeigen escapten Text, kein gerendertes HTML.** `wp_kses_post()` wäre hier
+falsch: Es entfernt `<script>`/`<style>`-Tags, behält aber deren Textinhalt (eine gescrapte Seite
+erschiene als Wand aus minifiziertem JS), `<img>` überlebt und zöge Fremdbilder in den Admin, und
+relative URLs lösen gegen die eigene Domain auf. Wer die gerenderte Seite braucht, nimmt den Link
+„Originalartikel öffnen".
+
+**Nonce und Auto-Start.** Eine Generierung kostet einen bezahlten API-Call, deshalb trägt der Link
+aus der Übersicht einen Nonce (`C::NONCE_GENERATE`). Gültig → Start beim Laden; fehlt oder
+abgelaufen → nur ein Button „Jetzt generieren". Direkt nach dem Start entfernt `generate.js` den
+Nonce per `history.replaceState()` aus der Adressleiste, damit Reload, Zurück-Taste und Lesezeichen
+keinen zweiten bezahlten Aufruf auslösen.
+
+**Veröffentlichen ohne Reload.** `publish-post` liefert `edit_url` und `post_status`; die Seite
+zeigt einen Erfolgskasten statt neu zu laden. Ein Reload würde die Generierung erneut anstoßen.
+
 ## Offene Punkte
 
 - [ ] Verschlüsselung der API-Keys
 - [ ] Unit Tests / PHPCS in CI
 - [ ] WP-CLI-Kommandos
 - [ ] `posts_per_day` ist in den Defaults vorhanden, hat aber keine UI und wird nirgends gelesen
+- [ ] `autoQuill.fetchAction` wird lokalisiert, aber von keinem Skript gelesen
 - [ ] `Fetcher::fetch_feeds()` ruft am Ende `do_action(CRON_SELECT)` auf, wodurch die Selektion an
       einem Cron-Tag zweimal läuft
 - [ ] `fetch_article_content()` speichert rohes HTML ohne Readability-Extraktion

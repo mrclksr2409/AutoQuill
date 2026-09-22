@@ -16,6 +16,7 @@ class Constants {
     const SOURCES_PAGE_SLUG  = 'auto-quill-sources';
     const SETTINGS_PAGE_SLUG = 'auto-quill-settings';
     const LOGS_PAGE_SLUG     = 'auto-quill-logs';
+    const GENERATE_PAGE_SLUG = 'auto-quill-generate';
 
     const ACTION_ADD      = 'auto_quill_add_source';
     const ACTION_DELETE   = 'auto_quill_delete_source';
@@ -24,6 +25,7 @@ class Constants {
     const ACTION_RESELECT = 'auto_quill_reselect_topics';
 
     const NONCE_SCOPE    = 'auto-quill-nonce';
+    const NONCE_GENERATE = 'auto_quill_generate';
     const NOTICE_KEY_FMT = 'auto_quill_notice_%d';
 
     const CRON_FETCH  = 'auto_quill_daily_fetch';

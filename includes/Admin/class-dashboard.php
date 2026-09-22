@@ -247,15 +247,14 @@ class Dashboard {
                     <?php endif; ?>
                 </td>
                 <td class="auto-quill-feed-action">
-                    <button type="button"
-                            class="<?php echo esc_attr($button_class); ?> auto-quill-select-article"
-                            data-article-id="<?php echo $article_id; ?>">
+                    <a class="<?php echo esc_attr($button_class); ?> auto-quill-generate-link"
+                       href="<?php echo esc_url(GeneratePage::url(['article_id' => $article_id])); ?>">
                         <?php
                         echo $post
                             ? esc_html__('Erneut generieren', 'auto-quill')
                             : esc_html__('Blog-Post generieren', 'auto-quill');
                         ?>
-                    </button>
+                    </a>
                 </td>
             </tr>
             <?php
@@ -276,285 +275,183 @@ class Dashboard {
         // Deactivated feeds can still have articles in the table, so the feed
         // filter lists all of them, not just the active ones.
         $all_sources  = $sources_repository->all();
-        $settings     = get_option(C::OPTION_KEY, C::defaults());
-        if (!is_array($settings)) {
-            $settings = C::defaults();
-        }
-        $publish_label = self::publish_button_label($settings);
         ?>
         <div class="wrap auto-quill-wrap">
             <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
 
             <?php Notices::flush(); ?>
 
-            <div class="auto-quill-container">
-                <div class="auto-quill-panel">
-                    <h2 class="nav-tab-wrapper auto-quill-dashboard-tabs">
-                        <a href="#dash-topics" class="nav-tab nav-tab-active" data-tab="topics">
-                            <?php esc_html_e('Top-Themen', 'auto-quill'); ?>
-                        </a>
-                        <a href="#dash-articles" class="nav-tab" data-tab="articles">
-                            <?php esc_html_e('Alle Feed-Einträge', 'auto-quill'); ?>
-                        </a>
-                    </h2>
+            <div class="auto-quill-panel">
+                <h2 class="nav-tab-wrapper auto-quill-dashboard-tabs">
+                    <a href="#dash-topics" class="nav-tab nav-tab-active" data-tab="topics">
+                        <?php esc_html_e('Top-Themen', 'auto-quill'); ?>
+                    </a>
+                    <a href="#dash-articles" class="nav-tab" data-tab="articles">
+                        <?php esc_html_e('Alle Feed-Einträge', 'auto-quill'); ?>
+                    </a>
+                </h2>
 
-                    <div class="auto-quill-dash-panel" data-tab="topics">
-                        <div class="auto-quill-recrawl-controls">
-                            <label for="auto-quill-source-select" class="screen-reader-text">
-                                <?php esc_html_e('RSS-Feed auswählen', 'auto-quill'); ?>
-                            </label>
-                            <select id="auto-quill-source-select">
-                                <option value="0"><?php esc_html_e('Alle aktiven Feeds', 'auto-quill'); ?></option>
-                                <?php foreach ($sources as $source): ?>
-                                    <option value="<?php echo (int) $source->id; ?>">
-                                        <?php echo esc_html($source->title); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                            <button class="button button-primary" id="auto-quill-recrawl-btn">
-                                <?php esc_html_e('Feeds neu holen + Topics neu wählen', 'auto-quill'); ?>
-                            </button>
-                            <button class="button" id="auto-quill-reselect-btn">
-                                <?php esc_html_e('Nur Topics neu wählen', 'auto-quill'); ?>
-                            </button>
-                        </div>
+                <div class="auto-quill-dash-panel" data-tab="topics">
+                    <div class="auto-quill-recrawl-controls">
+                        <label for="auto-quill-source-select" class="screen-reader-text">
+                            <?php esc_html_e('RSS-Feed auswählen', 'auto-quill'); ?>
+                        </label>
+                        <select id="auto-quill-source-select">
+                            <option value="0"><?php esc_html_e('Alle aktiven Feeds', 'auto-quill'); ?></option>
+                            <?php foreach ($sources as $source): ?>
+                                <option value="<?php echo (int) $source->id; ?>">
+                                    <?php echo esc_html($source->title); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <button class="button button-primary" id="auto-quill-recrawl-btn">
+                            <?php esc_html_e('Feeds neu holen + Topics neu wählen', 'auto-quill'); ?>
+                        </button>
+                        <button class="button" id="auto-quill-reselect-btn">
+                            <?php esc_html_e('Nur Topics neu wählen', 'auto-quill'); ?>
+                        </button>
+                    </div>
 
-                        <?php if ($today_topics): ?>
-                            <?php
-                            $topics = json_decode($today_topics->topics, true) ?: [];
-                            // The Selector already stores topics in rating order;
-                            // this only re-sorts rows written before that change.
-                            $topics = Selector::sort_by_rating($topics);
+                    <?php if ($today_topics): ?>
+                        <?php
+                        $topics = json_decode($today_topics->topics, true) ?: [];
+                        // The Selector already stores topics in rating order;
+                        // this only re-sorts rows written before that change.
+                        $topics = Selector::sort_by_rating($topics);
 
-                            $articles_repo     = new ArticlesRepository();
-                            $sources_repo      = new SourcesRepository();
-                            $source_name_cache = [];
-                            ?>
-                            <div id="topics-list" class="topics-list">
-                                <?php foreach ($topics as $idx => $topic): ?>
-                                    <?php
-                                    $article_id  = (int) ($topic['article_id'] ?? 0);
-                                    $article_url = '';
-                                    $source_name = '';
-                                    if ($article_id > 0) {
-                                        $article = $articles_repo->find($article_id);
-                                        if ($article) {
-                                            $article_url = (string) $article->article_url;
-                                            $source_id   = (int) $article->source_id;
-                                            if ($source_id > 0) {
-                                                if (!array_key_exists($source_id, $source_name_cache)) {
-                                                    $source = $sources_repo->find($source_id);
-                                                    $source_name_cache[$source_id] = $source ? (string) $source->title : '';
-                                                }
-                                                $source_name = $source_name_cache[$source_id];
+                        $articles_repo     = new ArticlesRepository();
+                        $sources_repo      = new SourcesRepository();
+                        $source_name_cache = [];
+                        ?>
+                        <div id="topics-list" class="topics-list">
+                            <?php foreach ($topics as $idx => $topic): ?>
+                                <?php
+                                $article_id  = (int) ($topic['article_id'] ?? 0);
+                                $article_url = '';
+                                $source_name = '';
+                                if ($article_id > 0) {
+                                    $article = $articles_repo->find($article_id);
+                                    if ($article) {
+                                        $article_url = (string) $article->article_url;
+                                        $source_id   = (int) $article->source_id;
+                                        if ($source_id > 0) {
+                                            if (!array_key_exists($source_id, $source_name_cache)) {
+                                                $source = $sources_repo->find($source_id);
+                                                $source_name_cache[$source_id] = $source ? (string) $source->title : '';
                                             }
+                                            $source_name = $source_name_cache[$source_id];
                                         }
                                     }
+                                }
 
-                                    // Topics stored before the rating existed have no
-                                    // score - show no badge rather than a bogus zero.
-                                    $rating = (isset($topic['rating']) && $topic['rating'] !== null)
-                                        ? (int) $topic['rating']
-                                        : null;
-                                    $rating_reason = trim((string) ($topic['rating_reason'] ?? ''));
-                                    ?>
-                                    <div class="topic-card"
-                                         data-topic-id="<?php echo (int) $today_topics->id; ?>"
-                                         data-topic-index="<?php echo (int) $idx; ?>">
-                                        <h3><?php echo esc_html($topic['title'] ?? ''); ?></h3>
+                                // Topics stored before the rating existed have no
+                                // score - show no badge rather than a bogus zero.
+                                $rating = (isset($topic['rating']) && $topic['rating'] !== null)
+                                    ? (int) $topic['rating']
+                                    : null;
+                                $rating_reason = trim((string) ($topic['rating_reason'] ?? ''));
+                                ?>
+                                <div class="topic-card">
+                                    <h3><?php echo esc_html($topic['title'] ?? ''); ?></h3>
 
-                                        <?php if ($rating !== null): ?>
-                                            <p class="auto-quill-rating-line">
-                                                <span class="auto-quill-rating <?php echo esc_attr(self::rating_class($rating)); ?>"
-                                                      title="<?php esc_attr_e('Bewertung von 0 bis 100', 'auto-quill'); ?>">
-                                                    <?php echo (int) $rating; ?>
+                                    <?php if ($rating !== null): ?>
+                                        <p class="auto-quill-rating-line">
+                                            <span class="auto-quill-rating <?php echo esc_attr(self::rating_class($rating)); ?>"
+                                                  title="<?php esc_attr_e('Bewertung von 0 bis 100', 'auto-quill'); ?>">
+                                                <?php echo (int) $rating; ?>
+                                            </span>
+                                            <?php if ($rating_reason !== ''): ?>
+                                                <span class="auto-quill-rating-reason">
+                                                    <?php echo esc_html($rating_reason); ?>
                                                 </span>
-                                                <?php if ($rating_reason !== ''): ?>
-                                                    <span class="auto-quill-rating-reason">
-                                                        <?php echo esc_html($rating_reason); ?>
-                                                    </span>
-                                                <?php endif; ?>
-                                            </p>
-                                        <?php endif; ?>
+                                            <?php endif; ?>
+                                        </p>
+                                    <?php endif; ?>
 
-                                        <p><?php echo esc_html(substr((string) ($topic['summary'] ?? ''), 0, 200)); ?></p>
-                                        <?php if ($source_name !== '' || $article_url !== ''): ?>
-                                            <p class="auto-quill-topic-source">
-                                                <strong><?php esc_html_e('Quelle:', 'auto-quill'); ?></strong>
-                                                <?php if ($source_name !== ''): ?>
-                                                    <?php echo esc_html($source_name); ?>
-                                                <?php endif; ?>
-                                                <?php if ($article_url !== ''): ?>
-                                                    <?php if ($source_name !== ''): ?> &ndash; <?php endif; ?>
-                                                    <a href="<?php echo esc_url($article_url); ?>"
-                                                       target="_blank" rel="noopener noreferrer">
-                                                        <?php esc_html_e('Originalartikel', 'auto-quill'); ?>
-                                                    </a>
-                                                <?php endif; ?>
-                                            </p>
-                                        <?php endif; ?>
-                                        <button class="button button-primary auto-quill-select-topic"
-                                                data-topic-id="<?php echo (int) $today_topics->id; ?>"
-                                                data-topic-index="<?php echo (int) $idx; ?>">
-                                            <?php esc_html_e('Blog-Post generieren', 'auto-quill'); ?>
-                                        </button>
-                                    </div>
-                                <?php endforeach; ?>
-                            </div>
-                        <?php else: ?>
-                            <p><?php esc_html_e('Noch keine Themen für heute verfügbar. Topics werden täglich aktualisiert oder über die Buttons oben manuell ausgelöst.', 'auto-quill'); ?></p>
-                        <?php endif; ?>
-                    </div>
-
-                    <div class="auto-quill-dash-panel" data-tab="articles" style="display:none;">
-                        <div class="auto-quill-feed-filters">
-                            <label for="auto-quill-feed-source" class="screen-reader-text">
-                                <?php esc_html_e('Quelle filtern', 'auto-quill'); ?>
-                            </label>
-                            <select id="auto-quill-feed-source">
-                                <option value="0"><?php esc_html_e('Alle Quellen', 'auto-quill'); ?></option>
-                                <?php foreach ($all_sources as $source): ?>
-                                    <option value="<?php echo (int) $source->id; ?>">
-                                        <?php echo esc_html($source->title); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-
-                            <label for="auto-quill-feed-search" class="screen-reader-text">
-                                <?php esc_html_e('Feed-Einträge durchsuchen', 'auto-quill'); ?>
-                            </label>
-                            <input type="search" id="auto-quill-feed-search"
-                                   placeholder="<?php esc_attr_e('Titel oder Beschreibung durchsuchen', 'auto-quill'); ?>">
-
-                            <label class="auto-quill-feed-unlinked-label">
-                                <input type="checkbox" id="auto-quill-feed-unlinked">
-                                <?php esc_html_e('Nur ohne Blog-Post', 'auto-quill'); ?>
-                            </label>
-
-                            <button type="button" class="button" id="auto-quill-feed-apply">
-                                <?php esc_html_e('Filtern', 'auto-quill'); ?>
-                            </button>
+                                    <p><?php echo esc_html(substr((string) ($topic['summary'] ?? ''), 0, 200)); ?></p>
+                                    <?php if ($source_name !== '' || $article_url !== ''): ?>
+                                        <p class="auto-quill-topic-source">
+                                            <strong><?php esc_html_e('Quelle:', 'auto-quill'); ?></strong>
+                                            <?php if ($source_name !== ''): ?>
+                                                <?php echo esc_html($source_name); ?>
+                                            <?php endif; ?>
+                                            <?php if ($article_url !== ''): ?>
+                                                <?php if ($source_name !== ''): ?> &ndash; <?php endif; ?>
+                                                <a href="<?php echo esc_url($article_url); ?>"
+                                                   target="_blank" rel="noopener noreferrer">
+                                                    <?php esc_html_e('Originalartikel', 'auto-quill'); ?>
+                                                </a>
+                                            <?php endif; ?>
+                                        </p>
+                                    <?php endif; ?>
+                                    <a class="button button-primary auto-quill-generate-link"
+                                       href="<?php echo esc_url(GeneratePage::url([
+                                           'topic_id'    => (int) $today_topics->id,
+                                           'topic_index' => (int) $idx,
+                                       ])); ?>">
+                                        <?php esc_html_e('Blog-Post generieren', 'auto-quill'); ?>
+                                    </a>
+                                </div>
+                            <?php endforeach; ?>
                         </div>
-
-                        <div id="auto-quill-feed-status" class="auto-quill-feed-status" hidden></div>
-
-                        <table class="widefat striped auto-quill-feed-table">
-                            <thead>
-                                <tr>
-                                    <th scope="col"><?php esc_html_e('Titel', 'auto-quill'); ?></th>
-                                    <th scope="col"><?php esc_html_e('Feed', 'auto-quill'); ?></th>
-                                    <th scope="col"><?php esc_html_e('Datum', 'auto-quill'); ?></th>
-                                    <th scope="col"><?php esc_html_e('Blog-Post', 'auto-quill'); ?></th>
-                                    <th scope="col"><span class="screen-reader-text"><?php esc_html_e('Aktion', 'auto-quill'); ?></span></th>
-                                </tr>
-                            </thead>
-                            <tbody id="auto-quill-feed-body"></tbody>
-                        </table>
-
-                        <div id="auto-quill-feed-pagination" class="auto-quill-feed-pagination" hidden>
-                            <button type="button" class="button" id="auto-quill-feed-prev">
-                                &laquo; <?php esc_html_e('Zurück', 'auto-quill'); ?>
-                            </button>
-                            <span id="auto-quill-feed-page-info"></span>
-                            <button type="button" class="button" id="auto-quill-feed-next">
-                                <?php esc_html_e('Weiter', 'auto-quill'); ?> &raquo;
-                            </button>
-                        </div>
-                    </div>
+                    <?php else: ?>
+                        <p><?php esc_html_e('Noch keine Themen für heute verfügbar. Topics werden täglich aktualisiert oder über die Buttons oben manuell ausgelöst.', 'auto-quill'); ?></p>
+                    <?php endif; ?>
                 </div>
 
-                <div class="auto-quill-panel">
-                    <h2><?php esc_html_e('Blog-Post Vorschau', 'auto-quill'); ?></h2>
+                <div class="auto-quill-dash-panel" data-tab="articles" style="display:none;">
+                    <div class="auto-quill-feed-filters">
+                        <label for="auto-quill-feed-source" class="screen-reader-text">
+                            <?php esc_html_e('Quelle filtern', 'auto-quill'); ?>
+                        </label>
+                        <select id="auto-quill-feed-source">
+                            <option value="0"><?php esc_html_e('Alle Quellen', 'auto-quill'); ?></option>
+                            <?php foreach ($all_sources as $source): ?>
+                                <option value="<?php echo (int) $source->id; ?>">
+                                    <?php echo esc_html($source->title); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
 
-                    <div id="auto-quill-meta-fields" class="auto-quill-meta-fields">
-                        <div class="auto-quill-field">
-                            <label for="auto-quill-title">
-                                <strong><?php esc_html_e('Titel', 'auto-quill'); ?></strong>
-                            </label>
-                            <input type="text" id="auto-quill-title" class="large-text"
-                                   placeholder="<?php esc_attr_e('Wird automatisch von der KI gefüllt', 'auto-quill'); ?>">
-                        </div>
-                        <div class="auto-quill-field auto-quill-field--body">
-                            <label for="post-preview">
-                                <strong><?php esc_html_e('Text', 'auto-quill'); ?></strong>
-                            </label>
-                            <div id="post-preview" class="post-preview">
-                                <p><?php esc_html_e('Wählen Sie ein Thema aus, um den Blog-Post zu generieren.', 'auto-quill'); ?></p>
-                            </div>
-                        </div>
-                        <div class="auto-quill-field">
-                            <label for="auto-quill-excerpt">
-                                <strong><?php esc_html_e('Social-Media-Auszug', 'auto-quill'); ?></strong>
-                            </label>
-                            <textarea id="auto-quill-excerpt" rows="3" readonly
-                                      placeholder="<?php esc_attr_e('Wird automatisch von der KI gefüllt', 'auto-quill'); ?>"></textarea>
-                        </div>
-                        <div class="auto-quill-field">
-                            <label for="auto-quill-categories">
-                                <strong><?php esc_html_e('Kategorien', 'auto-quill'); ?></strong>
-                                <span class="description"><?php esc_html_e('(Mehrfachauswahl mit Strg/Cmd)', 'auto-quill'); ?></span>
-                            </label>
-                            <select id="auto-quill-categories" multiple size="5"></select>
-                        </div>
-                        <div class="auto-quill-field">
-                            <label>
-                                <strong><?php esc_html_e('Beitragsbild', 'auto-quill'); ?></strong>
-                                <span class="description"><?php esc_html_e('(optional, via Pixabay)', 'auto-quill'); ?></span>
-                            </label>
-                            <div id="auto-quill-image-preview" class="auto-quill-image-preview is-empty">
-                                <span class="placeholder"><?php esc_html_e('Kein Bild ausgewählt', 'auto-quill'); ?></span>
-                            </div>
-                            <p class="auto-quill-image-actions">
-                                <button type="button" class="button" id="auto-quill-pick-image-btn">
-                                    <?php esc_html_e('Bild auswählen', 'auto-quill'); ?>
-                                </button>
-                                <button type="button" class="button-link" id="auto-quill-clear-image-btn" hidden>
-                                    <?php esc_html_e('Bild entfernen', 'auto-quill'); ?>
-                                </button>
-                            </p>
-                        </div>
-                    </div>
+                        <label for="auto-quill-feed-search" class="screen-reader-text">
+                            <?php esc_html_e('Feed-Einträge durchsuchen', 'auto-quill'); ?>
+                        </label>
+                        <input type="search" id="auto-quill-feed-search"
+                               placeholder="<?php esc_attr_e('Titel oder Beschreibung durchsuchen', 'auto-quill'); ?>">
 
-                    <button class="button button-primary" id="publish-post-btn" style="display:none;">
-                        <?php echo esc_html($publish_label); ?>
-                    </button>
-                </div>
-            </div>
+                        <label class="auto-quill-feed-unlinked-label">
+                            <input type="checkbox" id="auto-quill-feed-unlinked">
+                            <?php esc_html_e('Nur ohne Blog-Post', 'auto-quill'); ?>
+                        </label>
 
-            <div id="auto-quill-image-modal" class="auto-quill-modal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="auto-quill-image-modal-title">
-                <div class="auto-quill-modal-overlay" data-modal-close></div>
-                <div class="auto-quill-modal-content">
-                    <div class="auto-quill-modal-header">
-                        <h2 id="auto-quill-image-modal-title"><?php esc_html_e('Beitragsbild auswählen', 'auto-quill'); ?></h2>
-                        <button type="button" class="auto-quill-modal-close" data-modal-close aria-label="<?php esc_attr_e('Schließen', 'auto-quill'); ?>">&times;</button>
-                    </div>
-                    <form class="auto-quill-modal-search" id="auto-quill-image-search-form">
-                        <input type="text" id="auto-quill-image-query"
-                               placeholder="<?php esc_attr_e('Suchbegriff…', 'auto-quill'); ?>"
-                               class="regular-text" autocomplete="off">
-                        <button type="submit" class="button button-primary">
-                            <?php esc_html_e('Suchen', 'auto-quill'); ?>
+                        <button type="button" class="button" id="auto-quill-feed-apply">
+                            <?php esc_html_e('Filtern', 'auto-quill'); ?>
                         </button>
-                    </form>
-                    <div class="auto-quill-modal-body">
-                        <div id="auto-quill-image-status" class="auto-quill-image-status" hidden></div>
-                        <div id="auto-quill-image-grid" class="auto-quill-image-grid"></div>
-                        <div id="auto-quill-image-pagination" class="auto-quill-image-pagination" hidden>
-                            <button type="button" class="button" id="auto-quill-image-prev">&laquo; <?php esc_html_e('Zurück', 'auto-quill'); ?></button>
-                            <span id="auto-quill-image-page-info"></span>
-                            <button type="button" class="button" id="auto-quill-image-next"><?php esc_html_e('Weiter', 'auto-quill'); ?> &raquo;</button>
-                        </div>
                     </div>
-                    <div class="auto-quill-modal-footer">
-                        <small>
-                            <?php
-                            printf(
-                                /* translators: %s: link to Pixabay */
-                                esc_html__('Bilder von %s — Pixabay Content License', 'auto-quill'),
-                                '<a href="https://pixabay.com/" target="_blank" rel="noopener noreferrer">Pixabay</a>'
-                            );
-                            ?>
-                        </small>
+
+                    <div id="auto-quill-feed-status" class="auto-quill-feed-status" hidden></div>
+
+                    <table class="widefat striped auto-quill-feed-table">
+                        <thead>
+                            <tr>
+                                <th scope="col"><?php esc_html_e('Titel', 'auto-quill'); ?></th>
+                                <th scope="col"><?php esc_html_e('Feed', 'auto-quill'); ?></th>
+                                <th scope="col"><?php esc_html_e('Datum', 'auto-quill'); ?></th>
+                                <th scope="col"><?php esc_html_e('Blog-Post', 'auto-quill'); ?></th>
+                                <th scope="col"><span class="screen-reader-text"><?php esc_html_e('Aktion', 'auto-quill'); ?></span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="auto-quill-feed-body"></tbody>
+                    </table>
+
+                    <div id="auto-quill-feed-pagination" class="auto-quill-feed-pagination" hidden>
+                        <button type="button" class="button" id="auto-quill-feed-prev">
+                            &laquo; <?php esc_html_e('Zurück', 'auto-quill'); ?>
+                        </button>
+                        <span id="auto-quill-feed-page-info"></span>
+                        <button type="button" class="button" id="auto-quill-feed-next">
+                            <?php esc_html_e('Weiter', 'auto-quill'); ?> &raquo;
+                        </button>
                     </div>
                 </div>
             </div>
