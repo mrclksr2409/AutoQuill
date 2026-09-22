@@ -70,7 +70,8 @@ Ein intelligentes WordPress-Plugin, das automatisch RSS-Feeds überwacht, tägli
   absteigend sortiert) und *Alle Feed-Einträge* (Tabelle mit Quellen-Filter, Suche,
   „nur ohne Blog-Post" und Paginierung). Aus beiden Tabs führt ein Klick auf
   „Blog-Post generieren" zur Generierungs-Seite.
-- **Blog-Post erstellen**: Eigene Seite ohne Menüeintrag, nur über die Übersicht erreichbar.
+- **Blog-Post erstellen**: Eigene Ansicht ohne Menüeintrag
+  (`admin.php?page=auto-quill&aq_view=generate`), nur über die Übersicht erreichbar.
   Links steht der Originaltext, rechts entsteht der Beitrag. Während die KI arbeitet, läuft ein
   Spinner mit Sekundenzähler.
 - **RSS Quellen**: Feed-Verwaltung (hinzufügen/löschen)
@@ -235,6 +236,16 @@ und bezieht Updates aus GitHub Releases. WordPress prüft automatisch und zeigt 
 stattdessen dem `main`-Branch.
 
 ## Changelog
+
+### [1.3.1] — 2026-09-22
+
+#### Fixed
+- Die Generierungs-Seite lehnte jeden Aufruf mit „Du bist leider nicht berechtigt, auf diese Seite
+  zuzugreifen" ab — auch als Administrator. Sie war als Untermenü registriert und der Menüeintrag
+  anschließend per `remove_submenu_page()` entfernt; WordPress ermittelt die Berechtigung aber über
+  genau diese Menüliste und fand die Seite dadurch nicht mehr wieder. Die Generierung ist jetzt
+  eine Ansicht der Dashboard-Seite und braucht weder eine eigene Registrierung noch das Entfernen
+  eines Menüeintrags.
 
 ### [1.3.0] — 2026-09-22
 

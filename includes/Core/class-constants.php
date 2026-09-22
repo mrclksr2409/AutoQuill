@@ -16,7 +16,13 @@ class Constants {
     const SOURCES_PAGE_SLUG  = 'auto-quill-sources';
     const SETTINGS_PAGE_SLUG = 'auto-quill-settings';
     const LOGS_PAGE_SLUG     = 'auto-quill-logs';
-    const GENERATE_PAGE_SLUG = 'auto-quill-generate';
+
+    /**
+     * The generate screen is a view of the dashboard page, not a page of its
+     * own: admin.php?page=auto-quill&aq_view=generate.
+     */
+    const VIEW_PARAM    = 'aq_view';
+    const VIEW_GENERATE = 'generate';
 
     const ACTION_ADD      = 'auto_quill_add_source';
     const ACTION_DELETE   = 'auto_quill_delete_source';

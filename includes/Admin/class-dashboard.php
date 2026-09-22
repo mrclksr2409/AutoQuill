@@ -263,7 +263,22 @@ class Dashboard {
         return (string) ob_get_clean();
     }
 
+    /**
+     * Menu callback for admin.php?page=auto-quill.
+     *
+     * The generate screen is a view of this same registered page rather than a
+     * page of its own; see GeneratePage for why.
+     */
     public static function render(): void {
+        if (GeneratePage::is_requested()) {
+            GeneratePage::render();
+            return;
+        }
+
+        self::render_list();
+    }
+
+    private static function render_list(): void {
         if (!current_user_can('manage_options')) {
             wp_die(esc_html__('Zugriff verweigert', 'auto-quill'));
         }

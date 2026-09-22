@@ -8,24 +8,46 @@ use AutoQuill\Database\SourcesRepository;
 /**
  * Hidden screen that turns one feed entry or daily topic into a blog post.
  *
- * Registered as a submenu and then removed from the menu in AdminMenu, so it
- * routes by URL only. Reached from the list screen through a nonced link.
+ * Deliberately a VIEW of the dashboard page (admin.php?page=auto-quill with
+ * aq_view=generate), not a page of its own.
+ *
+ * Registering it as a submenu and then calling remove_submenu_page() looks
+ * tidier but breaks access: user_can_access_admin_page() resolves the page's
+ * hook name through get_admin_page_parent(), which searches the $submenu array.
+ * With the entry removed the parent comes back empty, the hook name is computed
+ * as "admin_page_<slug>" instead of the "<parent>_page_<slug>" that was stored
+ * in $_registered_pages at registration time, and WordPress refuses the request
+ * with "Sorry, you are not allowed to access this page" - even for an
+ * administrator. Sharing the dashboard's registered page sidesteps menu
+ * registration, capability resolution and menu highlighting entirely.
  */
 class GeneratePage {
+    /** Is the current request asking for the generate view? */
+    public static function is_requested(): bool {
+        // phpcs:disable WordPress.Security.NonceVerification.Recommended -- read-only view switch.
+        return isset($_GET['page'], $_GET[C::VIEW_PARAM])
+            && $_GET['page'] === C::MENU_SLUG
+            && $_GET[C::VIEW_PARAM] === C::VIEW_GENERATE;
+        // phpcs:enable WordPress.Security.NonceVerification.Recommended
+    }
+
     /**
-     * Builds the link the list screen uses to reach this page.
+     * Builds the link the list screen uses to reach this view.
      *
      * @param array<string, int|string> $args Either ['article_id' => int] or
      *                                        ['topic_id' => int, 'topic_index' => int].
      */
     public static function url(array $args): string {
         $url = add_query_arg(
-            array_merge(['page' => C::GENERATE_PAGE_SLUG], $args),
+            array_merge([
+                'page'         => C::MENU_SLUG,
+                C::VIEW_PARAM  => C::VIEW_GENERATE,
+            ], $args),
             admin_url('admin.php')
         );
 
         // Generating costs a paid API call, so the GET that auto-starts it is
-        // CSRF-relevant. Without a valid nonce the page still renders, it just
+        // CSRF-relevant. Without a valid nonce the view still renders, it just
         // waits for an explicit click.
         return wp_nonce_url($url, C::NONCE_GENERATE);
     }

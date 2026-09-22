@@ -2,7 +2,7 @@
 
 # Entwicklungs-Notizen
 
-Stand: Version 1.3.0 / DB-Version 1.4
+Stand: Version 1.3.1 / DB-Version 1.4
 
 ## Projektstruktur
 
@@ -374,22 +374,30 @@ Dazu prüfen, ob Klassenname und Dateiname zur Autoloader-Konvention passen.
 
 ## Generierungs-Seite (`Admin/class-generate-page.php`)
 
-Erreichbar unter `admin.php?page=auto-quill-generate` mit `article_id` **oder**
+Erreichbar unter `admin.php?page=auto-quill&aq_view=generate` mit `article_id` **oder**
 `topic_id` + `topic_index`, nie über das Menü.
 
-**Versteckt, aber korrekt eingebunden.** `AdminMenu::register()` legt die Seite als echtes
-Submenu an und `hide_generate_page()` entfernt den Eintrag auf `admin_menu` mit Priorität 999.
-`remove_submenu_page()` löscht nur den `$submenu`-Eintrag; `$_registered_pages` und
-`$_parent_pages` bleiben, deshalb routet die Seite weiter. Eine Registrierung mit `null` als
-Parent wäre schlechter: Dann liefert `get_admin_page_parent()` einen Leerstring und das
-AutoQuill-Menü hebt sich gar nicht mehr hervor.
+**Keine eigene Seite, sondern eine Ansicht der Dashboard-Seite.** `Dashboard::render()` ist der
+Menü-Callback und verzweigt als Erstes: `GeneratePage::is_requested()` → `GeneratePage::render()`,
+sonst `Dashboard::render_list()`.
 
-Daraus folgen drei Dinge, die bewusst mitgelöst sind:
-- `submenu_file`-Filter, damit überhaupt ein Eintrag als aktiv markiert wird.
-- Das `<h1>` ist **hartkodiert**; `get_admin_page_title()` fiele ohne `$submenu`-Eintrag auf den
-  Titel des Elternmenüs („AutoQuill") zurück. Für den Browser-Tab tut das der `admin_title`-Filter.
-- Der explizite `current_user_can('manage_options')`-Check bleibt Pflicht, weil die Absicherung
-  über das Elternmenü nur ein Nebeneffekt ist.
+Der naheliegende Weg — als Untermenü registrieren und den Eintrag per `remove_submenu_page()`
+wieder entfernen — **funktioniert nicht** und wurde in 1.3.0 genau so falsch ausgeliefert:
+
+- `user_can_access_admin_page()` bestimmt den Hook-Namen über
+  `get_plugin_page_hookname($plugin_page, get_admin_page_parent())`.
+- `get_admin_page_parent()` sucht den Slug im `$submenu`-Array. Ist der Eintrag entfernt, liefert
+  es einen **leeren** Parent.
+- Mit leerem Parent ergibt sich `admin_page_<slug>`, bei der Registrierung war aber
+  `<parent>_page_<slug>` in `$_registered_pages` hinterlegt. Die Schlüssel passen nicht mehr.
+- Folge: `wp_die('Sorry, you are not allowed to access this page.')` — auch für Administratoren.
+
+Als Ansicht derselben registrierten Seite entfallen Menü-Registrierung, Capability-Auflösung und
+Menü-Hervorhebung als Problem komplett. Übrig bleibt nur ein `admin_title`-Filter, damit der
+Browser-Tab nicht auch „AutoQuill" heißt, und ein hartkodiertes `<h1>` aus demselben Grund.
+
+Der explizite `current_user_can('manage_options')`-Check am Anfang von `render()` bleibt trotzdem,
+weil jede Admin-Ausgabe im Plugin ihn hat.
 
 **Quelltext serverseitig.** `Writer::source_preview()` ist der einzige öffentliche Zugang zur
 Quell-Pipeline; `resolve_source()` und `build_source_block()` bleiben privat. Der Text wird beim

@@ -5,66 +5,32 @@ use AutoQuill\Core\Constants as C;
 use AutoQuill\Core\Logger;
 
 class AdminMenu {
-    /** Hook suffix of the hidden generate page, as returned by add_submenu_page(). */
-    private static ?string $generate_hook = null;
+    /** Hook suffix of the AutoQuill top-level page, from add_menu_page(). */
+    private static ?string $dashboard_hook = null;
 
     public static function boot(): void {
         add_action('admin_menu', [self::class, 'register']);
-        // Late enough to run after register(); must fire on every admin load.
-        add_action('admin_menu', [self::class, 'hide_generate_page'], 999);
-        add_filter('submenu_file', [self::class, 'keep_parent_highlighted']);
         add_filter('admin_title', [self::class, 'filter_admin_title'], 10, 2);
         add_action('admin_enqueue_scripts', [self::class, 'enqueue_assets']);
     }
 
     /**
-     * The generate page is reachable by URL but has no menu entry.
-     *
-     * remove_submenu_page() only unsets the $submenu entry; $_registered_pages
-     * and $_parent_pages stay intact, so the page still routes and the AutoQuill
-     * top-level menu still resolves as its parent. Registering it with a null
-     * parent instead would set $_parent_pages[$slug] = null, and then the
-     * top-level menu would not highlight at all.
-     */
-    public static function hide_generate_page(): void {
-        remove_submenu_page(C::MENU_SLUG, C::GENERATE_PAGE_SLUG);
-    }
-
-    /**
-     * With the submenu entry gone, $submenu_file points at a slug that is no
-     * longer in $submenu and nothing gets marked current. Fall back to the
-     * dashboard entry, which is where the generate page conceptually lives.
-     */
-    public static function keep_parent_highlighted($submenu_file) {
-        if (self::is_generate_screen()) {
-            return C::MENU_SLUG;
-        }
-        return $submenu_file;
-    }
-
-    /**
-     * get_admin_page_title() walks $submenu[$parent]; with the entry removed it
-     * falls back to the parent menu's title, so the browser tab would read
-     * "AutoQuill". Same reason the <h1> on that page is hardcoded.
+     * The generate screen shares the dashboard's page, so the browser tab would
+     * otherwise read "AutoQuill" on both.
      */
     public static function filter_admin_title($admin_title, $title) {
-        if (!self::is_generate_screen()) {
+        if (!GeneratePage::is_requested()) {
             return $admin_title;
         }
         return sprintf(
-            /* translators: %s: site admin title suffix */
+            /* translators: %s: the site's admin title suffix */
             __('Blog-Post erstellen%s', 'auto-quill'),
-            substr($admin_title, strlen((string) $title))
+            substr((string) $admin_title, strlen((string) $title))
         );
     }
 
-    private static function is_generate_screen(): bool {
-        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only screen check.
-        return isset($_GET['page']) && $_GET['page'] === C::GENERATE_PAGE_SLUG;
-    }
-
     public static function register(): void {
-        add_menu_page(
+        $hook = add_menu_page(
             __('AutoQuill', 'auto-quill'),
             __('AutoQuill', 'auto-quill'),
             'manage_options',
@@ -73,6 +39,7 @@ class AdminMenu {
             'dashicons-rss',
             90
         );
+        self::$dashboard_hook = is_string($hook) ? $hook : null;
 
         add_submenu_page(
             C::MENU_SLUG,
@@ -101,17 +68,6 @@ class AdminMenu {
             ['\AutoQuill\Admin\LogsPage', 'render']
         );
 
-        // Registered as a real submenu so it routes and inherits the parent's
-        // capability, then removed from the menu in hide_generate_page().
-        $hook = add_submenu_page(
-            C::MENU_SLUG,
-            __('Blog-Post erstellen', 'auto-quill'),
-            __('Blog-Post erstellen', 'auto-quill'),
-            'manage_options',
-            C::GENERATE_PAGE_SLUG,
-            ['\AutoQuill\Admin\GeneratePage', 'render']
-        );
-        self::$generate_hook = is_string($hook) ? $hook : null;
     }
 
     public static function enqueue_assets(string $hook): void {
@@ -197,12 +153,14 @@ class AdminMenu {
     /**
      * The generate screen's script, loaded only there.
      *
-     * Compared against the hook suffix add_submenu_page() returned rather than
-     * guessing "auto-quill_page_auto-quill-generate": that string is derived in
-     * get_plugin_page_hookname() and is not worth betting on.
+     * The screen lives on the dashboard page, so the hook suffix alone does not
+     * identify it - the view parameter does.
      */
     private static function enqueue_generate_assets(string $hook, array $settings): void {
-        if (self::$generate_hook === null || $hook !== self::$generate_hook) {
+        if (self::$dashboard_hook === null || $hook !== self::$dashboard_hook) {
+            return;
+        }
+        if (!GeneratePage::is_requested()) {
             return;
         }
 
