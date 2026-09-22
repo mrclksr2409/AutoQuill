@@ -5,13 +5,32 @@ use AutoQuill\Core\Constants as C;
 use AutoQuill\Core\Logger;
 
 class AdminMenu {
+    /** Hook suffix of the AutoQuill top-level page, from add_menu_page(). */
+    private static ?string $dashboard_hook = null;
+
     public static function boot(): void {
         add_action('admin_menu', [self::class, 'register']);
+        add_filter('admin_title', [self::class, 'filter_admin_title'], 10, 2);
         add_action('admin_enqueue_scripts', [self::class, 'enqueue_assets']);
     }
 
+    /**
+     * The generate screen shares the dashboard's page, so the browser tab would
+     * otherwise read "AutoQuill" on both.
+     */
+    public static function filter_admin_title($admin_title, $title) {
+        if (!GeneratePage::is_requested()) {
+            return $admin_title;
+        }
+        return sprintf(
+            /* translators: %s: the site's admin title suffix */
+            __('Blog-Post erstellen%s', 'auto-quill'),
+            substr((string) $admin_title, strlen((string) $title))
+        );
+    }
+
     public static function register(): void {
-        add_menu_page(
+        $hook = add_menu_page(
             __('AutoQuill', 'auto-quill'),
             __('AutoQuill', 'auto-quill'),
             'manage_options',
@@ -20,6 +39,7 @@ class AdminMenu {
             'dashicons-rss',
             90
         );
+        self::$dashboard_hook = is_string($hook) ? $hook : null;
 
         add_submenu_page(
             C::MENU_SLUG,
@@ -47,6 +67,7 @@ class AdminMenu {
             C::LOGS_PAGE_SLUG,
             ['\AutoQuill\Admin\LogsPage', 'render']
         );
+
     }
 
     public static function enqueue_assets(string $hook): void {
@@ -94,7 +115,6 @@ class AdminMenu {
             'nonce'              => wp_create_nonce(C::NONCE_SCOPE),
             'restNonce'          => wp_create_nonce('wp_rest'),
             'fetchAction'        => C::ACTION_FETCH,
-            'publishButtonLabel' => Dashboard::publish_button_label($settings),
             'i18n' => [
                 'recrawling'         => __('Wird neu gecrawlt...', 'auto-quill'),
                 'recrawlInfo'        => __('Feeds werden geholt und Themen neu generiert...', 'auto-quill'),
@@ -104,6 +124,11 @@ class AdminMenu {
                 'reselectError'      => __('Fehler beim Neu-Wählen', 'auto-quill'),
                 'generating'         => __('Blog-Post wird generiert...', 'auto-quill'),
                 'generateError'      => __('Fehler beim Generieren des Posts', 'auto-quill'),
+                'sessionExpired'     => __('Die Sitzung ist abgelaufen. Bitte die Seite neu laden und erneut versuchen.', 'auto-quill'),
+                'loadingFeed'        => __('Feed-Einträge werden geladen…', 'auto-quill'),
+                'feedLoadError'      => __('Feed-Einträge konnten nicht geladen werden.', 'auto-quill'),
+                /* translators: 1: current page, 2: total pages, 3: total entries */
+                'feedPageInfo'       => __('Seite %1$d von %2$d (%3$d Einträge)', 'auto-quill'),
                 'noContent'          => __('Keine Post-Inhalte verfügbar', 'auto-quill'),
                 'saving'             => __('Wird gespeichert...', 'auto-quill'),
                 'publishSuccess'     => __('Post erfolgreich erstellt!', 'auto-quill'),
@@ -118,6 +143,52 @@ class AdminMenu {
                 /* translators: 1: current page, 2: total pages */
                 'imagePageInfo'      => __('Seite %1$d von %2$d', 'auto-quill'),
                 'suggestingKeywords' => __('Suchbegriffe werden vorgeschlagen…', 'auto-quill'),
+                'requestTimeout'     => __('Die Anfrage hat zu lange gedauert. Bitte erneut versuchen.', 'auto-quill'),
+            ],
+        ]);
+
+        self::enqueue_generate_assets($hook, $settings);
+    }
+
+    /**
+     * The generate screen's script, loaded only there.
+     *
+     * The screen lives on the dashboard page, so the hook suffix alone does not
+     * identify it - the view parameter does.
+     */
+    private static function enqueue_generate_assets(string $hook, array $settings): void {
+        if (self::$dashboard_hook === null || $hook !== self::$dashboard_hook) {
+            return;
+        }
+        if (!GeneratePage::is_requested()) {
+            return;
+        }
+
+        wp_enqueue_script(
+            'auto-quill-generate',
+            AUTO_QUILL_PLUGIN_URL . 'assets/generate.js',
+            // admin.js declared as a dependency, so window.AutoQuill exists.
+            ['jquery', 'auto-quill-admin'],
+            AUTO_QUILL_VERSION,
+            true
+        );
+
+        $context = GeneratePage::request_context();
+
+        wp_localize_script('auto-quill-generate', 'autoQuillGenerate', [
+            'params'    => $context['params'],
+            'autostart' => $context['autostart'],
+            'backUrl'   => $context['back_url'],
+            // Screen-specific strings stay out of the shared autoQuill object.
+            'i18n' => [
+                /* translators: %d: elapsed seconds */
+                'elapsedSeconds'    => __('%d s', 'auto-quill'),
+                'generating'        => __('Die KI schreibt den Beitrag…', 'auto-quill'),
+                'retry'             => __('Erneut versuchen', 'auto-quill'),
+                'regenerate'        => __('Neu generieren', 'auto-quill'),
+                'editPost'          => __('Post bearbeiten', 'auto-quill'),
+                'backToList'        => __('Zurück zur Übersicht', 'auto-quill'),
+                'publishRetryLabel' => Dashboard::publish_button_label($settings),
             ],
         ]);
     }

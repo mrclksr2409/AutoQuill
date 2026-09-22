@@ -2,8 +2,24 @@
 namespace AutoQuill\Database;
 
 use AutoQuill\Core\Constants as C;
+use AutoQuill\Core\Logger;
 
 class Schema {
+    /**
+     * Columns that must exist after dbDelta ran. Used to verify a migration
+     * actually applied before the stored DB version is advanced.
+     *
+     * @return array<string, string[]>
+     */
+    private static function required_columns(): array {
+        return [
+            C::TABLE_SOURCES  => ['id', 'title', 'feed_url', 'is_active'],
+            C::TABLE_ARTICLES => ['id', 'source_id', 'title', 'article_url', 'article_hash', 'post_id'],
+            C::TABLE_TOPICS   => ['id', 'topic_date', 'topics', 'post_id', 'status'],
+            C::TABLE_LOGS     => ['id', 'level', 'source', 'message'],
+        ];
+    }
+
     public static function ensure_tables(): void {
         static $checked = false;
         if ($checked) {
@@ -58,11 +74,13 @@ class Schema {
             published_date DATETIME,
             article_url TEXT NOT NULL,
             article_hash VARCHAR(64),
+            post_id BIGINT UNSIGNED NULL,
             fetched_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY  (id),
             UNIQUE KEY article_hash (article_hash),
             KEY source_id (source_id),
-            KEY published_date (published_date)
+            KEY published_date (published_date),
+            KEY post_id (post_id)
         ) $charset_collate;";
 
         $topics_sql = "CREATE TABLE $topics_table (
@@ -99,7 +117,43 @@ class Schema {
         dbDelta($topics_sql);
         dbDelta($logs_sql);
 
+        // dbDelta() never throws: it swallows failures (missing GRANTs, locked
+        // table, read-only storage engine) and only returns a message array.
+        // Advancing the stored version on a failed migration would make
+        // ensure_tables() skip the retry forever, so verify first.
+        $missing = self::missing_columns();
+        if (!empty($missing)) {
+            Logger::error('db.schema', 'Migration unvollständig, DB-Version wird nicht hochgesetzt', [
+                'missing'      => $missing,
+                'wpdb_error'   => $wpdb->last_error,
+                'target_version' => C::DB_VERSION,
+            ]);
+            return;
+        }
+
         update_option(C::DB_VERSION_KEY, C::DB_VERSION);
+    }
+
+    /**
+     * @return array<string, string[]> table slug => columns that are still absent
+     */
+    private static function missing_columns(): array {
+        global $wpdb;
+        $missing = [];
+
+        foreach (self::required_columns() as $slug => $columns) {
+            $full    = $wpdb->prefix . $slug;
+            $present = $wpdb->get_col("SHOW COLUMNS FROM `$full`", 0);
+            if (!is_array($present)) {
+                $present = [];
+            }
+            $absent = array_values(array_diff($columns, $present));
+            if (!empty($absent)) {
+                $missing[$slug] = $absent;
+            }
+        }
+
+        return $missing;
     }
 
     public static function drop_tables(): void {

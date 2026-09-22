@@ -83,7 +83,10 @@ class Logger {
     public static function cleanup(): int {
         global $wpdb;
         $table  = $wpdb->prefix . Constants::TABLE_LOGS;
-        $cutoff = gmdate('Y-m-d H:i:s', time() - (self::MAX_AGE_DAYS * DAY_IN_SECONDS));
+        // created_at is written with current_time('mysql'), i.e. local time, so
+        // the cutoff has to be local too. gmdate() made the age limit 7 days
+        // plus the site's UTC offset.
+        $cutoff = wp_date('Y-m-d H:i:s', time() - (self::MAX_AGE_DAYS * DAY_IN_SECONDS));
 
         $deleted = (int) $wpdb->query($wpdb->prepare(
             "DELETE FROM $table WHERE created_at < %s",
@@ -104,17 +107,35 @@ class Logger {
     /**
      * @param array{level?:string, source?:string, since_id?:int, since?:string, limit?:int} $filters
      */
-    public static function query(array $filters = []): array {
-        global $wpdb;
-        $table = $wpdb->prefix . Constants::TABLE_LOGS;
+    /**
+     * Shared WHERE builder for query() and count().
+     *
+     * `since` is compared against created_at, which is written in LOCAL time -
+     * callers must pass a local 'Y-m-d H:i:s' string (wp_date()), not gmdate().
+     *
+     * @param array{level?:string, levels?:string[], source?:string, since_id?:int, since?:string} $filters
+     * @return array{0: string[], 1: array}
+     */
+    private static function build_where(array $filters): array {
+        $allowed = [self::LEVEL_ERROR, self::LEVEL_WARNING, self::LEVEL_INFO, self::LEVEL_DEBUG];
+        $where   = [];
+        $args    = [];
 
-        $where = [];
-        $args  = [];
-
-        if (!empty($filters['level']) && in_array($filters['level'], [self::LEVEL_ERROR, self::LEVEL_WARNING, self::LEVEL_INFO, self::LEVEL_DEBUG], true)) {
+        if (!empty($filters['level']) && in_array($filters['level'], $allowed, true)) {
             $where[] = 'level = %s';
             $args[]  = $filters['level'];
         }
+
+        if (!empty($filters['levels']) && is_array($filters['levels'])) {
+            $levels = array_values(array_intersect($filters['levels'], $allowed));
+            if ($levels) {
+                $where[] = 'level IN (' . implode(',', array_fill(0, count($levels), '%s')) . ')';
+                foreach ($levels as $level) {
+                    $args[] = $level;
+                }
+            }
+        }
+
         if (!empty($filters['source'])) {
             $where[] = 'source = %s';
             $args[]  = substr((string) $filters['source'], 0, 40);
@@ -128,13 +149,45 @@ class Logger {
             $args[]  = (string) $filters['since'];
         }
 
+        return [$where, $args];
+    }
+
+    /**
+     * How many rows match, so a caller can tell a capped result set from a
+     * complete one. cleanup() evicts oldest-first regardless of level, so a
+     * digest cannot assume the table still holds its whole window.
+     */
+    public static function count(array $filters = []): int {
+        global $wpdb;
+        $table = $wpdb->prefix . Constants::TABLE_LOGS;
+
+        [$where, $args] = self::build_where($filters);
+
+        $sql = "SELECT COUNT(*) FROM $table";
+        if ($where) {
+            $sql .= ' WHERE ' . implode(' AND ', $where);
+        }
+
+        // prepare() with an empty args array triggers _doing_it_wrong.
+        return (int) $wpdb->get_var($args ? $wpdb->prepare($sql, $args) : $sql);
+    }
+
+    public static function query(array $filters = []): array {
+        global $wpdb;
+        $table = $wpdb->prefix . Constants::TABLE_LOGS;
+
+        [$where, $args] = self::build_where($filters);
+
         $limit = isset($filters['limit']) ? max(1, min(500, (int) $filters['limit'])) : 100;
+        $order = (isset($filters['order']) && strtolower((string) $filters['order']) === 'desc')
+            ? 'DESC'
+            : 'ASC';
 
         $sql = "SELECT id, created_at, level, source, message, context FROM $table";
         if ($where) {
             $sql .= ' WHERE ' . implode(' AND ', $where);
         }
-        $sql .= ' ORDER BY id ASC LIMIT %d';
+        $sql .= " ORDER BY id $order LIMIT %d";
         $args[] = $limit;
 
         $rows = $wpdb->get_results($wpdb->prepare($sql, $args), ARRAY_A) ?: [];

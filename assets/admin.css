@@ -42,12 +42,16 @@
 
 /* Topics List */
 .topics-list {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 15px;
 }
 
 .topic-card {
+    /* Grid stretches items to row height; flex + margin-top:auto on the link
+       keeps the button pinned to the bottom across a row of uneven cards. */
+    display: flex;
+    flex-direction: column;
     border-left: 4px solid #0073aa;
     padding: 15px;
     background: #f9f9f9;
@@ -84,7 +88,7 @@
     text-decoration: none;
 }
 
-.auto-quill-select-topic {
+.auto-quill-generate-link {
     margin-top: 10px;
 }
 
@@ -121,13 +125,14 @@
 .auto-quill-loading::after {
     content: '';
     display: inline-block;
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     margin-left: 8px;
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"><animate attributeName="r" from="8" to="8" begin="0s" dur="1.2s" values="8;8;8;8;" keyTimes="0;.2;.5;1" /></animate><circle cx="12" cy="12" r="1"><animate attributeName="r" from="5" to="8" begin="0.1s" dur="1.2s" values="5;5;8;8;" keyTimes="0;.2;.5;1" /></animate></circle></circle></svg>');
-    background-repeat: no-repeat;
-    background-size: contain;
-    animation: spin 1s linear infinite;
+    vertical-align: -2px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
@@ -423,4 +428,322 @@
     border-top: 1px solid #f0f0f0;
     color: #555;
     background: #fafafa;
+}
+
+/* Dashboard tabs */
+.auto-quill-dashboard-tabs {
+    border-bottom: 1px solid #ccc;
+    margin: 0 0 15px 0;
+    padding-bottom: 0;
+    color: inherit;
+}
+
+.auto-quill-panel .auto-quill-dashboard-tabs {
+    border-bottom-width: 1px;
+    border-bottom-color: #ccc;
+}
+
+/* Topic rating */
+.auto-quill-rating-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 8px 0;
+}
+
+.auto-quill-rating {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.6;
+    color: #fff;
+    background: #8c8f94;
+}
+
+.auto-quill-rating.is-rating-high {
+    background: #1a7f37;
+}
+
+.auto-quill-rating.is-rating-mid {
+    background: #bb8800;
+}
+
+.auto-quill-rating.is-rating-low {
+    background: #8c8f94;
+}
+
+.auto-quill-rating-reason {
+    font-size: 12px;
+    color: #555;
+    line-height: 1.4;
+}
+
+/* Feed list */
+.auto-quill-feed-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.auto-quill-feed-filters select,
+.auto-quill-feed-filters input[type="search"] {
+    min-width: 170px;
+}
+
+.auto-quill-feed-unlinked-label {
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.auto-quill-feed-status {
+    padding: 8px 0;
+    color: #555;
+}
+
+.auto-quill-feed-status.is-error {
+    color: #b32d2e;
+}
+
+.auto-quill-feed-table {
+    margin-top: 0;
+}
+
+.auto-quill-feed-table th,
+.auto-quill-feed-table td {
+    vertical-align: top;
+}
+
+.auto-quill-feed-table tr.is-linked {
+    background: #f6fbf7;
+}
+
+.auto-quill-feed-title a {
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.auto-quill-feed-excerpt {
+    display: block;
+    margin-top: 3px;
+    font-size: 12px;
+    color: #666;
+    line-height: 1.4;
+}
+
+.auto-quill-feed-date,
+.auto-quill-feed-post {
+    white-space: nowrap;
+    font-size: 12px;
+}
+
+.auto-quill-post-status {
+    display: block;
+    color: #666;
+}
+
+.auto-quill-feed-empty td {
+    padding: 20px 10px;
+    color: #666;
+}
+
+.auto-quill-feed-pagination {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    margin-top: 12px;
+    font-size: 12px;
+}
+
+/* Source note appended to generated posts */
+.post-preview .auto-quill-source {
+    margin-top: 20px;
+    padding-top: 10px;
+    border-top: 1px solid #ddd;
+    font-size: 13px;
+}
+
+/* ---------------------------------------------------------------- Generate screen */
+
+.auto-quill-back-link {
+    margin: 0 0 4px;
+}
+
+.topic-card .auto-quill-generate-link {
+    align-self: flex-start;
+    margin-top: auto;
+}
+
+.auto-quill-source-header h3 {
+    margin: 0 0 4px;
+    font-size: 1.05em;
+}
+
+.auto-quill-source-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 0 0 12px;
+    font-size: 12px;
+    color: #555;
+}
+
+.auto-quill-panel .auto-quill-source-tabs {
+    border-bottom: 1px solid #ccc;
+    margin: 0 0 12px;
+    padding-bottom: 0;
+    color: inherit;
+}
+
+/* Both source tabs show escaped text, never rendered third-party markup. */
+.auto-quill-source-text {
+    max-height: 520px;
+    margin: 0;
+    padding: 12px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: #f6f7f7;
+    border: 1px solid #dcdcde;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.auto-quill-generate-actions {
+    margin: 0 0 12px;
+}
+
+/* Anchor for the busy overlay. */
+.auto-quill-result-body {
+    position: relative;
+}
+
+.auto-quill-busy {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.88);
+    border-radius: 4px;
+}
+
+/* display:flex would otherwise win over the hidden attribute. */
+.auto-quill-busy[hidden] {
+    display: none;
+}
+
+.auto-quill-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #c3c4c7;
+    border-top-color: #0073aa;
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+}
+
+.auto-quill-busy-text {
+    margin: 0;
+    text-align: center;
+    font-size: 14px;
+    color: #1d2327;
+}
+
+.auto-quill-busy-elapsed {
+    margin-left: 6px;
+    color: #50575e;
+    font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .auto-quill-spinner,
+    .auto-quill-loading::after {
+        animation: none;
+    }
+}
+
+/* A failure after a minute of waiting needs a box that stays put. */
+.auto-quill-generate-error {
+    margin-bottom: 12px;
+    padding: 12px;
+    background: #fcf0f1;
+    border-left: 4px solid #b32d2e;
+    border-radius: 2px;
+}
+
+.auto-quill-generate-error[hidden] {
+    display: none;
+}
+
+.auto-quill-generate-error p {
+    margin: 0 0 10px;
+}
+
+.auto-quill-generate-result {
+    margin-top: 15px;
+    padding: 12px;
+    background: #f0f7f1;
+    border-left: 4px solid #1a7f37;
+    border-radius: 2px;
+}
+
+.auto-quill-generate-result[hidden] {
+    display: none;
+}
+
+.auto-quill-generate-result p {
+    margin: 0;
+}
+
+.auto-quill-result-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 10px 0 0;
+}
+
+/* Notification recipients */
+.auto-quill-user-list {
+    max-height: 220px;
+    overflow-y: auto;
+    padding: 8px 10px;
+    background: #fff;
+    border: 1px solid #dcdcde;
+    border-radius: 4px;
+}
+
+.auto-quill-user-list label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 13px;
+}
+
+.auto-quill-user-list .description {
+    margin-left: 6px;
+    color: #666;
+}
+
+.auto-quill-test-mail {
+    margin-top: 20px;
+    padding: 15px 20px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.auto-quill-test-mail h2 {
+    margin-top: 0;
 }

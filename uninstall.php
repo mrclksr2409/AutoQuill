@@ -13,5 +13,18 @@ require_once AUTO_QUILL_INC_DIR . 'class-autoloader.php';
 delete_option(\AutoQuill\Core\Constants::OPTION_KEY);
 delete_option(\AutoQuill\Core\Constants::DB_VERSION_KEY);
 
+foreach ([
+    \AutoQuill\Core\Constants::META_ARTICLE_ID,
+    \AutoQuill\Core\Constants::META_SOURCE_URL,
+    \AutoQuill\Core\Constants::META_ARTICLE_TITLE,
+    \AutoQuill\Core\Constants::META_FEED_NAME,
+    \AutoQuill\Core\Constants::META_GENERATED_AT,
+] as $meta_key) {
+    delete_post_meta_by_key($meta_key);
+}
+
+delete_option(\AutoQuill\Core\Constants::OPTION_LAST_DIGEST);
+
 wp_clear_scheduled_hook(\AutoQuill\Core\Constants::CRON_FETCH);
 wp_clear_scheduled_hook(\AutoQuill\Core\Constants::CRON_SELECT);
+wp_clear_scheduled_hook(\AutoQuill\Core\Constants::CRON_DIGEST);

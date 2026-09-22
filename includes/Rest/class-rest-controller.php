@@ -19,6 +19,41 @@ class RestController {
             'permission_callback' => $can,
         ]);
 
+        register_rest_route(self::NS, '/articles', [
+            'methods'             => 'GET',
+            'callback'            => ['\AutoQuill\Rest\ArticlesService', 'list_articles'],
+            'permission_callback' => $can,
+            'args'                => [
+                'page' => [
+                    'type'              => 'integer',
+                    'default'           => 1,
+                    'sanitize_callback' => 'absint',
+                ],
+                'per_page' => [
+                    'type'              => 'integer',
+                    'default'           => 20,
+                    'minimum'           => 1,
+                    'maximum'           => 100,
+                    'sanitize_callback' => 'absint',
+                ],
+                'source_id' => [
+                    'type'              => 'integer',
+                    'default'           => 0,
+                    'sanitize_callback' => 'absint',
+                ],
+                'search' => [
+                    'type'              => 'string',
+                    'default'           => '',
+                    'sanitize_callback' => 'sanitize_text_field',
+                ],
+                'linked' => [
+                    'type'    => 'string',
+                    'default' => 'all',
+                    'enum'    => ['all', 'linked', 'unlinked'],
+                ],
+            ],
+        ]);
+
         register_rest_route(self::NS, '/generate-post', [
             'methods'             => 'POST',
             'callback'            => ['\AutoQuill\AI\Writer', 'generate_post'],

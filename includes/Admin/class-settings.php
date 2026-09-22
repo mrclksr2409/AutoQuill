@@ -2,10 +2,39 @@
 namespace AutoQuill\Admin;
 
 use AutoQuill\Core\Constants as C;
+use AutoQuill\Core\Notifier;
 
 class Settings {
     public static function boot(): void {
         add_action('admin_init', [self::class, 'register']);
+        // Handler lives here, not in Notifier: Admin may depend on Core, not
+        // the other way round. Same admin_post_ pattern as SourcesController.
+        add_action('admin_post_' . C::ACTION_TEST_MAIL, [self::class, 'handle_test_mail']);
+    }
+
+    public static function handle_test_mail(): void {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('Zugriff verweigert', 'auto-quill'));
+        }
+        check_admin_referer(C::NONCE_TEST_MAIL);
+
+        $result = Notifier::send_test();
+
+        if ($result['total'] === 0) {
+            Notices::error(__('Es ist kein gültiger Empfänger konfiguriert — es wurde nichts versendet.', 'auto-quill'));
+        } elseif ($result['sent'] === 0) {
+            Notices::error(__('Der Versand ist fehlgeschlagen. Details stehen unter AutoQuill → Logs.', 'auto-quill'));
+        } else {
+            Notices::success(sprintf(
+                /* translators: 1: delivered count, 2: total recipients */
+                __('Test-Mail an %1$d von %2$d Empfängern versendet.', 'auto-quill'),
+                $result['sent'],
+                $result['total']
+            ));
+        }
+
+        wp_safe_redirect(admin_url('admin.php?page=' . C::SETTINGS_PAGE_SLUG) . '#tab-notify');
+        exit;
     }
 
     public static function register(): void {
@@ -70,6 +99,15 @@ class Settings {
 
         $clean['auto_publish'] = !empty($input['auto_publish']);
 
+        $clean['source_link_enabled'] = !empty($input['source_link_enabled']);
+
+        if (array_key_exists('source_link_template', $input)) {
+            $template = sanitize_textarea_field((string) $input['source_link_template']);
+            $clean['source_link_template'] = trim($template) !== ''
+                ? $template
+                : C::DEFAULT_SOURCE_LINK_TEMPLATE;
+        }
+
         if (isset($input['posts_per_day'])) {
             $clean['posts_per_day'] = max(1, min(10, (int) $input['posts_per_day']));
         }
@@ -112,6 +150,22 @@ class Settings {
         $clean['debug_logging'] = !empty($input['debug_logging']);
         $clean['beta_mode']     = !empty($input['beta_mode']);
 
+        self::sanitize_notifications($input, $prev, $clean);
+
+        // An enabled-but-nobody-listening state is the real trap; say so instead
+        // of silently never sending.
+        if (!empty($clean['notify_enabled'])
+            && empty($clean['notify_users'])
+            && empty($clean['notify_emails'])
+        ) {
+            add_settings_error(
+                C::OPTION_KEY,
+                'auto_quill_notify_no_recipients',
+                __('Benachrichtigungen sind aktiv, aber es ist kein Empfänger hinterlegt — es wird nichts versendet.', 'auto-quill'),
+                'warning'
+            );
+        }
+
         add_settings_error(
             C::OPTION_KEY,
             'auto_quill_settings_updated',
@@ -120,6 +174,88 @@ class Settings {
         );
 
         return $clean;
+    }
+
+    /**
+     * Notification keys.
+     *
+     * Gated on array_key_exists or an explicit marker rather than the
+     * unconditional `!empty($input[k])` used for the older checkboxes: that is
+     * only safe because nothing else writes this option today.
+     *
+     * @param array $clean Modified in place.
+     */
+    private static function sanitize_notifications(array $input, array $prev, array &$clean): void {
+        $defaults = C::defaults();
+
+        if (array_key_exists('notify_enabled', $input)) {
+            $clean['notify_enabled'] = !empty($input['notify_enabled']);
+        }
+
+        if (array_key_exists('notify_time', $input)) {
+            // <input type="time"> submits HH:MM, some browsers HH:MM:SS.
+            $time = trim((string) $input['notify_time']);
+            if (preg_match('/^([01]\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?$/', $time, $m)) {
+                $clean['notify_time'] = $m[1] . ':' . $m[2];
+            } else {
+                // Empty must fall back, not silently become 00:00.
+                $clean['notify_time'] = (string) ($prev['notify_time'] ?? $defaults['notify_time']);
+            }
+        }
+
+        // A checkbox group with nothing ticked submits no key at all. Without
+        // the marker, `$clean = $prev` would keep the old selection and the
+        // last recipient could never be removed.
+        if (!empty($input['notify_users_present'])) {
+            $ids = isset($input['notify_users']) && is_array($input['notify_users'])
+                ? $input['notify_users']
+                : [];
+            $ids = array_values(array_unique(array_filter(array_map('absint', $ids))));
+            $ids = array_slice($ids, 0, 50);
+
+            $clean['notify_users'] = array_values(array_filter(
+                $ids,
+                static fn($id) => (bool) get_userdata($id)
+            ));
+        }
+
+        if (array_key_exists('notify_emails', $input)) {
+            $clean['notify_emails'] = self::parse_email_list((string) $input['notify_emails']);
+        }
+
+        if (!empty($input['notify_events_present'])) {
+            $events = isset($input['notify_events']) && is_array($input['notify_events'])
+                ? $input['notify_events']
+                : [];
+            // Intersect in the constant's order so the stored order is stable.
+            $clean['notify_events'] = array_values(array_intersect(C::NOTIFY_EVENTS, $events));
+        }
+
+        // Markers are form plumbing and must never reach the stored option.
+        unset($clean['notify_users_present'], $clean['notify_events_present']);
+    }
+
+    /**
+     * Splits a textarea into validated, de-duplicated addresses.
+     *
+     * @return string[]
+     */
+    private static function parse_email_list(string $raw): array {
+        $parts = preg_split('/[\r\n,;]+/', $raw) ?: [];
+        $out   = [];
+
+        foreach ($parts as $part) {
+            $email = sanitize_email(trim($part));
+            if ($email === '' || !is_email($email)) {
+                continue;
+            }
+            $key = strtolower($email);
+            if (!isset($out[$key])) {
+                $out[$key] = $email;
+            }
+        }
+
+        return array_slice(array_values($out), 0, 50);
     }
 
     public static function render(): void {
@@ -136,6 +272,7 @@ class Settings {
             <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
 
             <?php settings_errors(C::OPTION_KEY); ?>
+            <?php Notices::flush(); ?>
 
             <form method="post" action="options.php">
                 <?php settings_fields(C::SETTINGS_GROUP); ?>
@@ -144,6 +281,7 @@ class Settings {
                     <a href="#tab-ki"      class="nav-tab nav-tab-active" data-tab="ki"><?php esc_html_e('KI-Provider', 'auto-quill'); ?></a>
                     <a href="#tab-publish" class="nav-tab"                data-tab="publish"><?php esc_html_e('Veröffentlichung', 'auto-quill'); ?></a>
                     <a href="#tab-prompts" class="nav-tab"                data-tab="prompts"><?php esc_html_e('Prompts', 'auto-quill'); ?></a>
+                    <a href="#tab-notify"  class="nav-tab"                data-tab="notify"><?php esc_html_e('Benachrichtigungen', 'auto-quill'); ?></a>
                     <a href="#tab-updates" class="nav-tab"                data-tab="updates"><?php esc_html_e('Updates', 'auto-quill'); ?></a>
                     <a href="#tab-debug"   class="nav-tab"                data-tab="debug"><?php esc_html_e('Debug', 'auto-quill'); ?></a>
                 </h2>
@@ -294,6 +432,55 @@ class Settings {
 
                         <tr>
                             <th scope="row">
+                                <?php esc_html_e('Link zum Originalartikel', 'auto-quill'); ?>
+                            </th>
+                            <td>
+                                <label>
+                                    <input type="hidden"
+                                           name="<?php echo esc_attr(C::OPTION_KEY); ?>[source_link_enabled]"
+                                           value="0">
+                                    <input type="checkbox"
+                                           id="source_link_enabled"
+                                           name="<?php echo esc_attr(C::OPTION_KEY); ?>[source_link_enabled]"
+                                           value="1"
+                                           <?php checked($settings['source_link_enabled'] ?? true); ?>>
+                                    <?php esc_html_e('Jedem Blog-Beitrag einen Quellenhinweis anhängen', 'auto-quill'); ?>
+                                </label>
+                                <p class="description">
+                                    <?php esc_html_e('Der Hinweis wird serverseitig ans Ende des Beitrags gesetzt und ist damit garantiert vorhanden – unabhängig davon, ob die KI einen Link ausgibt. Er erscheint bereits in der Vorschau.', 'auto-quill'); ?>
+                                </p>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <th scope="row">
+                                <label for="source_link_template"><?php esc_html_e('Text des Quellenhinweises', 'auto-quill'); ?></label>
+                            </th>
+                            <td>
+                                <textarea id="source_link_template" rows="2" class="large-text code"
+                                          name="<?php echo esc_attr(C::OPTION_KEY); ?>[source_link_template]"><?php
+                                    echo esc_textarea($settings['source_link_template'] ?? C::DEFAULT_SOURCE_LINK_TEMPLATE);
+                                ?></textarea>
+                                <p class="description">
+                                    <?php esc_html_e('Reiner Text mit Platzhaltern (kein HTML – das Markup liefert der Platzhalter):', 'auto-quill'); ?>
+                                    <code>{source_link}</code> <?php esc_html_e('(fertiger Link auf den Artikeltitel)', 'auto-quill'); ?>,
+                                    <code>{article_title}</code>,
+                                    <code>{source_url}</code>,
+                                    <code>{feed_name}</code>.
+                                    <br>
+                                    <?php
+                                    printf(
+                                        /* translators: %s: default template string */
+                                        esc_html__('Standard: %s', 'auto-quill'),
+                                        '<code>' . esc_html(C::DEFAULT_SOURCE_LINK_TEMPLATE) . '</code>'
+                                    );
+                                    ?>
+                                </p>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <th scope="row">
                                 <label for="rss_lookback_days"><?php esc_html_e('RSS-Rückblick (Tage)', 'auto-quill'); ?></label>
                             </th>
                             <td>
@@ -376,6 +563,139 @@ class Settings {
                     </table>
                 </div>
 
+                <div class="auto-quill-tab-panel" data-tab="notify" style="display:none;">
+                    <?php
+                    $notify_enabled = $settings['notify_enabled'] ?? C::defaults()['notify_enabled'];
+                    $notify_time    = (string) ($settings['notify_time'] ?? C::defaults()['notify_time']);
+                    $notify_users   = is_array($settings['notify_users'] ?? null) ? $settings['notify_users'] : [];
+                    $notify_emails  = is_array($settings['notify_emails'] ?? null) ? $settings['notify_emails'] : [];
+                    $notify_events  = is_array($settings['notify_events'] ?? null)
+                        ? $settings['notify_events']
+                        : C::defaults()['notify_events'];
+
+                    $admin_users = get_users([
+                        'capability' => 'manage_options',
+                        'fields'     => ['ID', 'display_name', 'user_email'],
+                        'number'     => 200,
+                        'orderby'    => 'display_name',
+                    ]);
+
+                    $event_labels = [
+                        'topics' => __('Neue Top-Themen', 'auto-quill'),
+                        'errors' => __('Fehler und Warnungen', 'auto-quill'),
+                        'posts'  => __('Erstellte Blog-Posts', 'auto-quill'),
+                    ];
+                    ?>
+
+                    <p class="description" style="margin: 1em 0;">
+                        <?php esc_html_e('AutoQuill kann einmal täglich zusammenfassen, was seit der letzten Mail passiert ist. Gibt es nichts zu berichten, wird auch nichts verschickt. Ob die Mail ankommt, hängt von der Mail-Konfiguration der Seite ab — im Zweifel ein SMTP-Plugin einrichten und den Test unten nutzen.', 'auto-quill'); ?>
+                    </p>
+
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row"><?php esc_html_e('Tagesbericht', 'auto-quill'); ?></th>
+                            <td>
+                                <label>
+                                    <input type="hidden"
+                                           name="<?php echo esc_attr(C::OPTION_KEY); ?>[notify_enabled]"
+                                           value="0">
+                                    <input type="checkbox"
+                                           id="notify_enabled"
+                                           name="<?php echo esc_attr(C::OPTION_KEY); ?>[notify_enabled]"
+                                           value="1"
+                                           <?php checked(!empty($notify_enabled)); ?>>
+                                    <?php esc_html_e('Täglich eine Zusammenfassung per E-Mail senden', 'auto-quill'); ?>
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <th scope="row">
+                                <label for="notify_time"><?php esc_html_e('Uhrzeit', 'auto-quill'); ?></label>
+                            </th>
+                            <td>
+                                <input type="time" id="notify_time"
+                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[notify_time]"
+                                       value="<?php echo esc_attr($notify_time); ?>">
+                                <p class="description">
+                                    <?php
+                                    printf(
+                                        /* translators: %s: site timezone name */
+                                        esc_html__('Ortszeit der Seite (%s). Die tatsächliche Ausführung hängt an WP-Cron und kann sich verzögern, wenn die Seite wenig besucht wird.', 'auto-quill'),
+                                        '<code>' . esc_html(wp_timezone_string()) . '</code>'
+                                    );
+                                    ?>
+                                </p>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <th scope="row"><?php esc_html_e('Inhalte', 'auto-quill'); ?></th>
+                            <td>
+                                <?php /* Marker: a checkbox group with nothing ticked submits no key. */ ?>
+                                <input type="hidden"
+                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[notify_events_present]"
+                                       value="1">
+                                <?php foreach ($event_labels as $event_key => $label): ?>
+                                    <label style="display:block; margin-bottom:4px;">
+                                        <input type="checkbox"
+                                               name="<?php echo esc_attr(C::OPTION_KEY); ?>[notify_events][]"
+                                               value="<?php echo esc_attr($event_key); ?>"
+                                               <?php checked(in_array($event_key, $notify_events, true)); ?>>
+                                        <?php echo esc_html($label); ?>
+                                    </label>
+                                <?php endforeach; ?>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <th scope="row"><?php esc_html_e('Empfänger: Benutzer', 'auto-quill'); ?></th>
+                            <td>
+                                <input type="hidden"
+                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[notify_users_present]"
+                                       value="1">
+                                <?php if (empty($admin_users)): ?>
+                                    <p class="description"><?php esc_html_e('Keine Benutzer mit Administratorrechten gefunden.', 'auto-quill'); ?></p>
+                                <?php else: ?>
+                                    <div class="auto-quill-user-list">
+                                        <?php foreach ($admin_users as $user): ?>
+                                            <label>
+                                                <input type="checkbox"
+                                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[notify_users][]"
+                                                       value="<?php echo (int) $user->ID; ?>"
+                                                       <?php checked(in_array((int) $user->ID, array_map('intval', $notify_users), true)); ?>>
+                                                <?php echo esc_html($user->display_name); ?>
+                                                <span class="description"><?php echo esc_html($user->user_email); ?></span>
+                                            </label>
+                                        <?php endforeach; ?>
+                                    </div>
+                                    <p class="description">
+                                        <?php esc_html_e('Die Adresse wird beim Versand frisch aus dem Benutzerkonto gelesen — eine geänderte Mailadresse wirkt sofort.', 'auto-quill'); ?>
+                                        <?php if (count($admin_users) >= 200): ?>
+                                            <br><?php esc_html_e('Hinweis: Es werden nur die ersten 200 Benutzer angezeigt.', 'auto-quill'); ?>
+                                        <?php endif; ?>
+                                    </p>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <th scope="row">
+                                <label for="notify_emails"><?php esc_html_e('Weitere Adressen', 'auto-quill'); ?></label>
+                            </th>
+                            <td>
+                                <textarea id="notify_emails" rows="4" class="large-text code"
+                                          name="<?php echo esc_attr(C::OPTION_KEY); ?>[notify_emails]"><?php
+                                    echo esc_textarea(implode("\n", $notify_emails));
+                                ?></textarea>
+                                <p class="description">
+                                    <?php esc_html_e('Eine Adresse pro Zeile, auch für Verteiler ohne WordPress-Konto. Ungültige Einträge werden beim Speichern verworfen.', 'auto-quill'); ?>
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
                 <div class="auto-quill-tab-panel" data-tab="updates" style="display:none;">
                     <table class="form-table">
                         <tr>
@@ -439,6 +759,31 @@ class Settings {
 
                 <?php submit_button(); ?>
             </form>
+
+            <div class="auto-quill-tab-panel" data-tab="notify" style="display:none;">
+                <div class="auto-quill-test-mail">
+                    <h2><?php esc_html_e('Versand testen', 'auto-quill'); ?></h2>
+                    <?php $current_recipients = Notifier::recipients(); ?>
+                    <p class="description">
+                        <?php esc_html_e('Sendet den Bericht der letzten 24 Stunden sofort — oder, wenn es nichts zu berichten gibt, eine kurze Bestätigung. Die Einstellungen müssen dafür gespeichert sein.', 'auto-quill'); ?>
+                    </p>
+                    <p>
+                        <strong><?php esc_html_e('Aktuelle Empfänger:', 'auto-quill'); ?></strong>
+                        <?php if (empty($current_recipients)): ?>
+                            <span style="color:#a00;"><?php esc_html_e('keine', 'auto-quill'); ?></span>
+                        <?php else: ?>
+                            <?php echo esc_html(implode(', ', $current_recipients)); ?>
+                        <?php endif; ?>
+                    </p>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                        <?php wp_nonce_field(C::NONCE_TEST_MAIL); ?>
+                        <input type="hidden" name="action" value="<?php echo esc_attr(C::ACTION_TEST_MAIL); ?>">
+                        <button type="submit" class="button" <?php disabled(empty($current_recipients)); ?>>
+                            <?php esc_html_e('Test-Mail an alle Empfänger senden', 'auto-quill'); ?>
+                        </button>
+                    </form>
+                </div>
+            </div>
 
             <div class="auto-quill-tab-panel" data-tab="debug" style="display:none;">
                 <?php StatusPanel::render(); ?>

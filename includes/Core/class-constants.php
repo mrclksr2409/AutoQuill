@@ -5,7 +5,7 @@ class Constants {
     const OPTION_KEY     = 'auto_quill_settings';
     const SETTINGS_GROUP = 'auto_quill_settings_group';
     const DB_VERSION_KEY = 'auto_quill_db_version';
-    const DB_VERSION     = '1.3';
+    const DB_VERSION     = '1.4';
 
     const TABLE_SOURCES  = 'auto_quill_sources';
     const TABLE_ARTICLES = 'auto_quill_articles';
@@ -17,17 +17,55 @@ class Constants {
     const SETTINGS_PAGE_SLUG = 'auto-quill-settings';
     const LOGS_PAGE_SLUG     = 'auto-quill-logs';
 
+    /**
+     * The generate screen is a view of the dashboard page, not a page of its
+     * own: admin.php?page=auto-quill&aq_view=generate.
+     */
+    const VIEW_PARAM    = 'aq_view';
+    const VIEW_GENERATE = 'generate';
+
     const ACTION_ADD      = 'auto_quill_add_source';
     const ACTION_DELETE   = 'auto_quill_delete_source';
     const ACTION_FETCH    = 'auto_quill_fetch_now';
     const ACTION_RECRAWL  = 'auto_quill_recrawl_topics';
     const ACTION_RESELECT = 'auto_quill_reselect_topics';
+    const ACTION_TEST_MAIL = 'auto_quill_test_mail';
 
     const NONCE_SCOPE    = 'auto-quill-nonce';
+    const NONCE_GENERATE = 'auto_quill_generate';
+    const NONCE_TEST_MAIL = 'auto_quill_test_mail_nonce';
     const NOTICE_KEY_FMT = 'auto_quill_notice_%d';
 
     const CRON_FETCH  = 'auto_quill_daily_fetch';
     const CRON_SELECT = 'auto_quill_daily_select';
+    const CRON_DIGEST = 'auto_quill_daily_digest';
+
+    /** UTC timestamp of the last sent digest. */
+    const OPTION_LAST_DIGEST = 'auto_quill_last_digest';
+
+    /** Sections a digest can contain. */
+    const NOTIFY_EVENTS = ['topics', 'errors', 'posts'];
+
+    /** How far back a digest may ever look, bounded by the log retention. */
+    const DIGEST_MAX_WINDOW_DAYS = 7;
+
+    const DEFAULT_SOURCE_LINK_TEMPLATE = 'Quelle: {source_link}';
+
+    /** Post meta carrying the provenance of a generated post. */
+    const META_ARTICLE_ID    = '_auto_quill_article_id';
+    const META_SOURCE_URL    = '_auto_quill_source_url';
+    const META_ARTICLE_TITLE = '_auto_quill_article_title';
+    const META_FEED_NAME     = '_auto_quill_feed_name';
+
+    /**
+     * UTC timestamp, written for EVERY post AutoQuill creates.
+     *
+     * The provenance keys above are skipped when no source article resolves,
+     * and topics.post_id / articles.post_id are both lossy (one topics row per
+     * day, and articles are pruned by the retention pass), so this is the only
+     * reliable marker for "AutoQuill made this post".
+     */
+    const META_GENERATED_AT  = '_auto_quill_generated_at';
 
     const DEFAULT_OPENAI_MODEL = 'gpt-4o-mini';
     const DEFAULT_CLAUDE_MODEL = 'claude-sonnet-4-6';
@@ -75,6 +113,8 @@ class Constants {
             'pixabay_api_key' => '',
             'post_status'   => 'draft',
             'auto_publish'  => false,
+            'source_link_enabled'  => true,
+            'source_link_template' => self::DEFAULT_SOURCE_LINK_TEMPLATE,
             'posts_per_day' => 1,
             'rss_lookback_days' => 7,
             'prompt_title'    => self::default_prompt_title(),
@@ -83,6 +123,14 @@ class Constants {
             'prompt_category' => self::default_prompt_category(),
             'debug_logging'   => false,
             'beta_mode'       => false,
+            // Off by default: a plugin that starts mailing after an update is a
+            // nuisance. Existing installs never receive new default keys, so
+            // every read must fall back through defaults() explicitly.
+            'notify_enabled' => false,
+            'notify_time'    => '08:00',
+            'notify_users'   => [],
+            'notify_emails'  => [],
+            'notify_events'  => self::NOTIFY_EVENTS,
         ];
     }
 
