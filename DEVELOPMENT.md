@@ -296,14 +296,10 @@ tokens = woerter * 4 + 1000, geklemmt auf [6500, 16000]
 Die Untergrenze 6500 ist der früher hartkodierte Wert: Der Standard-Prompt (1200 Wörter ⇒ 5800)
 landet darauf, das Verhalten ändert sich also für bestehende Installationen nicht.
 
-Die Obergrenze 16000 liegt unter dem Ausgabelimit von `gpt-4o-mini` (16 384). **Achtung:** Die
-Modellfelder in den Einstellungen sind Freitext. Wer ein Modell mit kleinerem Ausgabelimit einträgt
-(`gpt-4`: 8192, `gpt-3.5-turbo`: 4096), bekommt statt einer gekürzten Antwort einen HTTP 400 —
+Die Obergrenze 16000 liegt unter dem Ausgabelimit von `gpt-4o-mini` (16 384). **Achtung:** Das
+Modell-Dropdown bietet alles an, was der Anbieter listet. Wer ein Modell mit kleinerem Ausgabelimit
+wählt (`gpt-4`: 8192, `gpt-3.5-turbo`: 4096), bekommt statt einer gekürzten Antwort einen HTTP 400 —
 dafür gibt es den Filter `auto_quill_max_tokens`.
-
-Ebenfalls erwähnenswert: `Client::call_openai()` sendet `max_tokens` und eine abweichende
-`temperature` bedingungslos. Neuere OpenAI-Modelle erwarten stattdessen `max_completion_tokens`
-und lehnen abweichende `temperature`-Werte ab.
 
 ### Quellenhinweis
 

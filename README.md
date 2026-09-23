@@ -2,6 +2,8 @@
 
 Ein intelligentes WordPress-Plugin, das automatisch RSS-Feeds überwacht, täglich die interessantesten Themen selektiert und mithilfe von KI professionelle Blog-Posts generiert.
 
+📖 **Ausführliche Dokumentation im [Wiki](https://github.com/mrclksr2409/autoquill/wiki)**
+
 ## Features
 
 ✅ **RSS-Feed Management** - Verwalte mehrere RSS-Quellen  
@@ -411,8 +413,8 @@ GPL v2 oder später. Siehe `LICENSE` für Details.
 
 ## Support
 
-- Öffne einen Issue auf [GitHub](https://github.com/AutoQuill/AutoQuill)
-- Dokumentation: [Wiki](https://github.com/AutoQuill/AutoQuill/wiki)
+- Öffne einen Issue auf [GitHub](https://github.com/mrclksr2409/autoquill/issues)
+- Dokumentation: [Wiki](https://github.com/mrclksr2409/autoquill/wiki) (Quelle: Ordner `wiki/`)
 
 ## Roadmap
 
