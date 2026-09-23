@@ -78,6 +78,28 @@ class RestController {
             'permission_callback' => $can,
         ]);
 
+        register_rest_route(self::NS, '/models', [
+            'methods'             => 'POST',
+            'callback'            => ['\AutoQuill\Rest\ModelsService', 'list_models'],
+            'permission_callback' => $can,
+            'args'                => [
+                'provider' => [
+                    'type'     => 'string',
+                    'required' => true,
+                    'enum'     => ['openai', 'claude'],
+                ],
+                'api_key' => [
+                    'type'              => 'string',
+                    'default'           => '',
+                    'sanitize_callback' => 'sanitize_text_field',
+                ],
+                'refresh' => [
+                    'type'    => 'boolean',
+                    'default' => false,
+                ],
+            ],
+        ]);
+
         register_rest_route(self::NS, '/logs', [
             [
                 'methods'             => 'GET',

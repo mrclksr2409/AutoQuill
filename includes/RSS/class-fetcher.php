@@ -27,8 +27,9 @@ class Fetcher {
             Logger::info('fetcher', 'Alte Artikel bereinigt', ['lookback_days' => $lookback, 'deleted' => $deleted]);
         }
 
-        Logger::info('fetcher', 'RSS-Fetch-Run abgeschlossen, Topic-Selection wird angestoßen');
-        do_action(C::CRON_SELECT);
+        // No chained selection: it runs at its own configured time
+        // (Scheduler), and the manual buttons trigger it explicitly.
+        Logger::info('fetcher', 'RSS-Fetch-Run abgeschlossen');
     }
 
     public static function fetch_feed(int $source_id, string $feed_url): void {

@@ -70,6 +70,10 @@ class Constants {
     const DEFAULT_OPENAI_MODEL = 'gpt-4o-mini';
     const DEFAULT_CLAUDE_MODEL = 'claude-sonnet-4-6';
 
+    /** Transient prefix for the model lists fetched from the providers. */
+    const MODELS_CACHE_PREFIX = 'auto_quill_models_';
+    const MODELS_CACHE_TTL    = 43200; // 12h
+
     const UPDATE_REPO_URL    = 'https://github.com/mrclksr2409/autoquill/';
     const UPDATE_MAIN_BRANCH = 'main';
     const UPDATE_SLUG        = 'auto-quill';
@@ -117,6 +121,10 @@ class Constants {
             'source_link_template' => self::DEFAULT_SOURCE_LINK_TEMPLATE,
             'posts_per_day' => 1,
             'rss_lookback_days' => 7,
+            // Local site time (HH:MM). Selection looks at the last 24h of
+            // articles, so it should run after the fetch.
+            'fetch_time'  => '00:00',
+            'select_time' => '01:00',
             'prompt_title'    => self::default_prompt_title(),
             'prompt_body'     => self::default_prompt_body(),
             'prompt_excerpt'  => self::default_prompt_excerpt(),

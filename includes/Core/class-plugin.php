@@ -25,17 +25,10 @@ class Plugin {
         RestController::boot();
         Updater::boot();
 
-        add_action(Constants::CRON_FETCH,  ['\AutoQuill\RSS\Fetcher',  'fetch_feeds']);
-        add_action(Constants::CRON_SELECT, ['\AutoQuill\AI\Selector',  'select_top_topics']);
+        Scheduler::boot();
+        Scheduler::ensure_scheduled();
 
-        if (!wp_next_scheduled(Constants::CRON_FETCH)) {
-            wp_schedule_event(time(), 'daily', Constants::CRON_FETCH);
-        }
-        if (!wp_next_scheduled(Constants::CRON_SELECT)) {
-            wp_schedule_event(time() + 3600, 'daily', Constants::CRON_SELECT);
-        }
-
-        // Gated on the setting, unlike the two above: an upgrade must never
+        // Gated on the setting, unlike fetch and selection: an upgrade must never
         // start sending mail on its own.
         Notifier::ensure_scheduled();
     }

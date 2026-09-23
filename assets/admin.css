@@ -262,6 +262,20 @@
     margin-top: 0;
 }
 
+.auto-quill-models-spinner.spinner {
+    float: none;
+    vertical-align: middle;
+    margin-top: 0;
+}
+
+.auto-quill-models-status:empty {
+    display: none;
+}
+
+.auto-quill-models-status.is-error {
+    color: #b32d2e;
+}
+
 /* Featured image preview */
 .auto-quill-image-preview {
     width: 100%;

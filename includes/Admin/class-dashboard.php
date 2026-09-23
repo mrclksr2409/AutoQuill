@@ -38,6 +38,7 @@ class Dashboard {
         }
 
         Fetcher::fetch_feeds();
+        Selector::select_top_topics();
         wp_send_json_success(['message' => __('Feeds aktualisiert', 'auto-quill')]);
     }
 

@@ -1,6 +1,7 @@
 <?php
 namespace AutoQuill\Admin;
 
+use AutoQuill\AI\ModelCatalog;
 use AutoQuill\Core\Constants as C;
 use AutoQuill\Core\Notifier;
 
@@ -75,12 +76,12 @@ class Settings {
         }
 
         if (array_key_exists('openai_model', $input)) {
-            $model = sanitize_text_field((string) $input['openai_model']);
+            $model = self::sanitize_model_id($input['openai_model']);
             $clean['openai_model'] = $model !== '' ? $model : C::DEFAULT_OPENAI_MODEL;
         }
 
         if (array_key_exists('claude_model', $input)) {
-            $model = sanitize_text_field((string) $input['claude_model']);
+            $model = self::sanitize_model_id($input['claude_model']);
             $clean['claude_model'] = $model !== '' ? $model : C::DEFAULT_CLAUDE_MODEL;
         }
 
@@ -117,6 +118,29 @@ class Settings {
             if ($v < 0)   { $v = 0; }
             if ($v > 365) { $v = 365; }
             $clean['rss_lookback_days'] = $v;
+        }
+
+        foreach (['fetch_time', 'select_time'] as $time_key) {
+            if (array_key_exists($time_key, $input)) {
+                $clean[$time_key] = self::sanitize_time(
+                    $input[$time_key],
+                    (string) ($prev[$time_key] ?? C::defaults()[$time_key])
+                );
+            }
+        }
+
+        // Selection looks at the last 24h of articles, so it should follow the
+        // fetch closely. Measured across midnight: 23:00 -> 00:30 is fine.
+        $to_minutes = static fn(string $t): int => (int) substr($t, 0, 2) * 60 + (int) substr($t, 3, 2);
+        $gap = ($to_minutes((string) ($clean['select_time'] ?? C::defaults()['select_time']))
+              - $to_minutes((string) ($clean['fetch_time'] ?? C::defaults()['fetch_time'])) + 1440) % 1440;
+        if ($gap === 0 || $gap > 720) {
+            add_settings_error(
+                C::OPTION_KEY,
+                'auto_quill_select_before_fetch',
+                __('Die Themenauswahl liegt nicht kurz nach dem RSS-Abruf. Sie arbeitet dann mit Artikeln eines älteren Abrufs — oder läuft gleichzeitig mit ihm.', 'auto-quill'),
+                'warning'
+            );
         }
 
         if (array_key_exists('prompt_title', $input)) {
@@ -193,14 +217,10 @@ class Settings {
         }
 
         if (array_key_exists('notify_time', $input)) {
-            // <input type="time"> submits HH:MM, some browsers HH:MM:SS.
-            $time = trim((string) $input['notify_time']);
-            if (preg_match('/^([01]\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?$/', $time, $m)) {
-                $clean['notify_time'] = $m[1] . ':' . $m[2];
-            } else {
-                // Empty must fall back, not silently become 00:00.
-                $clean['notify_time'] = (string) ($prev['notify_time'] ?? $defaults['notify_time']);
-            }
+            $clean['notify_time'] = self::sanitize_time(
+                $input['notify_time'],
+                (string) ($prev['notify_time'] ?? $defaults['notify_time'])
+            );
         }
 
         // A checkbox group with nothing ticked submits no key at all. Without
@@ -236,6 +256,25 @@ class Settings {
     }
 
     /**
+     * <input type="time"> submits HH:MM, some browsers HH:MM:SS. Anything
+     * else - including empty - keeps the previous value instead of silently
+     * becoming 00:00.
+     */
+    private static function sanitize_time($raw, string $fallback): string {
+        $time = trim((string) $raw);
+        if (preg_match('/^([01]\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?$/', $time, $m)) {
+            return $m[1] . ':' . $m[2];
+        }
+        return $fallback;
+    }
+
+    /** Model IDs from both providers only ever use this character set. */
+    private static function sanitize_model_id($raw): string {
+        $model = trim(sanitize_text_field((string) $raw));
+        return preg_match('/^[A-Za-z0-9._:\/-]{1,100}$/', $model) ? $model : '';
+    }
+
+    /**
      * Splits a textarea into validated, de-duplicated addresses.
      *
      * @return string[]
@@ -256,6 +295,56 @@ class Settings {
         }
 
         return array_slice(array_values($out), 0, 50);
+    }
+
+    /**
+     * A dropdown instead of free text. The options come from the provider
+     * (ModelCatalog, loaded by admin.js); the saved model and the default are
+     * always present, so the field works without the list and never silently
+     * changes the stored value.
+     */
+    private static function render_model_row(string $provider, string $label, string $current, string $default, string $active_provider): void {
+        $field   = $provider . '_model';
+        $options = [];
+        foreach (ModelCatalog::cached($provider) as $model) {
+            $options[$model['id']] = $model['label'];
+        }
+        if (!isset($options[$current])) {
+            $options = [$current => $current] + $options;
+        }
+        if (!isset($options[$default])) {
+            $options[$default] = $default;
+        }
+        ?>
+        <tr class="auto-quill-model-row" data-provider="<?php echo esc_attr($provider); ?>"
+            <?php echo $provider !== $active_provider ? 'style="display:none;"' : ''; ?>>
+            <th scope="row">
+                <label for="<?php echo esc_attr($field); ?>"><?php echo esc_html($label); ?></label>
+            </th>
+            <td>
+                <select id="<?php echo esc_attr($field); ?>"
+                        class="auto-quill-model-select"
+                        data-provider="<?php echo esc_attr($provider); ?>"
+                        name="<?php echo esc_attr(C::OPTION_KEY); ?>[<?php echo esc_attr($field); ?>]"
+                        style="min-width: 300px;">
+                    <?php foreach ($options as $id => $option_label): ?>
+                        <option value="<?php echo esc_attr((string) $id); ?>" <?php selected($current, (string) $id); ?>>
+                            <?php echo esc_html((string) $option_label); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <button type="button" class="button auto-quill-models-refresh" data-provider="<?php echo esc_attr($provider); ?>">
+                    <?php esc_html_e('Modelle neu laden', 'auto-quill'); ?>
+                </button>
+                <span class="spinner auto-quill-models-spinner"></span>
+                <p class="description auto-quill-models-status" aria-live="polite"></p>
+                <p class="description"><?php
+                    /* translators: %s: default model name */
+                    printf(esc_html__('Die Liste wird direkt beim Anbieter mit dem API-Schlüssel abgerufen. Standard: %s', 'auto-quill'), '<code>' . esc_html($default) . '</code>');
+                ?></p>
+            </td>
+        </tr>
+        <?php
     }
 
     public static function render(): void {
@@ -280,6 +369,7 @@ class Settings {
                 <h2 class="nav-tab-wrapper auto-quill-settings-tabs">
                     <a href="#tab-ki"      class="nav-tab nav-tab-active" data-tab="ki"><?php esc_html_e('KI-Provider', 'auto-quill'); ?></a>
                     <a href="#tab-publish" class="nav-tab"                data-tab="publish"><?php esc_html_e('Veröffentlichung', 'auto-quill'); ?></a>
+                    <a href="#tab-schedule" class="nav-tab"               data-tab="schedule"><?php esc_html_e('Zeitplan', 'auto-quill'); ?></a>
                     <a href="#tab-prompts" class="nav-tab"                data-tab="prompts"><?php esc_html_e('Prompts', 'auto-quill'); ?></a>
                     <a href="#tab-notify"  class="nav-tab"                data-tab="notify"><?php esc_html_e('Benachrichtigungen', 'auto-quill'); ?></a>
                     <a href="#tab-updates" class="nav-tab"                data-tab="updates"><?php esc_html_e('Updates', 'auto-quill'); ?></a>
@@ -329,39 +419,10 @@ class Settings {
                             </td>
                         </tr>
 
-                        <tr>
-                            <th scope="row">
-                                <label for="openai_model"><?php esc_html_e('OpenAI-Modell', 'auto-quill'); ?></label>
-                            </th>
-                            <td>
-                                <input type="text" id="openai_model"
-                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[openai_model]"
-                                       value="<?php echo esc_attr($settings['openai_model'] ?? C::DEFAULT_OPENAI_MODEL); ?>"
-                                       placeholder="<?php echo esc_attr(C::DEFAULT_OPENAI_MODEL); ?>"
-                                       style="width: 300px;">
-                                <p class="description"><?php
-                                    /* translators: %s: default model name */
-                                    printf(esc_html__('Standard: %s', 'auto-quill'), '<code>' . esc_html(C::DEFAULT_OPENAI_MODEL) . '</code>');
-                                ?></p>
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <th scope="row">
-                                <label for="claude_model"><?php esc_html_e('Claude-Modell', 'auto-quill'); ?></label>
-                            </th>
-                            <td>
-                                <input type="text" id="claude_model"
-                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[claude_model]"
-                                       value="<?php echo esc_attr($settings['claude_model'] ?? C::DEFAULT_CLAUDE_MODEL); ?>"
-                                       placeholder="<?php echo esc_attr(C::DEFAULT_CLAUDE_MODEL); ?>"
-                                       style="width: 300px;">
-                                <p class="description"><?php
-                                    /* translators: %s: default model name */
-                                    printf(esc_html__('Standard: %s', 'auto-quill'), '<code>' . esc_html(C::DEFAULT_CLAUDE_MODEL) . '</code>');
-                                ?></p>
-                            </td>
-                        </tr>
+                        <?php
+                        self::render_model_row('openai', __('OpenAI-Modell', 'auto-quill'), (string) ($settings['openai_model'] ?? C::DEFAULT_OPENAI_MODEL), C::DEFAULT_OPENAI_MODEL, (string) ($settings['ai_provider'] ?? 'openai'));
+                        self::render_model_row('claude', __('Claude-Modell', 'auto-quill'), (string) ($settings['claude_model'] ?? C::DEFAULT_CLAUDE_MODEL), C::DEFAULT_CLAUDE_MODEL, (string) ($settings['ai_provider'] ?? 'openai'));
+                        ?>
 
                         <tr>
                             <th scope="row">
@@ -489,6 +550,43 @@ class Settings {
                                        value="<?php echo esc_attr((string) ($settings['rss_lookback_days'] ?? 7)); ?>"
                                        style="width: 100px;">
                                 <p class="description"><?php esc_html_e('Wie viele Tage zurück sollen Feed-Artikel berücksichtigt werden? 0 = unbegrenzt. Ältere Artikel werden auch aus der Datenbank entfernt.', 'auto-quill'); ?></p>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="auto-quill-tab-panel" data-tab="schedule" style="display:none;">
+                    <p class="description" style="margin: 1em 0;">
+                        <?php
+                        printf(
+                            /* translators: %s: site timezone name */
+                            esc_html__('Beide Zeiten gelten in der Ortszeit der Seite (%s). Die tatsächliche Ausführung hängt an WP-Cron und kann sich verzögern, wenn die Seite wenig besucht wird.', 'auto-quill'),
+                            '<code>' . esc_html(wp_timezone_string()) . '</code>'
+                        );
+                        ?>
+                    </p>
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row">
+                                <label for="fetch_time"><?php esc_html_e('RSS-Abruf', 'auto-quill'); ?></label>
+                            </th>
+                            <td>
+                                <input type="time" id="fetch_time"
+                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[fetch_time]"
+                                       value="<?php echo esc_attr((string) ($settings['fetch_time'] ?? C::defaults()['fetch_time'])); ?>">
+                                <p class="description"><?php esc_html_e('Wann täglich alle aktiven RSS-Quellen abgerufen werden.', 'auto-quill'); ?></p>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <th scope="row">
+                                <label for="select_time"><?php esc_html_e('Themenauswahl', 'auto-quill'); ?></label>
+                            </th>
+                            <td>
+                                <input type="time" id="select_time"
+                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[select_time]"
+                                       value="<?php echo esc_attr((string) ($settings['select_time'] ?? C::defaults()['select_time'])); ?>">
+                                <p class="description"><?php esc_html_e('Wann die KI täglich die Top-Themen aus den Artikeln der letzten 24 Stunden wählt. Sollte nach dem RSS-Abruf liegen.', 'auto-quill'); ?></p>
                             </td>
                         </tr>
                     </table>

@@ -144,6 +144,11 @@ class AdminMenu {
                 'imagePageInfo'      => __('Seite %1$d von %2$d', 'auto-quill'),
                 'suggestingKeywords' => __('Suchbegriffe werden vorgeschlagen…', 'auto-quill'),
                 'requestTimeout'     => __('Die Anfrage hat zu lange gedauert. Bitte erneut versuchen.', 'auto-quill'),
+                'modelsLoading'      => __('Modelle werden beim Anbieter abgerufen…', 'auto-quill'),
+                /* translators: %d: number of models */
+                'modelsLoaded'       => __('%d Modelle verfügbar.', 'auto-quill'),
+                'modelsError'        => __('Die Modellliste konnte nicht geladen werden.', 'auto-quill'),
+                'modelNotListed'     => __('(aktuell gespeichert, nicht in der Liste)', 'auto-quill'),
             ],
         ]);
 

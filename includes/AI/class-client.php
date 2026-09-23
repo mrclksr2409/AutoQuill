@@ -64,15 +64,20 @@ class Client {
             'user_len'    => strlen($user),
         ]);
 
+        // max_completion_tokens is accepted by every chat model; max_tokens is
+        // rejected by the reasoning families (o*, gpt-5), which the model
+        // dropdown now offers. Those also only accept the default temperature.
         $payload = [
-            'model'       => $model,
-            'messages'    => [
+            'model'                 => $model,
+            'messages'              => [
                 ['role' => 'system', 'content' => $system],
                 ['role' => 'user',   'content' => $user],
             ],
-            'temperature' => (float) ($opts['temperature'] ?? 0.7),
-            'max_tokens'  => (int)   ($opts['max_tokens']  ?? 1500),
+            'max_completion_tokens' => (int) ($opts['max_tokens'] ?? 1500),
         ];
+        if (!self::is_openai_reasoning_model($model)) {
+            $payload['temperature'] = (float) ($opts['temperature'] ?? 0.7);
+        }
         // OpenAI's response_format=json_object only supports objects, not
         // top-level arrays. The Selector now wraps array results in an
         // object, so json_shape='object' is the only mode we activate here.
@@ -136,6 +141,11 @@ class Client {
             'usage'         => $body['usage'] ?? null,
         ]);
         return $content;
+    }
+
+    private static function is_openai_reasoning_model(string $model): bool {
+        return (bool) preg_match('/^o\d/', $model)
+            || (strpos($model, 'gpt-5') === 0 && strpos($model, '-chat') === false);
     }
 
     /**
