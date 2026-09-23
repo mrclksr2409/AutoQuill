@@ -66,6 +66,34 @@ class SourcesRepository {
         return $rows ?: [];
     }
 
+    /**
+     * Restore path: matched by feed URL, because IDs differ between sites and
+     * articles reference them. Updates title/active of an existing feed or
+     * inserts a new one; never deletes.
+     *
+     * @return string 'inserted' | 'updated' | 'failed'
+     */
+    public function upsert_by_url(string $title, string $feed_url, bool $is_active): string {
+        global $wpdb;
+        $id = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM {$this->table()} WHERE feed_url = %s LIMIT 1",
+            $feed_url
+        ));
+
+        if ($id) {
+            $ok = $wpdb->update(
+                $this->table(),
+                ['title' => $title, 'is_active' => $is_active ? 1 : 0],
+                ['id' => (int) $id],
+                ['%s', '%d'],
+                ['%d']
+            );
+            return $ok === false ? 'failed' : 'updated';
+        }
+
+        return $this->insert($title, $feed_url, $is_active) ? 'inserted' : 'failed';
+    }
+
     public function count(): int {
         global $wpdb;
         return (int) $wpdb->get_var("SELECT COUNT(*) FROM {$this->table()}");

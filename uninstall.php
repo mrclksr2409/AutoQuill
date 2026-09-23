@@ -24,7 +24,17 @@ foreach ([
 }
 
 delete_option(\AutoQuill\Core\Constants::OPTION_LAST_DIGEST);
+delete_option(\AutoQuill\Core\Constants::OPTION_BACKUPS);
+
+// Cached model lists (ModelCatalog), keyed by a hash of the API key.
+global $wpdb;
+$wpdb->query($wpdb->prepare(
+    "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
+    $wpdb->esc_like('_transient_' . \AutoQuill\Core\Constants::MODELS_CACHE_PREFIX) . '%',
+    $wpdb->esc_like('_transient_timeout_' . \AutoQuill\Core\Constants::MODELS_CACHE_PREFIX) . '%'
+));
 
 wp_clear_scheduled_hook(\AutoQuill\Core\Constants::CRON_FETCH);
 wp_clear_scheduled_hook(\AutoQuill\Core\Constants::CRON_SELECT);
 wp_clear_scheduled_hook(\AutoQuill\Core\Constants::CRON_DIGEST);
+wp_clear_scheduled_hook(\AutoQuill\Core\Constants::CRON_BACKUP);

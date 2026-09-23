@@ -2,7 +2,7 @@
 
 # Entwicklungs-Notizen
 
-Stand: Version 1.4.0 / DB-Version 1.4
+Stand: Version 1.5.0 / DB-Version 1.4
 
 ## Projektstruktur
 
@@ -23,6 +23,8 @@ auto-quill/
 │   │   ├── class-deactivator.php
 │   │   ├── class-logger.php            # Logging in wp_auto_quill_logs
 │   │   ├── class-notifier.php         # Tagesbericht per E-Mail
+│   │   ├── class-scheduler.php         # Fetch/Selektion zu einstellbaren Uhrzeiten
+│   │   ├── class-backup.php            # Sicherungen: Anlegen, Aufbewahrung, Planung, Export
 │   │   └── class-updater.php           # Plugin Update Checker (GitHub Releases / main)
 │   │
 │   ├── Database/
@@ -36,6 +38,7 @@ auto-quill/
 │   │
 │   ├── AI/
 │   │   ├── class-client.php            # OpenAI- und Claude-HTTP-Client
+│   │   ├── class-model-catalog.php     # Modelllisten der Provider (Transient-Cache)
 │   │   ├── class-selector.php          # Themenauswahl inkl. Rating
 │   │   ├── class-writer.php            # Post-Generierung
 │   │   ├── class-keyword-suggester.php # Suchbegriffe für die Bildsuche
@@ -49,14 +52,16 @@ auto-quill/
 │   │   ├── class-articles-service.php  # GET /articles
 │   │   ├── class-posts-service.php     # GET /topics, POST /publish-post
 │   │   ├── class-images-service.php
+│   │   ├── class-models-service.php    # POST /models
 │   │   └── class-logs-service.php
 │   │
 │   └── Admin/
 │       ├── class-admin-menu.php        # Menü + Asset-Enqueue + wp_localize_script
 │       ├── class-dashboard.php         # Übersicht (Tabs, Themen, Feed-Liste)
 │       ├── class-generate-page.php     # Generierungs-Seite (versteckt)
-│       ├── class-settings.php          # Settings-API, 5 Tabs
+│       ├── class-settings.php          # Settings-API, 8 Tabs
 │       ├── class-sources-controller.php
+│       ├── class-backup-controller.php # admin_post: Sichern, Wiederherstellen, Download, Import
 │       ├── class-post-meta-box.php     # Box „AutoQuill-Quelle" im Post-Editor
 │       ├── class-logs-page.php
 │       ├── class-status-panel.php
@@ -78,7 +83,8 @@ Konvention folgen, sonst wird die Datei stillschweigend nicht geladen — es gib
 ## Komponenten
 
 ### RSS Fetcher (`RSS/class-fetcher.php`)
-- `fetch_feeds()` — alle aktiven Quellen abrufen, danach Retention und `do_action(CRON_SELECT)`
+- `fetch_feeds()` — alle aktiven Quellen abrufen, danach Retention. Stößt die Selektion **nicht**
+  an — die läuft zu ihrer eigenen Uhrzeit (`Scheduler`); die Dashboard-Knöpfe rufen sie explizit auf.
 - `fetch_feed(int $source_id, string $feed_url)` — ein Feed, max. 20 Items, Dedup über
   `article_hash = md5(feed_url . link)`
 - `fetch_article_content(string $link)` — lädt die Artikelseite (roh, auf 50 000 Zeichen gekürzt)
@@ -103,6 +109,25 @@ Wer erst beim Rendern sortiert, generiert das falsche Thema.
 
 **Token-Budget:** 2500. Rating und Begründung über fünf Themen sprengen die früheren 1500; der
 Client liefert dann `WP_Error('truncated')` und die tägliche Selektion bricht kommentarlos ab.
+
+### Modellauswahl (`AI/class-model-catalog.php`)
+
+Die Modell-Felder sind `<select>`s. `Settings::render_model_row()` füllt sie serverseitig aus dem
+Transient (`ModelCatalog::cached()`, kein HTTP) und ergänzt **immer** das gespeicherte und das
+Default-Modell — ein fehlgeschlagener Abruf darf den gespeicherten Wert nie verändern.
+`admin.js` (`ModelPicker`) lädt die Liste per `POST /models` nach.
+
+- **POST, nicht GET:** Der Request kann einen frisch eingetippten, ungespeicherten Schlüssel tragen,
+  der nicht in URLs und Access-Logs landen soll. Ist `AUTO_QUILL_AI_KEY` definiert, gewinnt die
+  Konstante — wie bei den eigentlichen Anfragen.
+- **Cache-Key:** `auto_quill_models_{provider}_{md5(key)[0..12]}`, 12 h. Der Schlüssel selbst
+  landet nie in `wp_options`. `uninstall.php` räumt die Transients per `LIKE` ab.
+- **OpenAI-Filter:** `/v1/models` liefert auch Embeddings, Audio, Bild und Moderation, die
+  `/chat/completions` ablehnt. Behalten wird `gpt-*`, `chatgpt-*`, `o<Ziffer>*` abzüglich
+  `OPENAI_EXCLUDE`.
+- **Reasoning-Modelle:** `Client` sendet `max_completion_tokens` (von allen Chat-Modellen akzeptiert)
+  und lässt `temperature` für o-Serie und `gpt-5*` (außer `*-chat*`) weg. Deren Reasoning-Tokens
+  zählen ins selbe Budget — bei knappen Budgets droht `truncated`.
 
 ### AI Writer (`AI/class-writer.php`)
 - `generate_post()` — REST-Endpoint
@@ -164,6 +189,33 @@ Anders als `CRON_FETCH`/`CRON_SELECT` ist die Planung auf `notify_enabled` **gat
 `Notifier::ensure_scheduled()` räumt den Termin ab, wenn abgeschaltet wird. Jeder Schreibzugriff auf
 die Option löst `reschedule()` aus, weil der `wp_next_scheduled`-Guard eine *geänderte Uhrzeit*
 nicht erkennen kann.
+
+Dasselbe Muster gilt für `CRON_FETCH` und `CRON_SELECT` (`Core/class-scheduler.php`, Einstellungen
+`fetch_time`/`select_time`, Tab „Feeds & Zeitplan"). `Scheduler::next_occurrence()` ist die gemeinsame
+Umrechnung Ortszeit → UTC, auch für den Tagesbericht. `ensure_scheduled()` stellt Installationen vor
+1.5.0 um: Ein Event mit `schedule !== false` ist noch das alte `daily` und wird ersetzt.
+`on_settings_updated()` plant nur neu, wenn sich die jeweilige Uhrzeit geändert hat — sonst würde
+jedes Speichern einen überfälligen Lauf verwerfen.
+
+### Backup (`Core/class-backup.php`, `Admin/class-backup-controller.php`)
+
+Gesichert werden `auto_quill_settings` und die RSS-Quellen (Titel, URL, aktiv) — Artikel, Themen
+und Logs sind Daten, keine Konfiguration. Gleiches Planungsmuster wie oben (`CRON_BACKUP`, gated auf
+`backup_enabled`, Uhrzeit `backup_time`).
+
+- **Speicherort:** eine Option `auto_quill_backups` mit `autoload = false`, neueste zuerst. Bewusst
+  keine Dateien: Unter `uploads/` wären sie öffentlich abrufbar — mitsamt API-Schlüsseln.
+- **Aufbewahrung:** `store()` kappt bei jedem Schreiben auf `backup_keep`, über alle Anlässe
+  (`auto`, `manual`, `pre-restore`, `import`). Ein verkleinertes Limit greift sofort
+  (`on_settings_updated`).
+- **Wiederherstellen** läuft über `update_option()` und damit durch `Settings::sanitize()` — der
+  Wert wird validiert wie ein Formular-Post. Deshalb baut `apply_settings()` die Formularform nach:
+  `notify_emails` als Text, die `*_present`-Marker, leere Schlüssel-Felder (= aktuelle behalten).
+  Vorher wird der aktuelle Stand als `pre-restore` gesichert.
+- **RSS-Quellen** werden über die Feed-URL abgeglichen (`upsert_by_url`), nie gelöscht: IDs
+  unterscheiden sich zwischen Seiten, und Artikel referenzieren sie.
+- **Download** enthält keine API-Schlüssel (`SECRET_KEYS`). Ein Import legt nur einen Listeneintrag
+  an; angewendet wird er erst per „Wiederherstellen".
 
 ### Robustheit
 
@@ -244,14 +296,10 @@ tokens = woerter * 4 + 1000, geklemmt auf [6500, 16000]
 Die Untergrenze 6500 ist der früher hartkodierte Wert: Der Standard-Prompt (1200 Wörter ⇒ 5800)
 landet darauf, das Verhalten ändert sich also für bestehende Installationen nicht.
 
-Die Obergrenze 16000 liegt unter dem Ausgabelimit von `gpt-4o-mini` (16 384). **Achtung:** Die
-Modellfelder in den Einstellungen sind Freitext. Wer ein Modell mit kleinerem Ausgabelimit einträgt
-(`gpt-4`: 8192, `gpt-3.5-turbo`: 4096), bekommt statt einer gekürzten Antwort einen HTTP 400 —
+Die Obergrenze 16000 liegt unter dem Ausgabelimit von `gpt-4o-mini` (16 384). **Achtung:** Das
+Modell-Dropdown bietet alles an, was der Anbieter listet. Wer ein Modell mit kleinerem Ausgabelimit
+wählt (`gpt-4`: 8192, `gpt-3.5-turbo`: 4096), bekommt statt einer gekürzten Antwort einen HTTP 400 —
 dafür gibt es den Filter `auto_quill_max_tokens`.
-
-Ebenfalls erwähnenswert: `Client::call_openai()` sendet `max_tokens` und eine abweichende
-`temperature` bedingungslos. Neuere OpenAI-Modelle erwarten stattdessen `max_completion_tokens`
-und lehnen abweichende `temperature`-Werte ab.
 
 ### Quellenhinweis
 
@@ -341,6 +389,7 @@ Namespace `auto-quill/v1`, alle Routen mit `permission_callback` → `current_us
 | POST | `/publish-post` | `PostsService::publish_post` |
 | GET | `/search-images` | `ImagesService::search` |
 | POST | `/suggest-image-keywords` | `ImagesService::suggest_keywords` |
+| POST | `/models` | `ModelsService::list_models` |
 | GET/DELETE | `/logs` | `LogsService` |
 
 ### GET /articles
@@ -380,6 +429,12 @@ Geteilt wird über eine kleine, explizite Oberfläche, die `admin.js` setzt:
 außerhalb des `<form>`). Würden sich zwei Seiten dieselbe Klasse teilen, versteckten sie sich
 gegenseitig — deshalb hat jedes Widget ein eigenes Klassenpaar.
 
+**Einstellungs-Tabs** (Reihenfolge = Einrichtungsreihenfolge): `ki`, `feeds`, `prompts`, `publish`,
+`images`, `notify`, `backup`, `system`. Ein Tab kann zwei Panels haben — eines im Formular, eines
+danach für eigene `<form>`s (Test-Mail, Backup-Liste, StatusPanel unter `system`). Umbenannte Tabs
+bildet `SettingsTabs` über eine `legacy`-Tabelle ab; der zuletzt aktive Tab liegt in
+`sessionStorage`, weil `options.php` ohne Hash zurückleitet.
+
 **Cache-Busting:** `AUTO_QUILL_VERSION` ist der Versions-Parameter der Assets. Wer JS-seitige
 Änderungen ohne Versions-Bump ausliefert, bekommt bei Nutzern die alte `admin.js` — und die lässt
 beispielsweise `article_id` aus dem Publish-Payload weg, wodurch die Verknüpfung fehlerfrei und
@@ -391,6 +446,7 @@ unbemerkt nie geschrieben wird.
 - `auto_quill_daily_fetch` — RSS-Fetch
 - `auto_quill_daily_select` — Themen-Selektion
 - `auto_quill_daily_digest` — Tagesbericht (nur geplant, wenn aktiviert)
+- `auto_quill_daily_backup` — Sicherung (nur geplant, wenn aktiviert)
 - `auto_quill_topics_selected` — nach der Selektion, Parameter `$topics`
 
 ### Filters
@@ -491,8 +547,5 @@ zeigt einen Erfolgskasten statt neu zu laden. Ein Reload würde die Generierung 
 - [ ] WP-CLI-Kommandos
 - [ ] `posts_per_day` ist in den Defaults vorhanden, hat aber keine UI und wird nirgends gelesen
 - [ ] `autoQuill.fetchAction` wird lokalisiert, aber von keinem Skript gelesen
-- [ ] `StatusPanel` maskiert im Options-Dump nur `ai_api_key`, nicht `pixabay_api_key`
-- [ ] `Fetcher::fetch_feeds()` ruft am Ende `do_action(CRON_SELECT)` auf, wodurch die Selektion an
-      einem Cron-Tag zweimal läuft
 - [ ] `fetch_article_content()` speichert rohes HTML ohne Readability-Extraktion
 - [ ] Mehrsprachigkeit, weitere KI-Provider

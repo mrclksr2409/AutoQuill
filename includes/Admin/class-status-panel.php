@@ -1,6 +1,7 @@
 <?php
 namespace AutoQuill\Admin;
 
+use AutoQuill\Core\Backup;
 use AutoQuill\Core\Constants as C;
 use AutoQuill\Core\Notifier;
 use AutoQuill\Database\Schema;
@@ -14,13 +15,16 @@ class StatusPanel {
             $option = [];
         }
         $masked = $option;
-        if (!empty($masked['ai_api_key'])) {
-            $masked['ai_api_key'] = self::mask((string) $masked['ai_api_key']);
+        foreach (['ai_api_key', 'pixabay_api_key'] as $secret) {
+            if (!empty($masked[$secret])) {
+                $masked[$secret] = self::mask((string) $masked[$secret]);
+            }
         }
 
         $next_fetch  = wp_next_scheduled(C::CRON_FETCH);
         $next_select = wp_next_scheduled(C::CRON_SELECT);
         $next_digest = wp_next_scheduled(C::CRON_DIGEST);
+        $next_backup = wp_next_scheduled(C::CRON_BACKUP);
         $notify_on   = Notifier::is_enabled();
         $recipients  = $notify_on ? Notifier::recipients() : [];
         ?>
@@ -89,6 +93,26 @@ class StatusPanel {
                                     )); ?>
                                 </span>
                             <?php endif; ?>
+                        <?php else: ?>
+                            <span style="color:#a00;"><?php esc_html_e('nicht geplant', 'auto-quill'); ?></span>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+                <tr>
+                    <th><?php esc_html_e('Nächste Sicherung', 'auto-quill'); ?></th>
+                    <td>
+                        <?php if (!Backup::is_enabled()): ?>
+                            <?php esc_html_e('Automatische Sicherung ist deaktiviert', 'auto-quill'); ?>
+                        <?php elseif ($next_backup): ?>
+                            <?php echo esc_html(date_i18n('Y-m-d H:i', $next_backup)); ?>
+                            <span class="description">
+                                <?php echo esc_html(sprintf(
+                                    /* translators: 1: stored backups, 2: limit */
+                                    __('%1$d von max. %2$d gespeichert', 'auto-quill'),
+                                    count(Backup::all()),
+                                    Backup::keep()
+                                )); ?>
+                            </span>
                         <?php else: ?>
                             <span style="color:#a00;"><?php esc_html_e('nicht geplant', 'auto-quill'); ?></span>
                         <?php endif; ?>

@@ -251,16 +251,134 @@
                 $('.auto-quill-tab-panel').hide()
                      .filter('[data-tab="' + tab + '"]').show();
             };
+            // Tabs merged or renamed in 1.5.0; old links and bookmarks still land.
+            const legacy = { debug: 'system', updates: 'system', schedule: 'feeds' };
+            const storageKey = 'autoQuillSettingsTab';
+
             $tabs.on('click', function(e) {
                 e.preventDefault();
                 const tab = $(this).data('tab');
                 activate(tab);
                 history.replaceState(null, '', '#tab-' + tab);
+                try { sessionStorage.setItem(storageKey, tab); } catch (err) { /* storage blocked */ }
             });
-            const initial = (window.location.hash || '').replace(/^#tab-/, '');
+
+            // options.php redirects back without the hash, so saving would
+            // otherwise always land on the first tab.
+            let initial = (window.location.hash || '').replace(/^#tab-/, '');
+            if (!initial) {
+                try { initial = sessionStorage.getItem(storageKey) || ''; } catch (err) { initial = ''; }
+            }
+            initial = legacy[initial] || initial;
             if (initial && $tabs.filter('[data-tab="' + initial + '"]').length) {
                 activate(initial);
             }
+        },
+    };
+
+    /**
+     * Model dropdowns on the KI tab. Options come from the provider via
+     * POST /models; the saved value is always kept selectable, so a failed
+     * load never changes what gets saved.
+     */
+    const ModelPicker = {
+        loaded: {},
+
+        init: function() {
+            if (!$('.auto-quill-model-select').length) {
+                return;
+            }
+
+            $('#ai_provider').on('change', () => {
+                const provider = this.activeProvider();
+                this.showRow(provider);
+                if (!this.loaded[provider]) {
+                    this.load(provider, false);
+                }
+            });
+
+            $(document).on('click', '.auto-quill-models-refresh', (e) => {
+                e.preventDefault();
+                this.load($(e.currentTarget).data('provider'), true);
+            });
+
+            // A newly typed key may unlock a different set of models.
+            $('#ai_api_key').on('change', () => {
+                if (($('#ai_api_key').val() || '').trim() !== '') {
+                    this.loaded = {};
+                    this.load(this.activeProvider(), true);
+                }
+            });
+
+            const provider = this.activeProvider();
+            this.showRow(provider);
+            this.load(provider, false);
+        },
+
+        activeProvider: function() {
+            return $('#ai_provider').val() || 'openai';
+        },
+
+        showRow: function(provider) {
+            $('.auto-quill-model-row').hide()
+                .filter('[data-provider="' + provider + '"]').show();
+        },
+
+        load: function(provider, refresh) {
+            const $row = $('.auto-quill-model-row[data-provider="' + provider + '"]');
+            const $select = $row.find('.auto-quill-model-select');
+            const $status = $row.find('.auto-quill-models-status');
+            const $spinner = $row.find('.auto-quill-models-spinner');
+            const $button = $row.find('.auto-quill-models-refresh');
+
+            $spinner.addClass('is-active');
+            $button.prop('disabled', true);
+            $status.removeClass('is-error').text(t('modelsLoading'));
+
+            $.ajax({
+                url: AutoQuill.apiUrl + 'models',
+                type: 'POST',
+                dataType: 'json',
+                timeout: 30000,
+                data: {
+                    provider: provider,
+                    api_key: ($('#ai_api_key').val() || '').trim(),
+                    refresh: refresh ? 1 : 0,
+                },
+                headers: { 'X-WP-Nonce': AutoQuill.restNonce },
+            }).done((response) => {
+                const models = (response && response.models) || [];
+                this.fill($select, models);
+                this.loaded[provider] = true;
+                $status.text(
+                    (t('modelsLoaded') || '%d Modelle verfügbar').replace('%d', models.length)
+                );
+            }).fail((xhr, textStatus) => {
+                $status.addClass('is-error')
+                    .text(AutoQuill.errorMessage(xhr, 'modelsError', textStatus));
+            }).always(() => {
+                $spinner.removeClass('is-active');
+                $button.prop('disabled', false);
+            });
+        },
+
+        fill: function($select, models) {
+            const current = $select.val();
+            const ids = models.map((m) => m.id);
+
+            $select.empty();
+
+            if (current && ids.indexOf(current) === -1) {
+                $('<option>')
+                    .val(current)
+                    .text(current + ' ' + t('modelNotListed'))
+                    .appendTo($select);
+            }
+            models.forEach((m) => {
+                $('<option>').val(m.id).text(m.label || m.id).appendTo($select);
+            });
+
+            $select.val(current);
         },
     };
 
@@ -278,6 +396,7 @@
     $(document).ready(() => {
         AutoQuill.init();
         SettingsTabs.init();
+        ModelPicker.init();
         DashboardTabs.init((tab) => {
             // Loaded lazily so opening the dashboard costs nothing extra, and
             // switching tabs never reloads the page - an unpublished generated

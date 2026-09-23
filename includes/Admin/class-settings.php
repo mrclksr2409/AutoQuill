@@ -1,6 +1,7 @@
 <?php
 namespace AutoQuill\Admin;
 
+use AutoQuill\AI\ModelCatalog;
 use AutoQuill\Core\Constants as C;
 use AutoQuill\Core\Notifier;
 
@@ -75,12 +76,12 @@ class Settings {
         }
 
         if (array_key_exists('openai_model', $input)) {
-            $model = sanitize_text_field((string) $input['openai_model']);
+            $model = self::sanitize_model_id($input['openai_model']);
             $clean['openai_model'] = $model !== '' ? $model : C::DEFAULT_OPENAI_MODEL;
         }
 
         if (array_key_exists('claude_model', $input)) {
-            $model = sanitize_text_field((string) $input['claude_model']);
+            $model = self::sanitize_model_id($input['claude_model']);
             $clean['claude_model'] = $model !== '' ? $model : C::DEFAULT_CLAUDE_MODEL;
         }
 
@@ -117,6 +118,36 @@ class Settings {
             if ($v < 0)   { $v = 0; }
             if ($v > 365) { $v = 365; }
             $clean['rss_lookback_days'] = $v;
+        }
+
+        if (array_key_exists('backup_enabled', $input)) {
+            $clean['backup_enabled'] = !empty($input['backup_enabled']);
+        }
+        if (isset($input['backup_keep'])) {
+            $clean['backup_keep'] = max(1, min(C::BACKUP_KEEP_MAX, (int) $input['backup_keep']));
+        }
+
+        foreach (['fetch_time', 'select_time', 'backup_time'] as $time_key) {
+            if (array_key_exists($time_key, $input)) {
+                $clean[$time_key] = self::sanitize_time(
+                    $input[$time_key],
+                    (string) ($prev[$time_key] ?? C::defaults()[$time_key])
+                );
+            }
+        }
+
+        // Selection looks at the last 24h of articles, so it should follow the
+        // fetch closely. Measured across midnight: 23:00 -> 00:30 is fine.
+        $to_minutes = static fn(string $t): int => (int) substr($t, 0, 2) * 60 + (int) substr($t, 3, 2);
+        $gap = ($to_minutes((string) ($clean['select_time'] ?? C::defaults()['select_time']))
+              - $to_minutes((string) ($clean['fetch_time'] ?? C::defaults()['fetch_time'])) + 1440) % 1440;
+        if ($gap === 0 || $gap > 720) {
+            add_settings_error(
+                C::OPTION_KEY,
+                'auto_quill_select_before_fetch',
+                __('Die Themenauswahl liegt nicht kurz nach dem RSS-Abruf. Sie arbeitet dann mit Artikeln eines älteren Abrufs — oder läuft gleichzeitig mit ihm.', 'auto-quill'),
+                'warning'
+            );
         }
 
         if (array_key_exists('prompt_title', $input)) {
@@ -193,14 +224,10 @@ class Settings {
         }
 
         if (array_key_exists('notify_time', $input)) {
-            // <input type="time"> submits HH:MM, some browsers HH:MM:SS.
-            $time = trim((string) $input['notify_time']);
-            if (preg_match('/^([01]\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?$/', $time, $m)) {
-                $clean['notify_time'] = $m[1] . ':' . $m[2];
-            } else {
-                // Empty must fall back, not silently become 00:00.
-                $clean['notify_time'] = (string) ($prev['notify_time'] ?? $defaults['notify_time']);
-            }
+            $clean['notify_time'] = self::sanitize_time(
+                $input['notify_time'],
+                (string) ($prev['notify_time'] ?? $defaults['notify_time'])
+            );
         }
 
         // A checkbox group with nothing ticked submits no key at all. Without
@@ -236,6 +263,25 @@ class Settings {
     }
 
     /**
+     * <input type="time"> submits HH:MM, some browsers HH:MM:SS. Anything
+     * else - including empty - keeps the previous value instead of silently
+     * becoming 00:00.
+     */
+    private static function sanitize_time($raw, string $fallback): string {
+        $time = trim((string) $raw);
+        if (preg_match('/^([01]\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?$/', $time, $m)) {
+            return $m[1] . ':' . $m[2];
+        }
+        return $fallback;
+    }
+
+    /** Model IDs from both providers only ever use this character set. */
+    private static function sanitize_model_id($raw): string {
+        $model = trim(sanitize_text_field((string) $raw));
+        return preg_match('/^[A-Za-z0-9._:\/-]{1,100}$/', $model) ? $model : '';
+    }
+
+    /**
      * Splits a textarea into validated, de-duplicated addresses.
      *
      * @return string[]
@@ -258,6 +304,56 @@ class Settings {
         return array_slice(array_values($out), 0, 50);
     }
 
+    /**
+     * A dropdown instead of free text. The options come from the provider
+     * (ModelCatalog, loaded by admin.js); the saved model and the default are
+     * always present, so the field works without the list and never silently
+     * changes the stored value.
+     */
+    private static function render_model_row(string $provider, string $label, string $current, string $default, string $active_provider): void {
+        $field   = $provider . '_model';
+        $options = [];
+        foreach (ModelCatalog::cached($provider) as $model) {
+            $options[$model['id']] = $model['label'];
+        }
+        if (!isset($options[$current])) {
+            $options = [$current => $current] + $options;
+        }
+        if (!isset($options[$default])) {
+            $options[$default] = $default;
+        }
+        ?>
+        <tr class="auto-quill-model-row" data-provider="<?php echo esc_attr($provider); ?>"
+            <?php echo $provider !== $active_provider ? 'style="display:none;"' : ''; ?>>
+            <th scope="row">
+                <label for="<?php echo esc_attr($field); ?>"><?php echo esc_html($label); ?></label>
+            </th>
+            <td>
+                <select id="<?php echo esc_attr($field); ?>"
+                        class="auto-quill-model-select"
+                        data-provider="<?php echo esc_attr($provider); ?>"
+                        name="<?php echo esc_attr(C::OPTION_KEY); ?>[<?php echo esc_attr($field); ?>]"
+                        style="min-width: 300px;">
+                    <?php foreach ($options as $id => $option_label): ?>
+                        <option value="<?php echo esc_attr((string) $id); ?>" <?php selected($current, (string) $id); ?>>
+                            <?php echo esc_html((string) $option_label); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <button type="button" class="button auto-quill-models-refresh" data-provider="<?php echo esc_attr($provider); ?>">
+                    <?php esc_html_e('Modelle neu laden', 'auto-quill'); ?>
+                </button>
+                <span class="spinner auto-quill-models-spinner"></span>
+                <p class="description auto-quill-models-status" aria-live="polite"></p>
+                <p class="description"><?php
+                    /* translators: %s: default model name */
+                    printf(esc_html__('Die Liste wird direkt beim Anbieter mit dem API-Schlüssel abgerufen. Standard: %s', 'auto-quill'), '<code>' . esc_html($default) . '</code>');
+                ?></p>
+            </td>
+        </tr>
+        <?php
+    }
+
     public static function render(): void {
         if (!current_user_can('manage_options')) {
             wp_die(esc_html__('Zugriff verweigert', 'auto-quill'));
@@ -278,12 +374,14 @@ class Settings {
                 <?php settings_fields(C::SETTINGS_GROUP); ?>
 
                 <h2 class="nav-tab-wrapper auto-quill-settings-tabs">
-                    <a href="#tab-ki"      class="nav-tab nav-tab-active" data-tab="ki"><?php esc_html_e('KI-Provider', 'auto-quill'); ?></a>
-                    <a href="#tab-publish" class="nav-tab"                data-tab="publish"><?php esc_html_e('Veröffentlichung', 'auto-quill'); ?></a>
-                    <a href="#tab-prompts" class="nav-tab"                data-tab="prompts"><?php esc_html_e('Prompts', 'auto-quill'); ?></a>
-                    <a href="#tab-notify"  class="nav-tab"                data-tab="notify"><?php esc_html_e('Benachrichtigungen', 'auto-quill'); ?></a>
-                    <a href="#tab-updates" class="nav-tab"                data-tab="updates"><?php esc_html_e('Updates', 'auto-quill'); ?></a>
-                    <a href="#tab-debug"   class="nav-tab"                data-tab="debug"><?php esc_html_e('Debug', 'auto-quill'); ?></a>
+                    <a href="#tab-ki" class="nav-tab nav-tab-active" data-tab="ki"><?php esc_html_e('KI-Provider', 'auto-quill'); ?></a>
+                    <a href="#tab-feeds" class="nav-tab" data-tab="feeds"><?php esc_html_e('Feeds & Zeitplan', 'auto-quill'); ?></a>
+                    <a href="#tab-prompts" class="nav-tab" data-tab="prompts"><?php esc_html_e('Prompts', 'auto-quill'); ?></a>
+                    <a href="#tab-publish" class="nav-tab" data-tab="publish"><?php esc_html_e('Veröffentlichung', 'auto-quill'); ?></a>
+                    <a href="#tab-images" class="nav-tab" data-tab="images"><?php esc_html_e('Bilder', 'auto-quill'); ?></a>
+                    <a href="#tab-notify" class="nav-tab" data-tab="notify"><?php esc_html_e('Benachrichtigungen', 'auto-quill'); ?></a>
+                    <a href="#tab-backup" class="nav-tab" data-tab="backup"><?php esc_html_e('Backup', 'auto-quill'); ?></a>
+                    <a href="#tab-system" class="nav-tab" data-tab="system"><?php esc_html_e('System', 'auto-quill'); ?></a>
                 </h2>
 
                 <div class="auto-quill-tab-panel" data-tab="ki">
@@ -329,153 +427,45 @@ class Settings {
                             </td>
                         </tr>
 
-                        <tr>
-                            <th scope="row">
-                                <label for="openai_model"><?php esc_html_e('OpenAI-Modell', 'auto-quill'); ?></label>
-                            </th>
-                            <td>
-                                <input type="text" id="openai_model"
-                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[openai_model]"
-                                       value="<?php echo esc_attr($settings['openai_model'] ?? C::DEFAULT_OPENAI_MODEL); ?>"
-                                       placeholder="<?php echo esc_attr(C::DEFAULT_OPENAI_MODEL); ?>"
-                                       style="width: 300px;">
-                                <p class="description"><?php
-                                    /* translators: %s: default model name */
-                                    printf(esc_html__('Standard: %s', 'auto-quill'), '<code>' . esc_html(C::DEFAULT_OPENAI_MODEL) . '</code>');
-                                ?></p>
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <th scope="row">
-                                <label for="claude_model"><?php esc_html_e('Claude-Modell', 'auto-quill'); ?></label>
-                            </th>
-                            <td>
-                                <input type="text" id="claude_model"
-                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[claude_model]"
-                                       value="<?php echo esc_attr($settings['claude_model'] ?? C::DEFAULT_CLAUDE_MODEL); ?>"
-                                       placeholder="<?php echo esc_attr(C::DEFAULT_CLAUDE_MODEL); ?>"
-                                       style="width: 300px;">
-                                <p class="description"><?php
-                                    /* translators: %s: default model name */
-                                    printf(esc_html__('Standard: %s', 'auto-quill'), '<code>' . esc_html(C::DEFAULT_CLAUDE_MODEL) . '</code>');
-                                ?></p>
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <th scope="row">
-                                <label for="pixabay_api_key"><?php esc_html_e('Pixabay-API-Key', 'auto-quill'); ?></label>
-                            </th>
-                            <td>
-                                <?php
-                                $pixabay_from_const = C::pixabay_api_key_from_constant();
-                                $has_pixabay_key    = !empty($settings['pixabay_api_key']);
-                                $pixabay_placeholder = $has_pixabay_key
-                                    ? esc_attr__('Gespeicherter Schlüssel — leer lassen, um ihn zu behalten', 'auto-quill')
-                                    : esc_attr__('z. B. 12345678-abcdef…', 'auto-quill');
-                                ?>
-                                <input type="password" id="pixabay_api_key"
-                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[pixabay_api_key]"
-                                       value=""
-                                       placeholder="<?php echo $pixabay_placeholder; ?>"
-                                       autocomplete="new-password"
-                                       <?php disabled($pixabay_from_const); ?>
-                                       style="width: 300px;">
-                                <p class="description">
-                                    <?php if ($pixabay_from_const): ?>
-                                        <?php esc_html_e('Schlüssel wird aus der Konstante AUTO_QUILL_PIXABAY_KEY in wp-config.php geladen und hat Vorrang vor diesem Feld.', 'auto-quill'); ?>
-                                    <?php else: ?>
-                                        <?php
-                                        printf(
-                                            /* translators: %s: link to Pixabay API docs */
-                                            esc_html__('Optional. Wird für die Beitragsbild-Suche im Dashboard verwendet. Kostenlosen Key anfordern unter %s.', 'auto-quill'),
-                                            '<a href="https://pixabay.com/api/docs/" target="_blank" rel="noopener noreferrer">pixabay.com/api/docs</a>'
-                                        );
-                                        ?>
-                                    <?php endif; ?>
-                                </p>
-                            </td>
-                        </tr>
+                        <?php
+                        self::render_model_row('openai', __('OpenAI-Modell', 'auto-quill'), (string) ($settings['openai_model'] ?? C::DEFAULT_OPENAI_MODEL), C::DEFAULT_OPENAI_MODEL, (string) ($settings['ai_provider'] ?? 'openai'));
+                        self::render_model_row('claude', __('Claude-Modell', 'auto-quill'), (string) ($settings['claude_model'] ?? C::DEFAULT_CLAUDE_MODEL), C::DEFAULT_CLAUDE_MODEL, (string) ($settings['ai_provider'] ?? 'openai'));
+                        ?>
                     </table>
                 </div>
 
-                <div class="auto-quill-tab-panel" data-tab="publish" style="display:none;">
+                <div class="auto-quill-tab-panel" data-tab="feeds" style="display:none;">
+                    <p class="description" style="margin: 1em 0;">
+                        <?php
+                        printf(
+                            /* translators: %s: site timezone name */
+                            esc_html__('Alle Zeiten gelten in der Ortszeit der Seite (%s). Die tatsächliche Ausführung hängt an WP-Cron und kann sich verzögern, wenn die Seite wenig besucht wird.', 'auto-quill'),
+                            '<code>' . esc_html(wp_timezone_string()) . '</code>'
+                        );
+                        ?>
+                    </p>
                     <table class="form-table">
                         <tr>
                             <th scope="row">
-                                <label for="post_status"><?php esc_html_e('Standard Post-Status', 'auto-quill'); ?></label>
+                                <label for="fetch_time"><?php esc_html_e('RSS-Abruf', 'auto-quill'); ?></label>
                             </th>
                             <td>
-                                <select id="post_status" name="<?php echo esc_attr(C::OPTION_KEY); ?>[post_status]">
-                                    <option value="draft" <?php selected($settings['post_status'] ?? '', 'draft'); ?>>Entwurf</option>
-                                    <option value="publish" <?php selected($settings['post_status'] ?? '', 'publish'); ?>>Veröffentlicht</option>
-                                    <option value="pending" <?php selected($settings['post_status'] ?? '', 'pending'); ?>>Genehmigung ausstehend</option>
-                                </select>
+                                <input type="time" id="fetch_time"
+                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[fetch_time]"
+                                       value="<?php echo esc_attr((string) ($settings['fetch_time'] ?? C::defaults()['fetch_time'])); ?>">
+                                <p class="description"><?php esc_html_e('Wann täglich alle aktiven RSS-Quellen abgerufen werden.', 'auto-quill'); ?></p>
                             </td>
                         </tr>
 
                         <tr>
                             <th scope="row">
-                                <label>
-                                    <input type="hidden"
-                                           name="<?php echo esc_attr(C::OPTION_KEY); ?>[auto_publish]"
-                                           value="0">
-                                    <input type="checkbox"
-                                           name="<?php echo esc_attr(C::OPTION_KEY); ?>[auto_publish]"
-                                           value="1"
-                                           <?php checked(!empty($settings['auto_publish'])); ?>>
-                                    <?php esc_html_e('Posts automatisch veröffentlichen', 'auto-quill'); ?>
-                                </label>
-                            </th>
-                        </tr>
-
-                        <tr>
-                            <th scope="row">
-                                <?php esc_html_e('Link zum Originalartikel', 'auto-quill'); ?>
+                                <label for="select_time"><?php esc_html_e('Themenauswahl', 'auto-quill'); ?></label>
                             </th>
                             <td>
-                                <label>
-                                    <input type="hidden"
-                                           name="<?php echo esc_attr(C::OPTION_KEY); ?>[source_link_enabled]"
-                                           value="0">
-                                    <input type="checkbox"
-                                           id="source_link_enabled"
-                                           name="<?php echo esc_attr(C::OPTION_KEY); ?>[source_link_enabled]"
-                                           value="1"
-                                           <?php checked($settings['source_link_enabled'] ?? true); ?>>
-                                    <?php esc_html_e('Jedem Blog-Beitrag einen Quellenhinweis anhängen', 'auto-quill'); ?>
-                                </label>
-                                <p class="description">
-                                    <?php esc_html_e('Der Hinweis wird serverseitig ans Ende des Beitrags gesetzt und ist damit garantiert vorhanden – unabhängig davon, ob die KI einen Link ausgibt. Er erscheint bereits in der Vorschau.', 'auto-quill'); ?>
-                                </p>
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <th scope="row">
-                                <label for="source_link_template"><?php esc_html_e('Text des Quellenhinweises', 'auto-quill'); ?></label>
-                            </th>
-                            <td>
-                                <textarea id="source_link_template" rows="2" class="large-text code"
-                                          name="<?php echo esc_attr(C::OPTION_KEY); ?>[source_link_template]"><?php
-                                    echo esc_textarea($settings['source_link_template'] ?? C::DEFAULT_SOURCE_LINK_TEMPLATE);
-                                ?></textarea>
-                                <p class="description">
-                                    <?php esc_html_e('Reiner Text mit Platzhaltern (kein HTML – das Markup liefert der Platzhalter):', 'auto-quill'); ?>
-                                    <code>{source_link}</code> <?php esc_html_e('(fertiger Link auf den Artikeltitel)', 'auto-quill'); ?>,
-                                    <code>{article_title}</code>,
-                                    <code>{source_url}</code>,
-                                    <code>{feed_name}</code>.
-                                    <br>
-                                    <?php
-                                    printf(
-                                        /* translators: %s: default template string */
-                                        esc_html__('Standard: %s', 'auto-quill'),
-                                        '<code>' . esc_html(C::DEFAULT_SOURCE_LINK_TEMPLATE) . '</code>'
-                                    );
-                                    ?>
-                                </p>
+                                <input type="time" id="select_time"
+                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[select_time]"
+                                       value="<?php echo esc_attr((string) ($settings['select_time'] ?? C::defaults()['select_time'])); ?>">
+                                <p class="description"><?php esc_html_e('Wann die KI täglich die Top-Themen aus den Artikeln der letzten 24 Stunden wählt. Sollte nach dem RSS-Abruf liegen.', 'auto-quill'); ?></p>
                             </td>
                         </tr>
 
@@ -557,6 +547,132 @@ class Settings {
                                 <p class="description">
                                     <?php esc_html_e('Vorgaben für die Kategorienzuordnung. Unterstützter Platzhalter:', 'auto-quill'); ?>
                                     <code>{categories_list}</code>
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="auto-quill-tab-panel" data-tab="publish" style="display:none;">
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row">
+                                <label for="post_status"><?php esc_html_e('Standard Post-Status', 'auto-quill'); ?></label>
+                            </th>
+                            <td>
+                                <select id="post_status" name="<?php echo esc_attr(C::OPTION_KEY); ?>[post_status]">
+                                    <option value="draft" <?php selected($settings['post_status'] ?? '', 'draft'); ?>>Entwurf</option>
+                                    <option value="publish" <?php selected($settings['post_status'] ?? '', 'publish'); ?>>Veröffentlicht</option>
+                                    <option value="pending" <?php selected($settings['post_status'] ?? '', 'pending'); ?>>Genehmigung ausstehend</option>
+                                </select>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <th scope="row"><?php esc_html_e('Automatisch veröffentlichen', 'auto-quill'); ?></th>
+                            <td>
+                                <label>
+                                    <input type="hidden"
+                                           name="<?php echo esc_attr(C::OPTION_KEY); ?>[auto_publish]"
+                                           value="0">
+                                    <input type="checkbox"
+                                           id="auto_publish"
+                                           name="<?php echo esc_attr(C::OPTION_KEY); ?>[auto_publish]"
+                                           value="1"
+                                           <?php checked(!empty($settings['auto_publish'])); ?>>
+                                    <?php esc_html_e('Posts automatisch veröffentlichen', 'auto-quill'); ?>
+                                </label>
+                                <p class="description"><?php esc_html_e('Wenn aktiv, wird jeder Beitrag sofort veröffentlicht — unabhängig vom Standard Post-Status oben.', 'auto-quill'); ?></p>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <th scope="row">
+                                <?php esc_html_e('Link zum Originalartikel', 'auto-quill'); ?>
+                            </th>
+                            <td>
+                                <label>
+                                    <input type="hidden"
+                                           name="<?php echo esc_attr(C::OPTION_KEY); ?>[source_link_enabled]"
+                                           value="0">
+                                    <input type="checkbox"
+                                           id="source_link_enabled"
+                                           name="<?php echo esc_attr(C::OPTION_KEY); ?>[source_link_enabled]"
+                                           value="1"
+                                           <?php checked($settings['source_link_enabled'] ?? true); ?>>
+                                    <?php esc_html_e('Jedem Blog-Beitrag einen Quellenhinweis anhängen', 'auto-quill'); ?>
+                                </label>
+                                <p class="description">
+                                    <?php esc_html_e('Der Hinweis wird serverseitig ans Ende des Beitrags gesetzt und ist damit garantiert vorhanden – unabhängig davon, ob die KI einen Link ausgibt. Er erscheint bereits in der Vorschau.', 'auto-quill'); ?>
+                                </p>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <th scope="row">
+                                <label for="source_link_template"><?php esc_html_e('Text des Quellenhinweises', 'auto-quill'); ?></label>
+                            </th>
+                            <td>
+                                <textarea id="source_link_template" rows="2" class="large-text code"
+                                          name="<?php echo esc_attr(C::OPTION_KEY); ?>[source_link_template]"><?php
+                                    echo esc_textarea($settings['source_link_template'] ?? C::DEFAULT_SOURCE_LINK_TEMPLATE);
+                                ?></textarea>
+                                <p class="description">
+                                    <?php esc_html_e('Reiner Text mit Platzhaltern (kein HTML – das Markup liefert der Platzhalter):', 'auto-quill'); ?>
+                                    <code>{source_link}</code> <?php esc_html_e('(fertiger Link auf den Artikeltitel)', 'auto-quill'); ?>,
+                                    <code>{article_title}</code>,
+                                    <code>{source_url}</code>,
+                                    <code>{feed_name}</code>.
+                                    <br>
+                                    <?php
+                                    printf(
+                                        /* translators: %s: default template string */
+                                        esc_html__('Standard: %s', 'auto-quill'),
+                                        '<code>' . esc_html(C::DEFAULT_SOURCE_LINK_TEMPLATE) . '</code>'
+                                    );
+                                    ?>
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="auto-quill-tab-panel" data-tab="images" style="display:none;">
+                    <p class="description" style="margin: 1em 0;">
+                        <?php esc_html_e('Bildquellen für die Beitragsbild-Suche auf der Generierungs-Seite.', 'auto-quill'); ?>
+                    </p>
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row">
+                                <label for="pixabay_api_key"><?php esc_html_e('Pixabay-API-Key', 'auto-quill'); ?></label>
+                            </th>
+                            <td>
+                                <?php
+                                $pixabay_from_const = C::pixabay_api_key_from_constant();
+                                $has_pixabay_key    = !empty($settings['pixabay_api_key']);
+                                $pixabay_placeholder = $has_pixabay_key
+                                    ? esc_attr__('Gespeicherter Schlüssel — leer lassen, um ihn zu behalten', 'auto-quill')
+                                    : esc_attr__('z. B. 12345678-abcdef…', 'auto-quill');
+                                ?>
+                                <input type="password" id="pixabay_api_key"
+                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[pixabay_api_key]"
+                                       value=""
+                                       placeholder="<?php echo $pixabay_placeholder; ?>"
+                                       autocomplete="new-password"
+                                       <?php disabled($pixabay_from_const); ?>
+                                       style="width: 300px;">
+                                <p class="description">
+                                    <?php if ($pixabay_from_const): ?>
+                                        <?php esc_html_e('Schlüssel wird aus der Konstante AUTO_QUILL_PIXABAY_KEY in wp-config.php geladen und hat Vorrang vor diesem Feld.', 'auto-quill'); ?>
+                                    <?php else: ?>
+                                        <?php
+                                        printf(
+                                            /* translators: %s: link to Pixabay API docs */
+                                            esc_html__('Optional. Wird für die Beitragsbild-Suche im Dashboard verwendet. Kostenlosen Key anfordern unter %s.', 'auto-quill'),
+                                            '<a href="https://pixabay.com/api/docs/" target="_blank" rel="noopener noreferrer">pixabay.com/api/docs</a>'
+                                        );
+                                        ?>
+                                    <?php endif; ?>
                                 </p>
                             </td>
                         </tr>
@@ -696,7 +812,64 @@ class Settings {
                     </table>
                 </div>
 
-                <div class="auto-quill-tab-panel" data-tab="updates" style="display:none;">
+                <div class="auto-quill-tab-panel" data-tab="backup" style="display:none;">
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row"><?php esc_html_e('Automatische Sicherung', 'auto-quill'); ?></th>
+                            <td>
+                                <label>
+                                    <input type="hidden"
+                                           name="<?php echo esc_attr(C::OPTION_KEY); ?>[backup_enabled]"
+                                           value="0">
+                                    <input type="checkbox"
+                                           id="backup_enabled"
+                                           name="<?php echo esc_attr(C::OPTION_KEY); ?>[backup_enabled]"
+                                           value="1"
+                                           <?php checked(!empty($settings['backup_enabled'] ?? C::defaults()['backup_enabled'])); ?>>
+                                    <?php esc_html_e('Einstellungen und RSS-Quellen täglich sichern', 'auto-quill'); ?>
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <th scope="row">
+                                <label for="backup_time"><?php esc_html_e('Uhrzeit', 'auto-quill'); ?></label>
+                            </th>
+                            <td>
+                                <input type="time" id="backup_time"
+                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[backup_time]"
+                                       value="<?php echo esc_attr((string) ($settings['backup_time'] ?? C::defaults()['backup_time'])); ?>">
+                                <p class="description">
+                                    <?php
+                                    printf(
+                                        /* translators: %s: site timezone name */
+                                        esc_html__('Ortszeit der Seite (%s).', 'auto-quill'),
+                                        '<code>' . esc_html(wp_timezone_string()) . '</code>'
+                                    );
+                                    ?>
+                                </p>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <th scope="row">
+                                <label for="backup_keep"><?php esc_html_e('Aufbewahren', 'auto-quill'); ?></label>
+                            </th>
+                            <td>
+                                <input type="number" id="backup_keep" min="1" max="<?php echo (int) C::BACKUP_KEEP_MAX; ?>" step="1"
+                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[backup_keep]"
+                                       value="<?php echo esc_attr((string) ($settings['backup_keep'] ?? C::defaults()['backup_keep'])); ?>"
+                                       style="width: 100px;">
+                                <?php esc_html_e('Sicherungen', 'auto-quill'); ?>
+                                <p class="description">
+                                    <?php esc_html_e('Wie viele Sicherungen aufgehoben werden (automatische, manuelle und importierte zusammen). Ältere werden gelöscht — beim Verkleinern sofort.', 'auto-quill'); ?>
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="auto-quill-tab-panel" data-tab="system" style="display:none;">
                     <table class="form-table">
                         <tr>
                             <th scope="row">
@@ -728,11 +901,7 @@ class Settings {
                                 </p>
                             </td>
                         </tr>
-                    </table>
-                </div>
 
-                <div class="auto-quill-tab-panel" data-tab="debug" style="display:none;">
-                    <table class="form-table">
                         <tr>
                             <th scope="row">
                                 <?php esc_html_e('Debug-Logging', 'auto-quill'); ?>
@@ -785,7 +954,11 @@ class Settings {
                 </div>
             </div>
 
-            <div class="auto-quill-tab-panel" data-tab="debug" style="display:none;">
+            <div class="auto-quill-tab-panel" data-tab="backup" style="display:none;">
+                <?php BackupController::render_panel(); ?>
+            </div>
+
+            <div class="auto-quill-tab-panel" data-tab="system" style="display:none;">
                 <?php StatusPanel::render(); ?>
             </div>
         </div>

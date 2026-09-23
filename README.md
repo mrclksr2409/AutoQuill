@@ -2,6 +2,8 @@
 
 Ein intelligentes WordPress-Plugin, das automatisch RSS-Feeds überwacht, täglich die interessantesten Themen selektiert und mithilfe von KI professionelle Blog-Posts generiert.
 
+📖 **Ausführliche Dokumentation im [Wiki](https://github.com/mrclksr2409/autoquill/wiki)**
+
 ## Features
 
 ✅ **RSS-Feed Management** - Verwalte mehrere RSS-Quellen  
@@ -11,11 +13,12 @@ Ein intelligentes WordPress-Plugin, das automatisch RSS-Feeds überwacht, tägli
 ✅ **Quellenangabe** - Jeder Blog-Beitrag endet mit einem garantierten Link auf den Originalartikel  
 ✅ **KI-Text-Generierung** - Generiert vollständige, professionelle Blog-Posts  
 ✅ **Admin Dashboard** - Benutzerfreundliches Interface zur Verwaltung  
-✅ **WordPress Cron** - Automatische tägliche Updates  
+✅ **WordPress Cron** - Automatische tägliche Updates zu frei wählbaren Uhrzeiten  
 ✅ **REST API** - Volle API-Integration  
-✅ **OpenAI & Claude Support** - Flexible KI-Provider  
+✅ **OpenAI & Claude Support** - Flexible KI-Provider, Modellauswahl per Dropdown direkt vom Anbieter  
 ✅ **Sichere Konfiguration** - Sichere Speicherung von API-Keys  
 ✅ **Tagesbericht per E-Mail** - Einmal täglich, mit einstellbaren Empfängern und Uhrzeit  
+✅ **Backup** - Tägliche Sicherung von Einstellungen und RSS-Quellen, Wiederherstellen, Download und Import  
 
 ## Installation
 
@@ -40,11 +43,11 @@ Ein intelligentes WordPress-Plugin, das automatisch RSS-Feeds überwacht, tägli
 
 ### Workflow
 
-1. **Automatisches Sammeln** (täglich um Mitternacht)
+1. **Automatisches Sammeln** (täglich, Standard 00:00 — einstellbar unter *Einstellungen → Feeds & Zeitplan*)
    - Plugin holt alle Artikel aus den konfigurierten RSS-Feeds
    - Speichert neue, nicht-doppelte Artikel in der Datenbank
 
-2. **KI-Analyse** (1 Stunde nach dem Fetch)
+2. **KI-Analyse** (täglich, Standard 01:00 — einstellbar unter *Einstellungen → Feeds & Zeitplan*)
    - OpenAI/Claude analysiert alle Artikel des Tages
    - Wählt die 5 interessantesten Themen aus
    - Speichert die Auswahl im Admin-Dashboard
@@ -76,8 +79,8 @@ Ein intelligentes WordPress-Plugin, das automatisch RSS-Feeds überwacht, tägli
   Links steht der Originaltext, rechts entsteht der Beitrag. Während die KI arbeitet, läuft ein
   Spinner mit Sekundenzähler.
 - **RSS Quellen**: Feed-Verwaltung (hinzufügen/löschen)
-- **Einstellungen**: KI-Provider, API-Keys, Veröffentlichung, Quellenangabe, Prompts,
-  Benachrichtigungen, Updates, Debug
+- **Einstellungen**: KI-Provider, API-Keys, Modellauswahl, Veröffentlichung, Zeitplan, Quellenangabe, Prompts,
+  Benachrichtigungen, Backup, Updates, Debug
 
 ## Konfiguration
 
@@ -87,20 +90,26 @@ Ein intelligentes WordPress-Plugin, das automatisch RSS-Feeds überwacht, tägli
 |--------|-----|-------------|----------|
 | **KI-Provider** | KI-Provider | OpenAI oder Claude | OpenAI |
 | **API-Schlüssel** | KI-Provider | Dein API-Schlüssel | - |
-| **Pixabay-API-Key** | KI-Provider | Optional, für die Beitragsbild-Suche | - |
+| **OpenAI-/Claude-Modell** | KI-Provider | Dropdown; die Liste wird mit dem API-Schlüssel beim Anbieter abgerufen (12 h zwischengespeichert, „Modelle neu laden" erzwingt einen Abruf) | `gpt-4o-mini` / `claude-sonnet-4-6` |
+| **RSS-Abruf** | Feeds & Zeitplan | Uhrzeit des täglichen Feed-Abrufs (Ortszeit) | 00:00 |
+| **Themenauswahl** | Feeds & Zeitplan | Uhrzeit der täglichen KI-Themenauswahl (Ortszeit), sollte nach dem Abruf liegen | 01:00 |
+| **RSS-Rückblick (Tage)** | Feeds & Zeitplan | Zeitfenster für Feed-Artikel, 0 = unbegrenzt | 7 |
+| **Prompts** | Prompts | Vorgaben für Titel, Beitragstext, Auszug, Kategorie | siehe Tab |
 | **Post-Status** | Veröffentlichung | draft, publish, pending | draft |
-| **Auto Publish** | Veröffentlichung | Posts automatisch veröffentlichen | Nein |
-| **RSS-Rückblick (Tage)** | Veröffentlichung | Zeitfenster für Feed-Artikel, 0 = unbegrenzt | 7 |
+| **Automatisch veröffentlichen** | Veröffentlichung | Jeden Beitrag sofort veröffentlichen, überschreibt den Post-Status | Nein |
 | **Link zum Originalartikel** | Veröffentlichung | Quellenhinweis an jeden Beitrag anhängen | An |
 | **Text des Quellenhinweises** | Veröffentlichung | Reiner Text mit Platzhaltern | `Quelle: {source_link}` |
-| **Prompts** | Prompts | Vorgaben für Titel, Beitragstext, Auszug, Kategorie | siehe Tab |
-| **Beta-Modus** | Updates | Updates vom `main`-Branch statt nur aus Releases | Aus |
-| **Debug-Logging** | Debug | Info-/Debug-Einträge mitschreiben | Aus |
+| **Pixabay-API-Key** | Bilder | Optional, für die Beitragsbild-Suche | - |
 | **Tagesbericht** | Benachrichtigungen | Täglich eine Zusammenfassung per E-Mail | Aus |
 | **Uhrzeit** | Benachrichtigungen | Wann der Bericht verschickt wird (Ortszeit) | 08:00 |
 | **Inhalte** | Benachrichtigungen | Top-Themen, Fehler und Warnungen, erstellte Posts | alle drei |
 | **Empfänger: Benutzer** | Benachrichtigungen | Auswahl aus den Administratoren | – |
 | **Weitere Adressen** | Benachrichtigungen | Zusätzliche Adressen, eine pro Zeile | – |
+| **Automatische Sicherung** | Backup | Einstellungen und RSS-Quellen täglich sichern | An |
+| **Uhrzeit** | Backup | Wann die Sicherung läuft (Ortszeit) | 03:00 |
+| **Aufbewahren** | Backup | Anzahl aufgehobener Sicherungen (1–100), ältere werden gelöscht | 7 |
+| **Beta-Modus** | System | Updates vom `main`-Branch statt nur aus Releases | Aus |
+| **Debug-Logging** | System | Info-/Debug-Einträge mitschreiben; darunter das Status-Panel | Aus |
 
 #### Tagesbericht
 
@@ -175,6 +184,7 @@ POST /wp-json/auto-quill/v1/generate-post     # {article_id} ODER {topic_id, top
 POST /wp-json/auto-quill/v1/publish-post
 GET  /wp-json/auto-quill/v1/search-images
 POST /wp-json/auto-quill/v1/suggest-image-keywords
+POST /wp-json/auto-quill/v1/models            # {provider, api_key?, refresh?} → verfügbare Modelle
 GET  /wp-json/auto-quill/v1/logs
 ```
 
@@ -259,10 +269,42 @@ define('ALTERNATE_WP_CRON', true);
 
 AutoQuill nutzt den [Plugin Update Checker](https://github.com/YahnisElsts/plugin-update-checker)
 und bezieht Updates aus GitHub Releases. WordPress prüft automatisch und zeigt neue Versionen unter
-**Dashboard → Aktualisierungen**. Mit aktivem Beta-Modus (Einstellungen → Updates) folgt das Plugin
+**Dashboard → Aktualisierungen**. Mit aktivem Beta-Modus (Einstellungen → System) folgt das Plugin
 stattdessen dem `main`-Branch.
 
 ## Changelog
+
+### [1.5.0] — 2026-09-23
+
+#### Added
+- Die Modelle unter *Einstellungen → KI-Provider* werden per Dropdown gewählt. Die Liste wird
+  direkt beim Anbieter abgerufen (OpenAI `GET /v1/models`, gefiltert auf Chat-Modelle; Anthropic
+  `GET /v1/models`) und 12 Stunden zwischengespeichert. Ein frisch eingetippter, noch nicht
+  gespeicherter Schlüssel wird für den Abruf bereits verwendet. Es wird nur das Modell des
+  gewählten Providers angezeigt.
+- Neuer Einstellungs-Tab „Feeds & Zeitplan": Uhrzeit für den RSS-Abruf und für die Themenauswahl frei
+  wählbar (Ortszeit der Seite). Liegt die Auswahl nicht bis zu 12 Stunden nach dem Abruf, gibt es beim
+  Speichern einen Hinweis.
+- Neuer REST-Endpoint `POST /wp-json/auto-quill/v1/models`.
+- Neuer Einstellungs-Tab „Backup": tägliche Sicherung aller Einstellungen und der RSS-Quellen zu
+  einstellbarer Uhrzeit, Anzahl der aufbewahrten Sicherungen wählbar (Standard 7). Dazu „Jetzt
+  sichern", Wiederherstellen (der Stand davor wird automatisch mitgesichert), Download als JSON
+  (ohne API-Schlüssel) und Import. Artikel, Themen und Logs sind nicht Teil der Sicherung.
+- Das Status-Panel zeigt die nächste Sicherung und maskiert jetzt auch den Pixabay-Schlüssel.
+
+#### Changed
+- Abruf und Themenauswahl laufen nicht mehr als `daily`-Events ab dem Aktivierungszeitpunkt,
+  sondern als selbst verkettete Einzel-Events zur eingestellten Uhrzeit — robust gegen die
+  Zeitumstellung. Bestehende Installationen werden beim ersten Seitenaufruf automatisch umgestellt.
+- Einstellungsseite neu sortiert: *KI-Provider · Feeds & Zeitplan · Prompts · Veröffentlichung ·
+  Bilder · Benachrichtigungen · Backup · System*. Der Pixabay-Schlüssel hat einen eigenen Tab „Bilder"
+  statt unter „KI-Provider" zu stehen, der RSS-Rückblick wanderte von „Veröffentlichung" zu
+  „Feeds & Zeitplan", „Updates" und „Debug" sind zu „System" zusammengefasst. Alte Links
+  (`#tab-debug`, `#tab-updates`) führen weiterhin zum richtigen Tab, und nach dem Speichern bleibt
+  der zuletzt geöffnete Tab aktiv.
+- Der Cron-Abruf stößt die Themenauswahl nicht mehr zusätzlich an; sie lief dadurch zweimal täglich.
+- OpenAI-Anfragen senden `max_completion_tokens` statt `max_tokens` und lassen `temperature` bei
+  Reasoning-Modellen (o-Serie, gpt-5) weg — diese lehnen beides sonst ab.
 
 ### [1.4.0] — 2026-09-22
 
@@ -371,8 +413,8 @@ GPL v2 oder später. Siehe `LICENSE` für Details.
 
 ## Support
 
-- Öffne einen Issue auf [GitHub](https://github.com/AutoQuill/AutoQuill)
-- Dokumentation: [Wiki](https://github.com/AutoQuill/AutoQuill/wiki)
+- Öffne einen Issue auf [GitHub](https://github.com/mrclksr2409/autoquill/issues)
+- Dokumentation: [Wiki](https://github.com/mrclksr2409/autoquill/wiki) (Quelle: Ordner `wiki/`)
 
 ## Roadmap
 

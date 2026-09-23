@@ -1,0 +1,1 @@
+AutoQuill · [Repository](https://github.com/mrclksr2409/autoquill) · [Releases](https://github.com/mrclksr2409/autoquill/releases) · [Issues](https://github.com/mrclksr2409/autoquill/issues) — Diese Seiten werden aus dem Ordner `wiki/` im Repository erzeugt. Änderungen bitte dort vornehmen.

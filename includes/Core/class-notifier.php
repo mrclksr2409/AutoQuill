@@ -52,21 +52,11 @@ class Notifier {
      * @param int|null $from Reference point, for testing.
      */
     public static function next_run_timestamp(?int $from = null): int {
-        $settings = self::settings();
-        $time     = (string) ($settings['notify_time'] ?? '');
-
-        if (!preg_match('/^([01]\d|2[0-3]):([0-5]\d)$/', $time, $m)) {
-            preg_match('/^(\d{2}):(\d{2})$/', Constants::defaults()['notify_time'], $m);
-        }
-
-        $now = (new \DateTimeImmutable('@' . ($from ?? time())))->setTimezone(wp_timezone());
-        $next = $now->setTime((int) $m[1], (int) $m[2], 0);
-
-        if ($next <= $now) {
-            $next = $next->modify('+1 day');
-        }
-
-        return $next->getTimestamp();
+        return Scheduler::next_occurrence(
+            (string) (self::settings()['notify_time'] ?? ''),
+            Constants::defaults()['notify_time'],
+            $from
+        );
     }
 
     /** Clear and re-plan. Called on every settings write. */
