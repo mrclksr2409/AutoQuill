@@ -30,6 +30,11 @@ class Constants {
     const ACTION_RECRAWL  = 'auto_quill_recrawl_topics';
     const ACTION_RESELECT = 'auto_quill_reselect_topics';
     const ACTION_TEST_MAIL = 'auto_quill_test_mail';
+    const ACTION_BACKUP_NOW      = 'auto_quill_backup_now';
+    const ACTION_BACKUP_RESTORE  = 'auto_quill_backup_restore';
+    const ACTION_BACKUP_DELETE   = 'auto_quill_backup_delete';
+    const ACTION_BACKUP_DOWNLOAD = 'auto_quill_backup_download';
+    const ACTION_BACKUP_IMPORT   = 'auto_quill_backup_import';
 
     const NONCE_SCOPE    = 'auto-quill-nonce';
     const NONCE_GENERATE = 'auto_quill_generate';
@@ -39,6 +44,11 @@ class Constants {
     const CRON_FETCH  = 'auto_quill_daily_fetch';
     const CRON_SELECT = 'auto_quill_daily_select';
     const CRON_DIGEST = 'auto_quill_daily_digest';
+    const CRON_BACKUP = 'auto_quill_daily_backup';
+
+    /** Settings backups, newest first. Not autoloaded. */
+    const OPTION_BACKUPS = 'auto_quill_backups';
+    const BACKUP_KEEP_MAX = 100;
 
     /** UTC timestamp of the last sent digest. */
     const OPTION_LAST_DIGEST = 'auto_quill_last_digest';
@@ -139,6 +149,10 @@ class Constants {
             'notify_users'   => [],
             'notify_emails'  => [],
             'notify_events'  => self::NOTIFY_EVENTS,
+            // On by default: unlike mail, a backup bothers nobody.
+            'backup_enabled' => true,
+            'backup_time'    => '03:00',
+            'backup_keep'    => 7,
         ];
     }
 

@@ -120,7 +120,14 @@ class Settings {
             $clean['rss_lookback_days'] = $v;
         }
 
-        foreach (['fetch_time', 'select_time'] as $time_key) {
+        if (array_key_exists('backup_enabled', $input)) {
+            $clean['backup_enabled'] = !empty($input['backup_enabled']);
+        }
+        if (isset($input['backup_keep'])) {
+            $clean['backup_keep'] = max(1, min(C::BACKUP_KEEP_MAX, (int) $input['backup_keep']));
+        }
+
+        foreach (['fetch_time', 'select_time', 'backup_time'] as $time_key) {
             if (array_key_exists($time_key, $input)) {
                 $clean[$time_key] = self::sanitize_time(
                     $input[$time_key],
@@ -372,6 +379,7 @@ class Settings {
                     <a href="#tab-schedule" class="nav-tab"               data-tab="schedule"><?php esc_html_e('Zeitplan', 'auto-quill'); ?></a>
                     <a href="#tab-prompts" class="nav-tab"                data-tab="prompts"><?php esc_html_e('Prompts', 'auto-quill'); ?></a>
                     <a href="#tab-notify"  class="nav-tab"                data-tab="notify"><?php esc_html_e('Benachrichtigungen', 'auto-quill'); ?></a>
+                    <a href="#tab-backup"  class="nav-tab"                data-tab="backup"><?php esc_html_e('Backup', 'auto-quill'); ?></a>
                     <a href="#tab-updates" class="nav-tab"                data-tab="updates"><?php esc_html_e('Updates', 'auto-quill'); ?></a>
                     <a href="#tab-debug"   class="nav-tab"                data-tab="debug"><?php esc_html_e('Debug', 'auto-quill'); ?></a>
                 </h2>
@@ -794,6 +802,63 @@ class Settings {
                     </table>
                 </div>
 
+                <div class="auto-quill-tab-panel" data-tab="backup" style="display:none;">
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row"><?php esc_html_e('Automatische Sicherung', 'auto-quill'); ?></th>
+                            <td>
+                                <label>
+                                    <input type="hidden"
+                                           name="<?php echo esc_attr(C::OPTION_KEY); ?>[backup_enabled]"
+                                           value="0">
+                                    <input type="checkbox"
+                                           id="backup_enabled"
+                                           name="<?php echo esc_attr(C::OPTION_KEY); ?>[backup_enabled]"
+                                           value="1"
+                                           <?php checked(!empty($settings['backup_enabled'] ?? C::defaults()['backup_enabled'])); ?>>
+                                    <?php esc_html_e('Einstellungen und RSS-Quellen täglich sichern', 'auto-quill'); ?>
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <th scope="row">
+                                <label for="backup_time"><?php esc_html_e('Uhrzeit', 'auto-quill'); ?></label>
+                            </th>
+                            <td>
+                                <input type="time" id="backup_time"
+                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[backup_time]"
+                                       value="<?php echo esc_attr((string) ($settings['backup_time'] ?? C::defaults()['backup_time'])); ?>">
+                                <p class="description">
+                                    <?php
+                                    printf(
+                                        /* translators: %s: site timezone name */
+                                        esc_html__('Ortszeit der Seite (%s).', 'auto-quill'),
+                                        '<code>' . esc_html(wp_timezone_string()) . '</code>'
+                                    );
+                                    ?>
+                                </p>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <th scope="row">
+                                <label for="backup_keep"><?php esc_html_e('Aufbewahren', 'auto-quill'); ?></label>
+                            </th>
+                            <td>
+                                <input type="number" id="backup_keep" min="1" max="<?php echo (int) C::BACKUP_KEEP_MAX; ?>" step="1"
+                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[backup_keep]"
+                                       value="<?php echo esc_attr((string) ($settings['backup_keep'] ?? C::defaults()['backup_keep'])); ?>"
+                                       style="width: 100px;">
+                                <?php esc_html_e('Sicherungen', 'auto-quill'); ?>
+                                <p class="description">
+                                    <?php esc_html_e('Wie viele Sicherungen aufgehoben werden (automatische, manuelle und importierte zusammen). Ältere werden gelöscht — beim Verkleinern sofort.', 'auto-quill'); ?>
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
                 <div class="auto-quill-tab-panel" data-tab="updates" style="display:none;">
                     <table class="form-table">
                         <tr>
@@ -881,6 +946,10 @@ class Settings {
                         </button>
                     </form>
                 </div>
+            </div>
+
+            <div class="auto-quill-tab-panel" data-tab="backup" style="display:none;">
+                <?php BackupController::render_panel(); ?>
             </div>
 
             <div class="auto-quill-tab-panel" data-tab="debug" style="display:none;">

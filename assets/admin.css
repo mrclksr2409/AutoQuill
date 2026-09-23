@@ -761,3 +761,7 @@
 .auto-quill-test-mail h2 {
     margin-top: 0;
 }
+
+.auto-quill-backup-actions .button {
+    margin: 2px 4px 2px 0;
+}

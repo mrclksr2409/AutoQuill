@@ -16,6 +16,7 @@ Ein intelligentes WordPress-Plugin, das automatisch RSS-Feeds überwacht, tägli
 ✅ **OpenAI & Claude Support** - Flexible KI-Provider, Modellauswahl per Dropdown direkt vom Anbieter  
 ✅ **Sichere Konfiguration** - Sichere Speicherung von API-Keys  
 ✅ **Tagesbericht per E-Mail** - Einmal täglich, mit einstellbaren Empfängern und Uhrzeit  
+✅ **Backup** - Tägliche Sicherung von Einstellungen und RSS-Quellen, Wiederherstellen, Download und Import  
 
 ## Installation
 
@@ -77,7 +78,7 @@ Ein intelligentes WordPress-Plugin, das automatisch RSS-Feeds überwacht, tägli
   Spinner mit Sekundenzähler.
 - **RSS Quellen**: Feed-Verwaltung (hinzufügen/löschen)
 - **Einstellungen**: KI-Provider, API-Keys, Modellauswahl, Veröffentlichung, Zeitplan, Quellenangabe, Prompts,
-  Benachrichtigungen, Updates, Debug
+  Benachrichtigungen, Backup, Updates, Debug
 
 ## Konfiguration
 
@@ -97,6 +98,9 @@ Ein intelligentes WordPress-Plugin, das automatisch RSS-Feeds überwacht, tägli
 | **RSS-Abruf** | Zeitplan | Uhrzeit des täglichen Feed-Abrufs (Ortszeit) | 00:00 |
 | **Themenauswahl** | Zeitplan | Uhrzeit der täglichen KI-Themenauswahl (Ortszeit), sollte nach dem Abruf liegen | 01:00 |
 | **Prompts** | Prompts | Vorgaben für Titel, Beitragstext, Auszug, Kategorie | siehe Tab |
+| **Automatische Sicherung** | Backup | Einstellungen und RSS-Quellen täglich sichern | An |
+| **Uhrzeit** | Backup | Wann die Sicherung läuft (Ortszeit) | 03:00 |
+| **Aufbewahren** | Backup | Anzahl aufgehobener Sicherungen (1–100), ältere werden gelöscht | 7 |
 | **Beta-Modus** | Updates | Updates vom `main`-Branch statt nur aus Releases | Aus |
 | **Debug-Logging** | Debug | Info-/Debug-Einträge mitschreiben | Aus |
 | **Tagesbericht** | Benachrichtigungen | Täglich eine Zusammenfassung per E-Mail | Aus |
@@ -280,6 +284,11 @@ stattdessen dem `main`-Branch.
   wählbar (Ortszeit der Seite). Liegt die Auswahl nicht bis zu 12 Stunden nach dem Abruf, gibt es beim
   Speichern einen Hinweis.
 - Neuer REST-Endpoint `POST /wp-json/auto-quill/v1/models`.
+- Neuer Einstellungs-Tab „Backup": tägliche Sicherung aller Einstellungen und der RSS-Quellen zu
+  einstellbarer Uhrzeit, Anzahl der aufbewahrten Sicherungen wählbar (Standard 7). Dazu „Jetzt
+  sichern", Wiederherstellen (der Stand davor wird automatisch mitgesichert), Download als JSON
+  (ohne API-Schlüssel) und Import. Artikel, Themen und Logs sind nicht Teil der Sicherung.
+- Das Status-Panel zeigt die nächste Sicherung und maskiert jetzt auch den Pixabay-Schlüssel.
 
 #### Changed
 - Abruf und Themenauswahl laufen nicht mehr als `daily`-Events ab dem Aktivierungszeitpunkt,

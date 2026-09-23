@@ -2,6 +2,7 @@
 namespace AutoQuill\Core;
 
 use AutoQuill\Admin\AdminMenu;
+use AutoQuill\Admin\BackupController;
 use AutoQuill\Admin\Dashboard;
 use AutoQuill\Admin\LogsPage;
 use AutoQuill\Admin\PostMetaBox;
@@ -17,6 +18,7 @@ class Plugin {
 
         Settings::boot();
         SourcesController::boot();
+        BackupController::boot();
         Dashboard::boot();
         AdminMenu::boot();
         LogsPage::boot();
@@ -27,6 +29,9 @@ class Plugin {
 
         Scheduler::boot();
         Scheduler::ensure_scheduled();
+
+        Backup::boot();
+        Backup::ensure_scheduled();
 
         // Gated on the setting, unlike fetch and selection: an upgrade must never
         // start sending mail on its own.

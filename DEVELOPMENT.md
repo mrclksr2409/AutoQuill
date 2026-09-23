@@ -24,6 +24,7 @@ auto-quill/
 │   │   ├── class-logger.php            # Logging in wp_auto_quill_logs
 │   │   ├── class-notifier.php         # Tagesbericht per E-Mail
 │   │   ├── class-scheduler.php         # Fetch/Selektion zu einstellbaren Uhrzeiten
+│   │   ├── class-backup.php            # Sicherungen: Anlegen, Aufbewahrung, Planung, Export
 │   │   └── class-updater.php           # Plugin Update Checker (GitHub Releases / main)
 │   │
 │   ├── Database/
@@ -58,8 +59,9 @@ auto-quill/
 │       ├── class-admin-menu.php        # Menü + Asset-Enqueue + wp_localize_script
 │       ├── class-dashboard.php         # Übersicht (Tabs, Themen, Feed-Liste)
 │       ├── class-generate-page.php     # Generierungs-Seite (versteckt)
-│       ├── class-settings.php          # Settings-API, 7 Tabs
+│       ├── class-settings.php          # Settings-API, 8 Tabs
 │       ├── class-sources-controller.php
+│       ├── class-backup-controller.php # admin_post: Sichern, Wiederherstellen, Download, Import
 │       ├── class-post-meta-box.php     # Box „AutoQuill-Quelle" im Post-Editor
 │       ├── class-logs-page.php
 │       ├── class-status-panel.php
@@ -194,6 +196,26 @@ Umrechnung Ortszeit → UTC, auch für den Tagesbericht. `ensure_scheduled()` st
 1.5.0 um: Ein Event mit `schedule !== false` ist noch das alte `daily` und wird ersetzt.
 `on_settings_updated()` plant nur neu, wenn sich die jeweilige Uhrzeit geändert hat — sonst würde
 jedes Speichern einen überfälligen Lauf verwerfen.
+
+### Backup (`Core/class-backup.php`, `Admin/class-backup-controller.php`)
+
+Gesichert werden `auto_quill_settings` und die RSS-Quellen (Titel, URL, aktiv) — Artikel, Themen
+und Logs sind Daten, keine Konfiguration. Gleiches Planungsmuster wie oben (`CRON_BACKUP`, gated auf
+`backup_enabled`, Uhrzeit `backup_time`).
+
+- **Speicherort:** eine Option `auto_quill_backups` mit `autoload = false`, neueste zuerst. Bewusst
+  keine Dateien: Unter `uploads/` wären sie öffentlich abrufbar — mitsamt API-Schlüsseln.
+- **Aufbewahrung:** `store()` kappt bei jedem Schreiben auf `backup_keep`, über alle Anlässe
+  (`auto`, `manual`, `pre-restore`, `import`). Ein verkleinertes Limit greift sofort
+  (`on_settings_updated`).
+- **Wiederherstellen** läuft über `update_option()` und damit durch `Settings::sanitize()` — der
+  Wert wird validiert wie ein Formular-Post. Deshalb baut `apply_settings()` die Formularform nach:
+  `notify_emails` als Text, die `*_present`-Marker, leere Schlüssel-Felder (= aktuelle behalten).
+  Vorher wird der aktuelle Stand als `pre-restore` gesichert.
+- **RSS-Quellen** werden über die Feed-URL abgeglichen (`upsert_by_url`), nie gelöscht: IDs
+  unterscheiden sich zwischen Seiten, und Artikel referenzieren sie.
+- **Download** enthält keine API-Schlüssel (`SECRET_KEYS`). Ein Import legt nur einen Listeneintrag
+  an; angewendet wird er erst per „Wiederherstellen".
 
 ### Robustheit
 
@@ -422,6 +444,7 @@ unbemerkt nie geschrieben wird.
 - `auto_quill_daily_fetch` — RSS-Fetch
 - `auto_quill_daily_select` — Themen-Selektion
 - `auto_quill_daily_digest` — Tagesbericht (nur geplant, wenn aktiviert)
+- `auto_quill_daily_backup` — Sicherung (nur geplant, wenn aktiviert)
 - `auto_quill_topics_selected` — nach der Selektion, Parameter `$topics`
 
 ### Filters
@@ -522,6 +545,5 @@ zeigt einen Erfolgskasten statt neu zu laden. Ein Reload würde die Generierung 
 - [ ] WP-CLI-Kommandos
 - [ ] `posts_per_day` ist in den Defaults vorhanden, hat aber keine UI und wird nirgends gelesen
 - [ ] `autoQuill.fetchAction` wird lokalisiert, aber von keinem Skript gelesen
-- [ ] `StatusPanel` maskiert im Options-Dump nur `ai_api_key`, nicht `pixabay_api_key`
 - [ ] `fetch_article_content()` speichert rohes HTML ohne Readability-Extraktion
 - [ ] Mehrsprachigkeit, weitere KI-Provider
