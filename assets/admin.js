@@ -251,13 +251,25 @@
                 $('.auto-quill-tab-panel').hide()
                      .filter('[data-tab="' + tab + '"]').show();
             };
+            // Tabs merged or renamed in 1.5.0; old links and bookmarks still land.
+            const legacy = { debug: 'system', updates: 'system', schedule: 'feeds' };
+            const storageKey = 'autoQuillSettingsTab';
+
             $tabs.on('click', function(e) {
                 e.preventDefault();
                 const tab = $(this).data('tab');
                 activate(tab);
                 history.replaceState(null, '', '#tab-' + tab);
+                try { sessionStorage.setItem(storageKey, tab); } catch (err) { /* storage blocked */ }
             });
-            const initial = (window.location.hash || '').replace(/^#tab-/, '');
+
+            // options.php redirects back without the hash, so saving would
+            // otherwise always land on the first tab.
+            let initial = (window.location.hash || '').replace(/^#tab-/, '');
+            if (!initial) {
+                try { initial = sessionStorage.getItem(storageKey) || ''; } catch (err) { initial = ''; }
+            }
+            initial = legacy[initial] || initial;
             if (initial && $tabs.filter('[data-tab="' + initial + '"]').length) {
                 activate(initial);
             }

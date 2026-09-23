@@ -191,7 +191,7 @@ die Option löst `reschedule()` aus, weil der `wp_next_scheduled`-Guard eine *ge
 nicht erkennen kann.
 
 Dasselbe Muster gilt für `CRON_FETCH` und `CRON_SELECT` (`Core/class-scheduler.php`, Einstellungen
-`fetch_time`/`select_time`, Tab „Zeitplan"). `Scheduler::next_occurrence()` ist die gemeinsame
+`fetch_time`/`select_time`, Tab „Feeds & Zeitplan"). `Scheduler::next_occurrence()` ist die gemeinsame
 Umrechnung Ortszeit → UTC, auch für den Tagesbericht. `ensure_scheduled()` stellt Installationen vor
 1.5.0 um: Ein Event mit `schedule !== false` ist noch das alte `daily` und wird ersetzt.
 `on_settings_updated()` plant nur neu, wenn sich die jeweilige Uhrzeit geändert hat — sonst würde
@@ -432,6 +432,12 @@ Geteilt wird über eine kleine, explizite Oberfläche, die `admin.js` setzt:
 `.auto-quill-tab-panel` global, worauf die Einstellungsseite angewiesen ist (ihr StatusPanel liegt
 außerhalb des `<form>`). Würden sich zwei Seiten dieselbe Klasse teilen, versteckten sie sich
 gegenseitig — deshalb hat jedes Widget ein eigenes Klassenpaar.
+
+**Einstellungs-Tabs** (Reihenfolge = Einrichtungsreihenfolge): `ki`, `feeds`, `prompts`, `publish`,
+`images`, `notify`, `backup`, `system`. Ein Tab kann zwei Panels haben — eines im Formular, eines
+danach für eigene `<form>`s (Test-Mail, Backup-Liste, StatusPanel unter `system`). Umbenannte Tabs
+bildet `SettingsTabs` über eine `legacy`-Tabelle ab; der zuletzt aktive Tab liegt in
+`sessionStorage`, weil `options.php` ohne Hash zurückleitet.
 
 **Cache-Busting:** `AUTO_QUILL_VERSION` ist der Versions-Parameter der Assets. Wer JS-seitige
 Änderungen ohne Versions-Bump ausliefert, bekommt bei Nutzern die alte `admin.js` — und die lässt
