@@ -17,6 +17,11 @@ außen z. B. über [Anwendungspasswörter](https://make.wordpress.org/core/2020/
 | GET | [`/search-images`](#get-search-images) | Pixabay-Suche |
 | POST | [`/models`](#post-models) | Verfügbare Modelle des Anbieters |
 | GET / DELETE | [`/logs`](#get--delete-logs) | Log lesen / leeren |
+| GET / POST | [`/interviews`](#interviews) | Interviews auflisten / neues Interview starten |
+| GET / DELETE | [`/interviews/{id}`](#interviews) | Interview lesen / löschen |
+| POST | [`/interviews/{id}/answer`](#interviews) | Antwort senden (oder überspringen), nächste Frage erhalten |
+| POST | [`/interviews/{id}/question`](#interviews) | Fehlende Frage erneut anfordern oder offene Frage ersetzen |
+| POST | [`/interviews/{id}/write`](#interviews) | Beitrag aus dem Interview schreiben (speichert noch nichts) |
 
 Fehler kommen als JSON mit Feld `error` und passendem HTTP-Status.
 
@@ -142,6 +147,22 @@ GET-Parameter: `level`, `source`, `since_id`, `since`, `limit` (Standard 100). A
 `server_time`, `debug_enabled`. DELETE leert das Log.
 
 ---
+
+## Interviews
+
+- `POST /interviews` – `{"topic": "…", "notes": "…"}`. Legt das Interview an und stellt die erste
+  Frage. Antwort `201` mit `interview`.
+- `POST /interviews/{id}/answer` – `{"answer": "…"}` oder `{"skip": true}`. Nur möglich, wenn eine
+  Frage offen ist (sonst `409`). Die Antwort wird **vor** dem KI-Aufruf gespeichert; scheitert die
+  nächste Frage, kommt `502` mit `error` **und** dem gespeicherten `interview` zurück.
+- `POST /interviews/{id}/question` – ohne Body: fehlende Frage nachholen. `{"replace": true}`:
+  offene Frage durch eine andere ersetzen.
+- `POST /interviews/{id}/write` – ab 3 Antworten. Antwort im selben Format wie
+  [`/generate-post`](#post-generate-post) plus `interview_id`. Zum Speichern `interview_id` an
+  [`/publish-post`](#post-publish-post) mitschicken – dann wird der Beitrag mit dem Interview verknüpft.
+
+Das `interview`-Objekt enthält u. a. `id`, `topic`, `notes`, `status`, `messages`, `answers`,
+`target` (Richtwert), `min_answers`, `awaiting` (`answer` oder `question`) und `enough`.
 
 ## Beispiel mit Anwendungspasswort
 

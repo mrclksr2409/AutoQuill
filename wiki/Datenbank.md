@@ -1,6 +1,6 @@
 # Datenbank
 
-AutoQuill legt vier eigene Tabellen an (Präfix je nach Installation, meist `wp_`) und nutzt einige
+AutoQuill legt fünf eigene Tabellen an (Präfix je nach Installation, meist `wp_`) und nutzt einige
 Optionen und Post-Meta-Felder.
 
 ## Tabellen
@@ -51,12 +51,33 @@ erscheinen und könnte ein zweites Mal verarbeitet werden.
 `created_at`, `level` (`error`/`warning`/`info`/`debug`), `source`, `message`, `context` (JSON).
 Maximal 7 Tage bzw. 500 Einträge.
 
+### `wp_auto_quill_interviews` – Interviews (seit DB-Version 1.5)
+
+| Spalte | Inhalt |
+|---|---|
+| `topic` | Thema |
+| `notes` | Hinweise für den Redakteur (optional) |
+| `messages` | Gesprächsverlauf als JSON, siehe unten |
+| `status` | `open` (läuft), `drafted` (Beitrag entworfen), `published` (als Beitrag gespeichert) |
+| `post_id` | Der gespeicherte Beitrag (zuletzt gespeicherter, falls mehrfach) |
+| `user_id` | Wer das Interview angelegt hat |
+| `created_at`, `updated_at` | Ortszeit der Seite |
+
+```json
+[{ "role": "ai", "text": "Wie bist du zum Thema gekommen?", "at": "2026-09-28 10:00:00" },
+ { "role": "user", "text": "…", "at": "…" },
+ { "role": "user", "text": "", "skipped": true, "at": "…" },
+ { "role": "ai", "text": "…", "enough": true, "at": "…" }]
+```
+
+Interviews werden nicht automatisch aufgeräumt und sind nicht Teil der Sicherung.
+
 ## Optionen (`wp_options`)
 
 | Option | Inhalt |
 |---|---|
 | `auto_quill_settings` | Alle Einstellungen als Array |
-| `auto_quill_db_version` | Schema-Version (aktuell `1.4`) |
+| `auto_quill_db_version` | Schema-Version (aktuell `1.5`) |
 | `auto_quill_backups` | Sicherungen, nicht automatisch geladen |
 | `auto_quill_last_digest` | Zeitpunkt des letzten Tagesberichts (UTC) |
 | `_transient_auto_quill_models_*` | Zwischengespeicherte Modelllisten (12 h) |
@@ -70,6 +91,7 @@ Maximal 7 Tage bzw. 500 Einträge.
 | `_auto_quill_article_title` | Titel des Originalartikels |
 | `_auto_quill_feed_name` | Name der RSS-Quelle |
 | `_auto_quill_generated_at` | Zeitpunkt der Erstellung (UTC) – bei **jedem** AutoQuill-Beitrag gesetzt |
+| `_auto_quill_interview_id` | ID des Interviews, aus dem der Beitrag entstand |
 
 Die Felder sind geschützt (Unterstrich) und in der WordPress-REST-API nicht sichtbar. Im Editor
 zeigt die Box **„AutoQuill-Quelle“** sie an.

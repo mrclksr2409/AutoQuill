@@ -19,6 +19,7 @@ foreach ([
     \AutoQuill\Core\Constants::META_ARTICLE_TITLE,
     \AutoQuill\Core\Constants::META_FEED_NAME,
     \AutoQuill\Core\Constants::META_GENERATED_AT,
+    \AutoQuill\Core\Constants::META_INTERVIEW_ID,
 ] as $meta_key) {
     delete_post_meta_by_key($meta_key);
 }

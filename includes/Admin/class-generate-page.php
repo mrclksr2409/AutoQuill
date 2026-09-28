@@ -202,7 +202,7 @@ class GeneratePage {
                     <h2><?php esc_html_e('Generierter Beitrag', 'auto-quill'); ?></h2>
 
                     <p class="auto-quill-generate-actions">
-                        <button type="button" class="button button-primary" id="auto-quill-generate-btn">
+                        <button type="button" class="button button-primary" id="auto-quill-generate-btn" data-aq-busy-disable>
                             <?php
                             echo $autostart
                                 ? esc_html__('Neu generieren', 'auto-quill')
@@ -211,114 +211,135 @@ class GeneratePage {
                         </button>
                     </p>
 
-                    <div class="auto-quill-result-body">
-                        <div id="auto-quill-busy" class="auto-quill-busy" hidden>
-                            <span class="auto-quill-spinner" aria-hidden="true"></span>
-                            <p class="auto-quill-busy-text" role="status" aria-live="polite">
-                                <span id="auto-quill-busy-label"></span>
-                                <span id="auto-quill-busy-elapsed" class="auto-quill-busy-elapsed"></span>
-                            </p>
-                        </div>
-
-                        <div id="auto-quill-generate-error" class="auto-quill-generate-error" hidden></div>
-
-                        <div id="auto-quill-meta-fields" class="auto-quill-meta-fields">
-                            <div class="auto-quill-field auto-quill-field--body">
-                                <label for="post-preview">
-                                    <strong><?php esc_html_e('Text', 'auto-quill'); ?></strong>
-                                </label>
-                                <div id="post-preview" class="post-preview">
-                                    <p><?php
-                                        echo $autostart
-                                            ? esc_html__('Der Beitrag wird gleich generiert…', 'auto-quill')
-                                            : esc_html__('Auf „Jetzt generieren" klicken, um den Beitrag zu erstellen.', 'auto-quill');
-                                    ?></p>
-                                </div>
-                            </div>
-                            <div class="auto-quill-field">
-                                <label for="auto-quill-title">
-                                    <strong><?php esc_html_e('Titel', 'auto-quill'); ?></strong>
-                                </label>
-                                <input type="text" id="auto-quill-title" class="large-text"
-                                       placeholder="<?php esc_attr_e('Wird automatisch von der KI gefüllt', 'auto-quill'); ?>">
-                            </div>
-                            <div class="auto-quill-field">
-                                <label for="auto-quill-excerpt">
-                                    <strong><?php esc_html_e('Social-Media-Auszug', 'auto-quill'); ?></strong>
-                                </label>
-                                <textarea id="auto-quill-excerpt" rows="3" readonly
-                                          placeholder="<?php esc_attr_e('Wird automatisch von der KI gefüllt', 'auto-quill'); ?>"></textarea>
-                            </div>
-                            <div class="auto-quill-field">
-                                <label for="auto-quill-categories">
-                                    <strong><?php esc_html_e('Kategorien', 'auto-quill'); ?></strong>
-                                    <span class="description"><?php esc_html_e('(Mehrfachauswahl mit Strg/Cmd)', 'auto-quill'); ?></span>
-                                </label>
-                                <select id="auto-quill-categories" multiple size="5"></select>
-                            </div>
-                            <div class="auto-quill-field">
-                                <label>
-                                    <strong><?php esc_html_e('Beitragsbild', 'auto-quill'); ?></strong>
-                                    <span class="description"><?php esc_html_e('(optional, via Pixabay)', 'auto-quill'); ?></span>
-                                </label>
-                                <div id="auto-quill-image-preview" class="auto-quill-image-preview is-empty">
-                                    <span class="placeholder"><?php esc_html_e('Kein Bild ausgewählt', 'auto-quill'); ?></span>
-                                </div>
-                                <p class="auto-quill-image-actions">
-                                    <button type="button" class="button" id="auto-quill-pick-image-btn">
-                                        <?php esc_html_e('Bild auswählen', 'auto-quill'); ?>
-                                    </button>
-                                    <button type="button" class="button-link" id="auto-quill-clear-image-btn" hidden>
-                                        <?php esc_html_e('Bild entfernen', 'auto-quill'); ?>
-                                    </button>
-                                </p>
-                            </div>
-                        </div>
-
-                        <button class="button button-primary" id="publish-post-btn" style="display:none;">
-                            <?php echo esc_html($publish_label); ?>
-                        </button>
-
-                        <div id="auto-quill-generate-result" class="auto-quill-generate-result" hidden></div>
-                    </div>
+                    <?php
+                    self::render_post_editor(
+                        $publish_label,
+                        $autostart
+                            ? __('Der Beitrag wird gleich generiert…', 'auto-quill')
+                            : __('Auf „Jetzt generieren" klicken, um den Beitrag zu erstellen.', 'auto-quill')
+                    );
+                    ?>
                 </div>
             </div>
 
-            <div id="auto-quill-image-modal" class="auto-quill-modal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="auto-quill-image-modal-title">
-                <div class="auto-quill-modal-overlay" data-modal-close></div>
-                <div class="auto-quill-modal-content">
-                    <div class="auto-quill-modal-header">
-                        <h2 id="auto-quill-image-modal-title"><?php esc_html_e('Beitragsbild auswählen', 'auto-quill'); ?></h2>
-                        <button type="button" class="auto-quill-modal-close" data-modal-close aria-label="<?php esc_attr_e('Schließen', 'auto-quill'); ?>">&times;</button>
+            <?php self::render_image_modal(); ?>
+        </div>
+        <?php
+    }
+
+    /**
+     * The right-hand post editor: busy overlay, error box, preview, title,
+     * excerpt, categories, featured image and the save button. Shared by the
+     * generate screen and the interview screen; assets/post-editor.js drives it.
+     */
+    public static function render_post_editor(string $publish_label, string $placeholder): void {
+        ?>
+        <div class="auto-quill-result-body">
+            <div id="auto-quill-busy" class="auto-quill-busy" hidden>
+                <span class="auto-quill-spinner" aria-hidden="true"></span>
+                <p class="auto-quill-busy-text" role="status" aria-live="polite">
+                    <span id="auto-quill-busy-label"></span>
+                    <span id="auto-quill-busy-elapsed" class="auto-quill-busy-elapsed"></span>
+                </p>
+            </div>
+
+            <div id="auto-quill-generate-error" class="auto-quill-generate-error" hidden></div>
+
+            <div id="auto-quill-meta-fields" class="auto-quill-meta-fields">
+                <div class="auto-quill-field auto-quill-field--body">
+                    <label for="post-preview">
+                        <strong><?php esc_html_e('Text', 'auto-quill'); ?></strong>
+                    </label>
+                    <div id="post-preview" class="post-preview">
+                        <p><?php echo esc_html($placeholder); ?></p>
                     </div>
-                    <form class="auto-quill-modal-search" id="auto-quill-image-search-form">
-                        <input type="text" id="auto-quill-image-query"
-                               placeholder="<?php esc_attr_e('Suchbegriff…', 'auto-quill'); ?>"
-                               class="regular-text" autocomplete="off">
-                        <button type="submit" class="button button-primary">
-                            <?php esc_html_e('Suchen', 'auto-quill'); ?>
+                </div>
+                <div class="auto-quill-field">
+                    <label for="auto-quill-title">
+                        <strong><?php esc_html_e('Titel', 'auto-quill'); ?></strong>
+                    </label>
+                    <input type="text" id="auto-quill-title" class="large-text"
+                           placeholder="<?php esc_attr_e('Wird automatisch von der KI gefüllt', 'auto-quill'); ?>">
+                </div>
+                <div class="auto-quill-field">
+                    <label for="auto-quill-excerpt">
+                        <strong><?php esc_html_e('Social-Media-Auszug', 'auto-quill'); ?></strong>
+                    </label>
+                    <textarea id="auto-quill-excerpt" rows="3" readonly
+                              placeholder="<?php esc_attr_e('Wird automatisch von der KI gefüllt', 'auto-quill'); ?>"></textarea>
+                </div>
+                <div class="auto-quill-field">
+                    <label for="auto-quill-categories">
+                        <strong><?php esc_html_e('Kategorien', 'auto-quill'); ?></strong>
+                        <span class="description"><?php esc_html_e('(Mehrfachauswahl mit Strg/Cmd)', 'auto-quill'); ?></span>
+                    </label>
+                    <select id="auto-quill-categories" multiple size="5"></select>
+                </div>
+                <div class="auto-quill-field">
+                    <label>
+                        <strong><?php esc_html_e('Beitragsbild', 'auto-quill'); ?></strong>
+                        <span class="description"><?php esc_html_e('(optional, via Pixabay)', 'auto-quill'); ?></span>
+                    </label>
+                    <div id="auto-quill-image-preview" class="auto-quill-image-preview is-empty">
+                        <span class="placeholder"><?php esc_html_e('Kein Bild ausgewählt', 'auto-quill'); ?></span>
+                    </div>
+                    <p class="auto-quill-image-actions">
+                        <button type="button" class="button" id="auto-quill-pick-image-btn">
+                            <?php esc_html_e('Bild auswählen', 'auto-quill'); ?>
                         </button>
-                    </form>
-                    <div class="auto-quill-modal-body">
-                        <div id="auto-quill-image-status" class="auto-quill-image-status" hidden></div>
-                        <div id="auto-quill-image-grid" class="auto-quill-image-grid"></div>
-                        <div id="auto-quill-image-pagination" class="auto-quill-image-pagination" hidden>
-                            <button type="button" class="button" id="auto-quill-image-prev">&laquo; <?php esc_html_e('Zurück', 'auto-quill'); ?></button>
-                            <span id="auto-quill-image-page-info"></span>
-                            <button type="button" class="button" id="auto-quill-image-next"><?php esc_html_e('Weiter', 'auto-quill'); ?> &raquo;</button>
-                        </div>
+                        <button type="button" class="button-link" id="auto-quill-clear-image-btn" hidden>
+                            <?php esc_html_e('Bild entfernen', 'auto-quill'); ?>
+                        </button>
+                    </p>
+                </div>
+            </div>
+
+            <button class="button button-primary" id="publish-post-btn" style="display:none;">
+                <?php echo esc_html($publish_label); ?>
+            </button>
+
+            <div id="auto-quill-generate-result" class="auto-quill-generate-result" hidden></div>
+        </div>
+        <?php
+    }
+
+    /** Pixabay picker used by the post editor. */
+    public static function render_image_modal(): void {
+        ?>
+        <div id="auto-quill-image-modal" class="auto-quill-modal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="auto-quill-image-modal-title">
+            <div class="auto-quill-modal-overlay" data-modal-close></div>
+            <div class="auto-quill-modal-content">
+                <div class="auto-quill-modal-header">
+                    <h2 id="auto-quill-image-modal-title"><?php esc_html_e('Beitragsbild auswählen', 'auto-quill'); ?></h2>
+                    <button type="button" class="auto-quill-modal-close" data-modal-close aria-label="<?php esc_attr_e('Schließen', 'auto-quill'); ?>">&times;</button>
+                </div>
+                <form class="auto-quill-modal-search" id="auto-quill-image-search-form">
+                    <input type="text" id="auto-quill-image-query"
+                           placeholder="<?php esc_attr_e('Suchbegriff…', 'auto-quill'); ?>"
+                           class="regular-text" autocomplete="off">
+                    <button type="submit" class="button button-primary">
+                        <?php esc_html_e('Suchen', 'auto-quill'); ?>
+                    </button>
+                </form>
+                <div class="auto-quill-modal-body">
+                    <div id="auto-quill-image-status" class="auto-quill-image-status" hidden></div>
+                    <div id="auto-quill-image-grid" class="auto-quill-image-grid"></div>
+                    <div id="auto-quill-image-pagination" class="auto-quill-image-pagination" hidden>
+                        <button type="button" class="button" id="auto-quill-image-prev">&laquo; <?php esc_html_e('Zurück', 'auto-quill'); ?></button>
+                        <span id="auto-quill-image-page-info"></span>
+                        <button type="button" class="button" id="auto-quill-image-next"><?php esc_html_e('Weiter', 'auto-quill'); ?> &raquo;</button>
                     </div>
-                    <div class="auto-quill-modal-footer">
-                        <small>
-                            <?php
-                            printf(
-                                /* translators: %s: link to Pixabay */
-                                esc_html__('Bilder von %s — Pixabay Content License', 'auto-quill'),
-                                '<a href="https://pixabay.com/" target="_blank" rel="noopener noreferrer">Pixabay</a>'
-                            );
-                            ?>
-                        </small>
-                    </div>
+                </div>
+                <div class="auto-quill-modal-footer">
+                    <small>
+                        <?php
+                        printf(
+                            /* translators: %s: link to Pixabay */
+                            esc_html__('Bilder von %s — Pixabay Content License', 'auto-quill'),
+                            '<a href="https://pixabay.com/" target="_blank" rel="noopener noreferrer">Pixabay</a>'
+                        );
+                        ?>
+                    </small>
                 </div>
             </div>
         </div>

@@ -1,6 +1,6 @@
 # Einstellungen
 
-**AutoQuill → Einstellungen** ist in acht Tabs gegliedert – in der Reihenfolge, in der man das Plugin
+**AutoQuill → Einstellungen** ist in neun Tabs gegliedert – in der Reihenfolge, in der man das Plugin
 einrichtet. Ein Klick auf **Änderungen speichern** speichert **alle** Tabs auf einmal; danach bleibt
 der zuletzt geöffnete Tab aktiv.
 
@@ -9,6 +9,7 @@ der zuletzt geöffnete Tab aktiv.
 | [KI-Provider](#tab-ki-provider) | Anbieter, API-Schlüssel, Modell |
 | [Feeds & Zeitplan](#tab-feeds--zeitplan) | Uhrzeiten für Abruf und Themenauswahl, RSS-Rückblick |
 | [Prompts](#tab-prompts) | Vorgaben für Titel, Text, Auszug, Kategorien |
+| [Interview](#tab-interview) | Perspektive, Richtwert Fragen, Redakteurs-Prompt |
 | [Veröffentlichung](#tab-veröffentlichung) | Post-Status, Quellenhinweis |
 | [Bilder](#tab-bilder) | Pixabay-Schlüssel |
 | [Benachrichtigungen](#tab-benachrichtigungen) | Tagesbericht per E-Mail |
@@ -69,6 +70,20 @@ nach** dem Abruf liegen. Andernfalls erscheint beim Speichern ein Hinweis. Hinte
 Vier Textfelder, die zu **einer** KI-Anfrage zusammengesetzt werden: *Titel*, *Beitragstext*,
 *Social-Media-Auszug*, *Kategorie*. Ein leeres Feld stellt den Standard wieder her.
 Ausführlich mit Beispielen: **[Prompts](Prompts)**.
+
+---
+
+## Tab: Interview
+
+Einstellungen für **AutoQuill → Interview** (siehe [Interview](Interview)).
+
+| Feld | Bedeutung | Standard |
+|---|---|---|
+| **Perspektive des Beitrags** | *Ich-Perspektive* (dein eigener Blog-Post), *Redaktioneller Artikel mit Zitaten* (dritte Person) oder *Frage-Antwort-Interview* | Ich-Perspektive |
+| **Richtwert Fragen** | Nach etwa so vielen Antworten meldet der Redakteur „genug Material“ (3–15). Schreiben lassen geht ab 3 Antworten. | 6 |
+| **Prompt: Redakteur** | Rolle und Fragestil der KI. Thema, Hinweise, Verlauf und Antwortformat ergänzt AutoQuill selbst. Leer speichern = Standard. | siehe Tab |
+
+Titel, Länge, Auszug und Kategorien des Interview-Beitrags folgen weiter dem Tab *Prompts*.
 
 ---
 

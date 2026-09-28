@@ -8,6 +8,9 @@ class AdminMenu {
     /** Hook suffix of the AutoQuill top-level page, from add_menu_page(). */
     private static ?string $dashboard_hook = null;
 
+    /** Hook suffix of the interview page, from add_submenu_page(). */
+    private static ?string $interview_hook = null;
+
     public static function boot(): void {
         add_action('admin_menu', [self::class, 'register']);
         add_filter('admin_title', [self::class, 'filter_admin_title'], 10, 2);
@@ -40,6 +43,16 @@ class AdminMenu {
             90
         );
         self::$dashboard_hook = is_string($hook) ? $hook : null;
+
+        $interview_hook = add_submenu_page(
+            C::MENU_SLUG,
+            __('Interview', 'auto-quill'),
+            __('Interview', 'auto-quill'),
+            'manage_options',
+            C::INTERVIEW_PAGE_SLUG,
+            ['\AutoQuill\Admin\InterviewPage', 'render']
+        );
+        self::$interview_hook = is_string($interview_hook) ? $interview_hook : null;
 
         add_submenu_page(
             C::MENU_SLUG,
@@ -153,6 +166,84 @@ class AdminMenu {
         ]);
 
         self::enqueue_generate_assets($hook, $settings);
+        self::enqueue_interview_assets($hook, $settings);
+    }
+
+    /**
+     * The post editor shared by the generate and the interview screen.
+     */
+    private static function enqueue_post_editor(): void {
+        wp_enqueue_script(
+            'auto-quill-post-editor',
+            AUTO_QUILL_PLUGIN_URL . 'assets/post-editor.js',
+            // admin.js declared as a dependency, so window.AutoQuill exists.
+            ['jquery', 'auto-quill-admin'],
+            AUTO_QUILL_VERSION,
+            true
+        );
+    }
+
+    /**
+     * Strings the post editor needs on every screen that embeds it.
+     */
+    private static function post_editor_i18n(array $settings): array {
+        return [
+            /* translators: %d: elapsed seconds */
+            'elapsedSeconds'    => __('%d s', 'auto-quill'),
+            'retry'             => __('Erneut versuchen', 'auto-quill'),
+            'editPost'          => __('Post bearbeiten', 'auto-quill'),
+            'backToList'        => __('Zurück zur Übersicht', 'auto-quill'),
+            'publishRetryLabel' => Dashboard::publish_button_label($settings),
+        ];
+    }
+
+    private static function enqueue_interview_assets(string $hook, array $settings): void {
+        if (self::$interview_hook === null || $hook !== self::$interview_hook) {
+            return;
+        }
+
+        self::enqueue_post_editor();
+
+        wp_enqueue_script(
+            'auto-quill-interview',
+            AUTO_QUILL_PLUGIN_URL . 'assets/interview.js',
+            ['jquery', 'auto-quill-admin', 'auto-quill-post-editor'],
+            AUTO_QUILL_VERSION,
+            true
+        );
+
+        wp_localize_script('auto-quill-interview', 'autoQuillInterview', [
+            'interviewId' => InterviewPage::requested_id(),
+            'listUrl'     => InterviewPage::list_url(),
+            'i18n'        => array_merge(self::post_editor_i18n($settings), [
+                'backToList'      => __('Zurück zu den Interviews', 'auto-quill'),
+                'thinking'        => __('Der Redakteur überlegt sich die nächste Frage…', 'auto-quill'),
+                'starting'        => __('Das Interview wird vorbereitet…', 'auto-quill'),
+                'writing'         => __('Die KI schreibt den Beitrag aus dem Interview…', 'auto-quill'),
+                'writeError'      => __('Der Beitrag konnte nicht geschrieben werden.', 'auto-quill'),
+                'questionError'   => __('Die nächste Frage konnte nicht geladen werden.', 'auto-quill'),
+                'answerError'     => __('Die Antwort konnte nicht gesendet werden.', 'auto-quill'),
+                'loadError'       => __('Das Interview konnte nicht geladen werden.', 'auto-quill'),
+                'createError'     => __('Das Interview konnte nicht gestartet werden.', 'auto-quill'),
+                'deleteError'     => __('Das Interview konnte nicht gelöscht werden.', 'auto-quill'),
+                'confirmDelete'   => __('Dieses Interview wirklich löschen? Ein bereits gespeicherter Beitrag bleibt erhalten.', 'auto-quill'),
+                'confirmRewrite'  => __('Der aktuelle, noch nicht gespeicherte Beitrag wird ersetzt. Fortfahren?', 'auto-quill'),
+                'askAgain'        => __('Frage erneut anfordern', 'auto-quill'),
+                'editor'          => __('Redakteur', 'auto-quill'),
+                'you'             => __('Du', 'auto-quill'),
+                'skipped'         => __('(Frage übersprungen)', 'auto-quill'),
+                'enterAnswer'     => __('Bitte eine Antwort eingeben.', 'auto-quill'),
+                'enoughHint'      => __('Der Redakteur hat genug Material für einen Beitrag. Du kannst weitere Fragen beantworten oder jetzt den Beitrag schreiben lassen.', 'auto-quill'),
+                /* translators: 1: answers given, 2: planned number of questions */
+                'progress'        => __('%1$d von ca. %2$d Fragen beantwortet', 'auto-quill'),
+                /* translators: %d: answers still needed */
+                'needMore'        => __('Noch %d Antwort(en), dann kann der Beitrag geschrieben werden.', 'auto-quill'),
+                /* translators: 1: characters used, 2: character limit */
+                'charCount'       => __('%1$d / %2$d Zeichen', 'auto-quill'),
+                'placeholderPost' => __('Sobald genug Antworten da sind, auf „Beitrag schreiben" klicken.', 'auto-quill'),
+                'rewrite'         => __('Beitrag neu schreiben', 'auto-quill'),
+            ]),
+        ]);
     }
 
     /**
@@ -169,11 +260,12 @@ class AdminMenu {
             return;
         }
 
+        self::enqueue_post_editor();
+
         wp_enqueue_script(
             'auto-quill-generate',
             AUTO_QUILL_PLUGIN_URL . 'assets/generate.js',
-            // admin.js declared as a dependency, so window.AutoQuill exists.
-            ['jquery', 'auto-quill-admin'],
+            ['jquery', 'auto-quill-admin', 'auto-quill-post-editor'],
             AUTO_QUILL_VERSION,
             true
         );
@@ -185,16 +277,10 @@ class AdminMenu {
             'autostart' => $context['autostart'],
             'backUrl'   => $context['back_url'],
             // Screen-specific strings stay out of the shared autoQuill object.
-            'i18n' => [
-                /* translators: %d: elapsed seconds */
-                'elapsedSeconds'    => __('%d s', 'auto-quill'),
-                'generating'        => __('Die KI schreibt den Beitrag…', 'auto-quill'),
-                'retry'             => __('Erneut versuchen', 'auto-quill'),
-                'regenerate'        => __('Neu generieren', 'auto-quill'),
-                'editPost'          => __('Post bearbeiten', 'auto-quill'),
-                'backToList'        => __('Zurück zur Übersicht', 'auto-quill'),
-                'publishRetryLabel' => Dashboard::publish_button_label($settings),
-            ],
+            'i18n' => array_merge(self::post_editor_i18n($settings), [
+                'generating' => __('Die KI schreibt den Beitrag…', 'auto-quill'),
+                'regenerate' => __('Neu generieren', 'auto-quill'),
+            ]),
         ]);
     }
 }

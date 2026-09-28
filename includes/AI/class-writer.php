@@ -137,6 +137,71 @@ class Writer {
     }
 
     /**
+     * Writes a post from an interview transcript, through the same combined
+     * prompt, token budget, JSON retry and sanitizing as a feed-based post.
+     * The title/body/excerpt/category prompts from the settings apply; the
+     * interview adds the perspective chosen under Einstellungen -> Interview.
+     * No source link: there is no original article.
+     *
+     * @param array<int, array{role:string, text:string, skipped?:bool}> $messages
+     * @return array{title:string, content:string, excerpt:string, category_ids:int[],
+     *               available_categories: array<int, array{id:int,name:string}>}|\WP_Error
+     */
+    public static function write_from_interview(string $topic, string $notes, array $messages) {
+        $stored   = get_option(C::OPTION_KEY, []);
+        $settings = array_merge(C::defaults(), is_array($stored) ? $stored : []);
+        $defaults = C::defaults();
+
+        $available_categories = self::get_available_categories();
+        $categories_list      = self::format_categories_list($available_categories);
+
+        $source_block  = "Quelltext (Interview):\n";
+        $source_block .= "Thema: {$topic}\n";
+        if (trim($notes) !== '') {
+            $source_block .= "Hinweise des Autors: " . trim($notes) . "\n";
+        }
+        $source_block .= "Gesprächsverlauf (Redakteur = Fragen, Autor = Antworten):\n\n";
+        $source_block .= Interviewer::transcript($messages, Interviewer::WRITE_TRANSCRIPT_LIMIT) . "\n\n";
+
+        $style  = in_array($settings['interview_style'], C::INTERVIEW_STYLES, true)
+            ? (string) $settings['interview_style']
+            : (string) $defaults['interview_style'];
+        $extra  = "--- Perspektive und Form ---\n" . C::interview_style_instruction($style) . "\n";
+        $extra .= "Reicht das Material aus dem Interview nicht für die vorgegebene Länge, schreibe lieber kürzer, als etwas hinzuzuerfinden.\n\n";
+
+        $topic_arr = ['title' => $topic];
+        $prompt    = self::build_combined_prompt(
+            $settings,
+            $defaults,
+            $topic_arr,
+            $source_block,
+            $categories_list,
+            'Du erstellst einen Blog-Beitrag aus einem Interview, das ein Redakteur mit dem Autor geführt hat. Die Antworten des Autors sind der Quelltext.',
+            $extra
+        );
+
+        $system = 'Du bist ein professioneller Blog-Autor und Redakteur und verarbeitest Interviews zu hochwertigen Beiträgen. Antworte immer im geforderten JSON-Format.';
+        $result = self::run_combined_step(
+            new Client(),
+            $system,
+            $settings,
+            $defaults,
+            $topic_arr,
+            $source_block,
+            $categories_list,
+            $available_categories,
+            $prompt
+        );
+
+        if (is_wp_error($result)) {
+            return $result;
+        }
+
+        $result['available_categories'] = $available_categories;
+        return $result;
+    }
+
+    /**
      * Resolves what to write about, from either of two entry points.
      *
      * The feed tab sends {article_id}; the topics tab sends
@@ -390,7 +455,11 @@ class Writer {
         return $custom !== '' ? (string) $settings[$key] : (string) $defaults[$key];
     }
 
-    private static function build_combined_prompt(array $settings, array $defaults, array $topic, string $source_block, string $categories_list): string {
+    /**
+     * @param string $intro          First line of the prompt, naming what the source block is.
+     * @param string $extra_sections Additional instruction sections, inserted before the answer format.
+     */
+    private static function build_combined_prompt(array $settings, array $defaults, array $topic, string $source_block, string $categories_list, string $intro = 'Du erstellst einen Blog-Beitrag aus folgendem Quelltext.', string $extra_sections = ''): string {
         $replace = [
             '{topic_title}'     => (string) ($topic['title'] ?? ''),
             '{source_block}'    => $source_block,
@@ -404,13 +473,14 @@ class Writer {
         $section_excerpt  = strtr(self::resolve_prompt($settings, $defaults, 'prompt_excerpt'),  $replace);
         $section_category = strtr(self::resolve_prompt($settings, $defaults, 'prompt_category'), $replace);
 
-        $prompt  = "Du erstellst einen Blog-Beitrag aus folgendem Quelltext.\n\n";
+        $prompt  = $intro . "\n\n";
         $prompt .= $source_block;
         $prompt .= "Verfügbare Kategorien:\n{$categories_list}\n";
         $prompt .= "--- Vorgaben Titel ---\n{$section_title}\n\n";
         $prompt .= "--- Vorgaben Beitragstext ---\n{$section_body}\n\n";
         $prompt .= "--- Vorgaben Auszug ---\n{$section_excerpt}\n\n";
         $prompt .= "--- Vorgaben Kategorien ---\n{$section_category}\n\n";
+        $prompt .= $extra_sections;
         $prompt .= "--- Antwortformat ---\n";
         $prompt .= "Antworte AUSSCHLIESSLICH mit einem einzigen gültigen JSON-Objekt (kein Markdown, keine Codeblöcke, kein Text davor oder danach) nach folgendem Schema:\n";
         $prompt .= "{\n";
@@ -428,8 +498,8 @@ class Writer {
      * @param array<int, array{id:int,name:string}> $available_categories
      * @return array{title:string, content:string, excerpt:string, category_ids:int[]}|\WP_Error
      */
-    private static function run_combined_step(Client $client, string $system, array $settings, array $defaults, array $topic, string $source_block, string $categories_list, array $available_categories) {
-        $prompt     = self::build_combined_prompt($settings, $defaults, $topic, $source_block, $categories_list);
+    private static function run_combined_step(Client $client, string $system, array $settings, array $defaults, array $topic, string $source_block, string $categories_list, array $available_categories, ?string $prompt = null) {
+        $prompt     = $prompt ?? self::build_combined_prompt($settings, $defaults, $topic, $source_block, $categories_list);
         $max_tokens = self::estimate_max_tokens(self::resolve_prompt($settings, $defaults, 'prompt_body'));
 
         $raw = self::chat_with_token_retry($client, $system, $prompt, $max_tokens, 0.7);

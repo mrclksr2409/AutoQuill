@@ -2,7 +2,7 @@
 
 # Entwicklungs-Notizen
 
-Stand: Version 1.5.0 / DB-Version 1.4
+Stand: Version 1.6.0 / DB-Version 1.5
 
 ## Projektstruktur
 
@@ -31,7 +31,8 @@ auto-quill/
 │   │   ├── class-schema.php            # dbDelta + Migrations-Verifikation
 │   │   ├── class-sources-repository.php
 │   │   ├── class-articles-repository.php
-│   │   └── class-topics-repository.php
+│   │   ├── class-topics-repository.php
+│   │   └── class-interviews-repository.php # Interviews inkl. Gesprächsverlauf (JSON)
 │   │
 │   ├── RSS/
 │   │   └── class-fetcher.php           # SimplePie-Crawler + Retention
@@ -40,7 +41,8 @@ auto-quill/
 │   │   ├── class-client.php            # OpenAI- und Claude-HTTP-Client
 │   │   ├── class-model-catalog.php     # Modelllisten der Provider (Transient-Cache)
 │   │   ├── class-selector.php          # Themenauswahl inkl. Rating
-│   │   ├── class-writer.php            # Post-Generierung
+│   │   ├── class-writer.php            # Post-Generierung (Feed-Eintrag und Interview)
+│   │   ├── class-interviewer.php       # Interview: nächste Frage, Transkript
 │   │   ├── class-keyword-suggester.php # Suchbegriffe für die Bildsuche
 │   │   └── class-json-extractor.php    # Tolerantes JSON-Parsing der KI-Antworten
 │   │
@@ -53,13 +55,15 @@ auto-quill/
 │   │   ├── class-posts-service.php     # GET /topics, POST /publish-post
 │   │   ├── class-images-service.php
 │   │   ├── class-models-service.php    # POST /models
-│   │   └── class-logs-service.php
+│   │   ├── class-logs-service.php
+│   │   └── class-interviews-service.php # /interviews: anlegen, antworten, Frage, schreiben, löschen
 │   │
 │   └── Admin/
 │       ├── class-admin-menu.php        # Menü + Asset-Enqueue + wp_localize_script
 │       ├── class-dashboard.php         # Übersicht (Tabs, Themen, Feed-Liste)
-│       ├── class-generate-page.php     # Generierungs-Seite (versteckt)
-│       ├── class-settings.php          # Settings-API, 8 Tabs
+│       ├── class-generate-page.php     # Generierungs-Seite (versteckt) + geteilter Post-Editor
+│       ├── class-interview-page.php    # AutoQuill → Interview: Liste und Chat
+│       ├── class-settings.php          # Settings-API, 9 Tabs
 │       ├── class-sources-controller.php
 │       ├── class-backup-controller.php # admin_post: Sichern, Wiederherstellen, Download, Import
 │       ├── class-post-meta-box.php     # Box „AutoQuill-Quelle" im Post-Editor
@@ -70,7 +74,9 @@ auto-quill/
 ├── assets/
 │   ├── admin.css
 │   ├── admin.js                        # Übersicht: AutoQuill, DashboardTabs, SettingsTabs
+│   ├── post-editor.js                  # Post-Editor (Vorschau, Meta-Felder, Bild, Speichern), geteilt
 │   ├── generate.js                     # nur auf der Generierungs-Seite: Generate, SourceTabs
+│   ├── interview.js                    # nur auf der Interview-Seite: Liste, Chat
 │   └── auto-quill-debug.js
 │
 └── lib/plugin-update-checker/          # vendored, YahnisElsts
@@ -417,19 +423,31 @@ in handgebauten DOM-Code im Browser.
 - `DashboardTabs` — `.auto-quill-dashboard-tabs` / `.auto-quill-dash-panel`, wertet `#dash-<tab>` aus
 - `SettingsTabs` — `.auto-quill-settings-tabs` / `.auto-quill-tab-panel`
 
-`generate.js` (nur auf der Generierungs-Seite, mit `admin.js` als Dependency) enthält:
-- `Generate` — Auto-Start, Busy-Overlay, Veröffentlichen, Bildauswahl
+`post-editor.js` (Generierungs- und Interview-Seite) enthält `PostEditor` — Busy-Overlay,
+Fehlerbox, Vorschau, Titel/Auszug/Kategorien, Pixabay-Auswahl, Speichern und Erfolgskasten. Das
+Markup liefern `GeneratePage::render_post_editor()` und `render_image_modal()`. Die Seiten-Skripte
+rufen `PostEditor.init({i18n, backUrl})` und nach der Generierung `PostEditor.fill(response,
+publishContext)`; `publishContext` landet zusätzlich im Publish-Payload (`topic_id`/`article_id`
+bzw. `interview_id`). Buttons mit `data-aq-busy-disable` sind gesperrt, solange das Overlay läuft.
+
+`generate.js` (nur auf der Generierungs-Seite) enthält:
+- `Generate` — Auto-Start und Aufruf von `/generate-post`
 - `SourceTabs` — `.auto-quill-source-tabs` / `.auto-quill-source-panel`
 
+`interview.js` (nur auf der Interview-Seite) enthält `InterviewList` (Start-Formular, Löschen) und
+`Chat` (Verlauf, Antworten, Überspringen, andere Frage, Wiederholen, Beitrag schreiben). KI-Texte
+werden ausschließlich per `.text()` eingefügt.
+
 Geteilt wird über eine kleine, explizite Oberfläche, die `admin.js` setzt:
-`window.AutoQuill = { t, showAlert, errorMessage, apiUrl, restNonce }`.
+`window.AutoQuill = { t, showAlert, errorMessage, apiUrl, restNonce }`; `post-editor.js` ergänzt
+`window.AutoQuill.PostEditor`.
 
 **Die drei Tab-Objekte dürfen keine Klassennamen teilen.** `SettingsTabs.activate()` versteckt
 `.auto-quill-tab-panel` global, worauf die Einstellungsseite angewiesen ist (ihr StatusPanel liegt
 außerhalb des `<form>`). Würden sich zwei Seiten dieselbe Klasse teilen, versteckten sie sich
 gegenseitig — deshalb hat jedes Widget ein eigenes Klassenpaar.
 
-**Einstellungs-Tabs** (Reihenfolge = Einrichtungsreihenfolge): `ki`, `feeds`, `prompts`, `publish`,
+**Einstellungs-Tabs** (Reihenfolge = Einrichtungsreihenfolge): `ki`, `feeds`, `prompts`, `interview`, `publish`,
 `images`, `notify`, `backup`, `system`. Ein Tab kann zwei Panels haben — eines im Formular, eines
 danach für eigene `<form>`s (Test-Mail, Backup-Liste, StatusPanel unter `system`). Umbenannte Tabs
 bildet `SettingsTabs` über eine `legacy`-Tabelle ab; der zuletzt aktive Tab liegt in

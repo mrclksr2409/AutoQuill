@@ -178,6 +178,26 @@ class Settings {
                 : C::defaults()['prompt_category'];
         }
 
+        if (array_key_exists('interview_style', $input)) {
+            $clean['interview_style'] = in_array($input['interview_style'], C::INTERVIEW_STYLES, true)
+                ? $input['interview_style']
+                : C::defaults()['interview_style'];
+        }
+
+        if (isset($input['interview_questions'])) {
+            $clean['interview_questions'] = max(
+                C::INTERVIEW_QUESTIONS_MIN,
+                min(C::INTERVIEW_QUESTIONS_MAX, (int) $input['interview_questions'])
+            );
+        }
+
+        if (array_key_exists('prompt_interview', $input)) {
+            $interview_tpl = sanitize_textarea_field((string) $input['prompt_interview']);
+            $clean['prompt_interview'] = trim($interview_tpl) !== ''
+                ? $interview_tpl
+                : C::defaults()['prompt_interview'];
+        }
+
         $clean['debug_logging'] = !empty($input['debug_logging']);
         $clean['beta_mode']     = !empty($input['beta_mode']);
 
@@ -377,6 +397,7 @@ class Settings {
                     <a href="#tab-ki" class="nav-tab nav-tab-active" data-tab="ki"><?php esc_html_e('KI-Provider', 'auto-quill'); ?></a>
                     <a href="#tab-feeds" class="nav-tab" data-tab="feeds"><?php esc_html_e('Feeds & Zeitplan', 'auto-quill'); ?></a>
                     <a href="#tab-prompts" class="nav-tab" data-tab="prompts"><?php esc_html_e('Prompts', 'auto-quill'); ?></a>
+                    <a href="#tab-interview" class="nav-tab" data-tab="interview"><?php esc_html_e('Interview', 'auto-quill'); ?></a>
                     <a href="#tab-publish" class="nav-tab" data-tab="publish"><?php esc_html_e('Veröffentlichung', 'auto-quill'); ?></a>
                     <a href="#tab-images" class="nav-tab" data-tab="images"><?php esc_html_e('Bilder', 'auto-quill'); ?></a>
                     <a href="#tab-notify" class="nav-tab" data-tab="notify"><?php esc_html_e('Benachrichtigungen', 'auto-quill'); ?></a>
@@ -547,6 +568,86 @@ class Settings {
                                 <p class="description">
                                     <?php esc_html_e('Vorgaben für die Kategorienzuordnung. Unterstützter Platzhalter:', 'auto-quill'); ?>
                                     <code>{categories_list}</code>
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="auto-quill-tab-panel" data-tab="interview" style="display:none;">
+                    <?php
+                    $interview_style = (string) ($settings['interview_style'] ?? C::defaults()['interview_style']);
+                    $style_options   = [
+                        'first_person' => [
+                            __('Ich-Perspektive', 'auto-quill'),
+                            __('Der Beitrag klingt wie dein eigener Blog-Post: Deine Antworten werden in deiner Stimme zu einem zusammenhängenden Text verarbeitet, die Fragen verschwinden.', 'auto-quill'),
+                        ],
+                        'editorial' => [
+                            __('Redaktioneller Artikel mit Zitaten', 'auto-quill'),
+                            __('Ein Artikel in der dritten Person über dich und deine Sicht auf das Thema, mit einigen deiner Aussagen als wörtliche Zitate.', 'auto-quill'),
+                        ],
+                        'qa' => [
+                            __('Frage-Antwort-Interview', 'auto-quill'),
+                            __('Das Gespräch erscheint als klassisches Interview: kurze Einleitung, dann die Fragen als Zwischenüberschriften mit deinen (behutsam gekürzten) Antworten.', 'auto-quill'),
+                        ],
+                    ];
+                    ?>
+                    <p class="description" style="margin: 1em 0;">
+                        <?php esc_html_e('Unter AutoQuill → Interview stellt dir die KI als Redakteur Fragen zu einem Thema; aus deinen Antworten entsteht ein Blog-Beitrag. Titel, Länge, Auszug und Kategorien folgen weiterhin den Vorgaben im Tab „Prompts".', 'auto-quill'); ?>
+                    </p>
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row"><?php esc_html_e('Perspektive des Beitrags', 'auto-quill'); ?></th>
+                            <td>
+                                <fieldset>
+                                    <?php foreach ($style_options as $style_key => $style_info): ?>
+                                        <label style="display:block; margin-bottom:8px;">
+                                            <input type="radio"
+                                                   name="<?php echo esc_attr(C::OPTION_KEY); ?>[interview_style]"
+                                                   value="<?php echo esc_attr($style_key); ?>"
+                                                   <?php checked($interview_style, $style_key); ?>>
+                                            <strong><?php echo esc_html($style_info[0]); ?></strong>
+                                            <span class="description" style="display:block; margin-left:24px;"><?php echo esc_html($style_info[1]); ?></span>
+                                        </label>
+                                    <?php endforeach; ?>
+                                </fieldset>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <th scope="row">
+                                <label for="interview_questions"><?php esc_html_e('Richtwert Fragen', 'auto-quill'); ?></label>
+                            </th>
+                            <td>
+                                <input type="number" id="interview_questions"
+                                       min="<?php echo (int) C::INTERVIEW_QUESTIONS_MIN; ?>"
+                                       max="<?php echo (int) C::INTERVIEW_QUESTIONS_MAX; ?>" step="1"
+                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[interview_questions]"
+                                       value="<?php echo esc_attr((string) ($settings['interview_questions'] ?? C::defaults()['interview_questions'])); ?>"
+                                       style="width: 100px;">
+                                <p class="description">
+                                    <?php
+                                    printf(
+                                        /* translators: %d: minimum number of answers */
+                                        esc_html__('Nach etwa so vielen Antworten meldet der Redakteur, dass genug Material da ist. Du kannst trotzdem weiter antworten oder schon früher schreiben lassen – frühestens nach %d Antworten.', 'auto-quill'),
+                                        (int) C::INTERVIEW_MIN_ANSWERS
+                                    );
+                                    ?>
+                                </p>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <th scope="row">
+                                <label for="prompt_interview"><?php esc_html_e('Prompt: Redakteur', 'auto-quill'); ?></label>
+                            </th>
+                            <td>
+                                <textarea id="prompt_interview" rows="10" class="large-text code"
+                                          name="<?php echo esc_attr(C::OPTION_KEY); ?>[prompt_interview]"><?php
+                                    echo esc_textarea($settings['prompt_interview'] ?? C::defaults()['prompt_interview']);
+                                ?></textarea>
+                                <p class="description">
+                                    <?php esc_html_e('Wie der Redakteur fragt (Rolle, Tonfall, Du/Sie, Schwerpunkte). Thema, Hinweise, bisheriger Gesprächsverlauf und das Antwortformat werden automatisch ergänzt. Leer speichern stellt den Standard wieder her.', 'auto-quill'); ?>
                                 </p>
                             </td>
                         </tr>

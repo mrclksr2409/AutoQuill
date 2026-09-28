@@ -293,7 +293,11 @@ class Dashboard {
         $all_sources  = $sources_repository->all();
         ?>
         <div class="wrap auto-quill-wrap">
-            <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+            <h1 class="wp-heading-inline"><?php echo esc_html(get_admin_page_title()); ?></h1>
+            <a href="<?php echo esc_url(InterviewPage::list_url()); ?>" class="page-title-action">
+                <?php esc_html_e('Interview starten', 'auto-quill'); ?>
+            </a>
+            <hr class="wp-header-end">
 
             <?php Notices::flush(); ?>
 

@@ -5,7 +5,7 @@ interessantesten Themen des Tages auswählt und daraus auf Knopfdruck vollständ
 Blog-Beiträge schreibt – inklusive Titel, Social-Media-Auszug, Kategorien, Beitragsbild und
 garantiertem Quellenhinweis.
 
-> Aktuelle Version: **1.5.0** · Voraussetzungen: WordPress 5.9+, PHP 8.0+, ein API-Schlüssel von
+> Aktuelle Version: **1.6.0** · Voraussetzungen: WordPress 5.9+, PHP 8.0+, ein API-Schlüssel von
 > OpenAI oder Anthropic (Claude)
 
 ---
@@ -33,8 +33,9 @@ Mehr dazu unter **[Arbeitsablauf](Arbeitsablauf)**.
 |---|---|
 | [Dashboard](Dashboard) | Top-Themen, alle Feed-Einträge, manuelle Auslöser |
 | [Blog-Post erstellen](Blog-Post-erstellen) | Generierungs-Seite, Gegenprüfen, Bild, Veröffentlichen |
+| [Interview](Interview) | Die KI fragt als Redakteur, aus deinen Antworten entsteht ein Beitrag |
 | [RSS-Quellen](RSS-Quellen) | Feeds hinzufügen und verwalten |
-| [Einstellungen](Einstellungen) | Alle acht Tabs im Detail |
+| [Einstellungen](Einstellungen) | Alle neun Tabs im Detail |
 | [Prompts](Prompts) | Titel, Text, Auszug und Kategorien steuern |
 | [Zeitplan und Cron](Zeitplan-und-Cron) | Uhrzeiten, WP-Cron, echter Server-Cron |
 | [Tagesbericht](Tagesbericht) | Zusammenfassung per E-Mail |
