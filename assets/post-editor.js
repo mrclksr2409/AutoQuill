@@ -34,6 +34,7 @@
         busyTimer: null,
         busyStarted: 0,
         hasUnsavedPost: false,
+        meta: { title: '', excerpt: '', categoryIds: [] },
 
         /**
          * @param {Object} options { i18n: {}, backUrl: '' }
@@ -156,6 +157,7 @@
 
         setPlaceholder: function(text) {
             $('#post-preview').empty().append($('<p>').text(text));
+            this.renderMetaFields('', '', [], []);
         },
 
         clearPreview: function() {
@@ -199,12 +201,9 @@
                 return;
             }
 
-            const postExcerpt = $('#auto-quill-excerpt').val() || '';
-            const postTitle   = ($('#auto-quill-title').val() || '').trim()
-                || this.currentTopic.title;
-            const categoryIds = ($('#auto-quill-categories').val() || [])
-                .map((v) => parseInt(v, 10))
-                .filter((v) => !isNaN(v));
+            const postExcerpt = this.meta.excerpt;
+            const postTitle   = this.meta.title.trim() || this.currentTopic.title;
+            const categoryIds = this.meta.categoryIds;
 
             $btn.prop('disabled', true).text(this.t('saving'));
 
@@ -281,23 +280,27 @@
             }
         },
 
+        /** Title, excerpt and categories as read-only text; edited later in WordPress. */
         renderMetaFields: function(title, excerpt, availableCategories, selectedIds) {
-            const $title   = $('#auto-quill-title');
-            const $excerpt = $('#auto-quill-excerpt');
-            const $select  = $('#auto-quill-categories');
             const selected = new Set((selectedIds || []).map((id) => parseInt(id, 10)));
-
-            $title.val(title);
-            $excerpt.val(excerpt);
-            $select.empty();
+            const names = [];
+            const ids = [];
             (availableCategories || []).forEach((cat) => {
                 const id = parseInt(cat.id, 10);
-                const $opt = $('<option></option>').val(id).text(cat.name);
                 if (selected.has(id)) {
-                    $opt.prop('selected', true);
+                    ids.push(id);
+                    names.push(cat.name);
                 }
-                $select.append($opt);
             });
+
+            this.meta = { title: title || '', excerpt: excerpt || '', categoryIds: ids };
+
+            const show = ($el, text) => {
+                $el.text(text || $el.data('placeholder') || '').toggleClass('is-empty', !text);
+            };
+            show($('#auto-quill-title'), this.meta.title);
+            show($('#auto-quill-excerpt'), this.meta.excerpt);
+            show($('#auto-quill-categories'), names.join(', '));
         },
 
         resetImageSelection: function() {
@@ -328,8 +331,8 @@
             const $input = $('#auto-quill-image-query');
             $input.val('').trigger('focus');
 
-            const title   = ($('#auto-quill-title').val() || '').trim();
-            const excerpt = ($('#auto-quill-excerpt').val() || '').trim();
+            const title   = (this.meta.title || '').trim();
+            const excerpt = (this.meta.excerpt || '').trim();
 
             this.setImageStatus(this.t('suggestingKeywords'), false);
 

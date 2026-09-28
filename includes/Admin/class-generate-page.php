@@ -229,7 +229,9 @@ class GeneratePage {
 
     /**
      * The right-hand post editor: busy overlay, error box, title, preview,
-     * excerpt, categories, featured image and the save button. Shared by the
+     * excerpt, categories, featured image and the save button. Title, excerpt
+     * and categories are shown read-only - they are edited in WordPress after
+     * saving. Shared by the
      * generate screen and the interview screen; assets/post-editor.js drives it.
      */
     public static function render_post_editor(string $publish_label, string $placeholder): void {
@@ -247,33 +249,22 @@ class GeneratePage {
 
             <div id="auto-quill-meta-fields" class="auto-quill-meta-fields">
                 <div class="auto-quill-field">
-                    <label for="auto-quill-title">
-                        <strong><?php esc_html_e('Titel', 'auto-quill'); ?></strong>
-                    </label>
-                    <input type="text" id="auto-quill-title" class="large-text"
-                           placeholder="<?php esc_attr_e('Wird automatisch von der KI gefüllt', 'auto-quill'); ?>">
+                    <strong><?php esc_html_e('Titel', 'auto-quill'); ?></strong>
+                    <h2 id="auto-quill-title" data-placeholder="<?php esc_attr_e('Wird automatisch von der KI gefüllt', 'auto-quill'); ?>" class="auto-quill-meta-value auto-quill-meta-title is-empty"><?php esc_html_e('Wird automatisch von der KI gefüllt', 'auto-quill'); ?></h2>
                 </div>
                 <div class="auto-quill-field auto-quill-field--body">
-                    <label for="post-preview">
-                        <strong><?php esc_html_e('Text', 'auto-quill'); ?></strong>
-                    </label>
+                    <strong><?php esc_html_e('Text', 'auto-quill'); ?></strong>
                     <div id="post-preview" class="post-preview">
                         <p><?php echo esc_html($placeholder); ?></p>
                     </div>
                 </div>
                 <div class="auto-quill-field">
-                    <label for="auto-quill-excerpt">
-                        <strong><?php esc_html_e('Social-Media-Auszug', 'auto-quill'); ?></strong>
-                    </label>
-                    <textarea id="auto-quill-excerpt" rows="3" readonly
-                              placeholder="<?php esc_attr_e('Wird automatisch von der KI gefüllt', 'auto-quill'); ?>"></textarea>
+                    <strong><?php esc_html_e('Social-Media-Auszug', 'auto-quill'); ?></strong>
+                    <p id="auto-quill-excerpt" data-placeholder="<?php esc_attr_e('Wird automatisch von der KI gefüllt', 'auto-quill'); ?>" class="auto-quill-meta-value is-empty"><?php esc_html_e('Wird automatisch von der KI gefüllt', 'auto-quill'); ?></p>
                 </div>
                 <div class="auto-quill-field">
-                    <label for="auto-quill-categories">
-                        <strong><?php esc_html_e('Kategorien', 'auto-quill'); ?></strong>
-                        <span class="description"><?php esc_html_e('(Mehrfachauswahl mit Strg/Cmd)', 'auto-quill'); ?></span>
-                    </label>
-                    <select id="auto-quill-categories" multiple size="5"></select>
+                    <strong><?php esc_html_e('Kategorien', 'auto-quill'); ?></strong>
+                    <p id="auto-quill-categories" data-placeholder="<?php esc_attr_e('Wird automatisch von der KI gefüllt', 'auto-quill'); ?>" class="auto-quill-meta-value is-empty"><?php esc_html_e('Wird automatisch von der KI gefüllt', 'auto-quill'); ?></p>
                 </div>
                 <div class="auto-quill-field">
                     <label>
