@@ -228,7 +228,7 @@ class GeneratePage {
     }
 
     /**
-     * The right-hand post editor: busy overlay, error box, preview, title,
+     * The right-hand post editor: busy overlay, error box, title, preview,
      * excerpt, categories, featured image and the save button. Shared by the
      * generate screen and the interview screen; assets/post-editor.js drives it.
      */
@@ -246,6 +246,13 @@ class GeneratePage {
             <div id="auto-quill-generate-error" class="auto-quill-generate-error" hidden></div>
 
             <div id="auto-quill-meta-fields" class="auto-quill-meta-fields">
+                <div class="auto-quill-field">
+                    <label for="auto-quill-title">
+                        <strong><?php esc_html_e('Titel', 'auto-quill'); ?></strong>
+                    </label>
+                    <input type="text" id="auto-quill-title" class="large-text"
+                           placeholder="<?php esc_attr_e('Wird automatisch von der KI gefüllt', 'auto-quill'); ?>">
+                </div>
                 <div class="auto-quill-field auto-quill-field--body">
                     <label for="post-preview">
                         <strong><?php esc_html_e('Text', 'auto-quill'); ?></strong>
@@ -253,13 +260,6 @@ class GeneratePage {
                     <div id="post-preview" class="post-preview">
                         <p><?php echo esc_html($placeholder); ?></p>
                     </div>
-                </div>
-                <div class="auto-quill-field">
-                    <label for="auto-quill-title">
-                        <strong><?php esc_html_e('Titel', 'auto-quill'); ?></strong>
-                    </label>
-                    <input type="text" id="auto-quill-title" class="large-text"
-                           placeholder="<?php esc_attr_e('Wird automatisch von der KI gefüllt', 'auto-quill'); ?>">
                 </div>
                 <div class="auto-quill-field">
                     <label for="auto-quill-excerpt">
