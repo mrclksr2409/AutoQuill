@@ -5,17 +5,19 @@ class Constants {
     const OPTION_KEY     = 'auto_quill_settings';
     const SETTINGS_GROUP = 'auto_quill_settings_group';
     const DB_VERSION_KEY = 'auto_quill_db_version';
-    const DB_VERSION     = '1.4';
+    const DB_VERSION     = '1.5';
 
     const TABLE_SOURCES  = 'auto_quill_sources';
     const TABLE_ARTICLES = 'auto_quill_articles';
     const TABLE_TOPICS   = 'auto_quill_topics';
     const TABLE_LOGS     = 'auto_quill_logs';
+    const TABLE_INTERVIEWS = 'auto_quill_interviews';
 
     const MENU_SLUG          = 'auto-quill';
     const SOURCES_PAGE_SLUG  = 'auto-quill-sources';
     const SETTINGS_PAGE_SLUG = 'auto-quill-settings';
     const LOGS_PAGE_SLUG     = 'auto-quill-logs';
+    const INTERVIEW_PAGE_SLUG = 'auto-quill-interview';
 
     /**
      * The generate screen is a view of the dashboard page, not a page of its
@@ -39,6 +41,7 @@ class Constants {
     const NONCE_SCOPE    = 'auto-quill-nonce';
     const NONCE_GENERATE = 'auto_quill_generate';
     const NONCE_TEST_MAIL = 'auto_quill_test_mail_nonce';
+    const NONCE_INTERVIEW = 'auto_quill_interview';
     const NOTICE_KEY_FMT = 'auto_quill_notice_%d';
 
     const CRON_FETCH  = 'auto_quill_daily_fetch';
@@ -76,6 +79,18 @@ class Constants {
      * reliable marker for "AutoQuill made this post".
      */
     const META_GENERATED_AT  = '_auto_quill_generated_at';
+
+    /** ID of the interview a post was written from. */
+    const META_INTERVIEW_ID  = '_auto_quill_interview_id';
+
+    /** Answers needed before an interview can be turned into a post. */
+    const INTERVIEW_MIN_ANSWERS = 3;
+    const INTERVIEW_ANSWER_MAX_CHARS = 4000;
+    const INTERVIEW_QUESTIONS_MIN = 3;
+    const INTERVIEW_QUESTIONS_MAX = 15;
+
+    /** How the post written from an interview is framed. */
+    const INTERVIEW_STYLES = ['first_person', 'editorial', 'qa'];
 
     const DEFAULT_OPENAI_MODEL = 'gpt-4o-mini';
     const DEFAULT_CLAUDE_MODEL = 'claude-sonnet-4-6';
@@ -153,6 +168,9 @@ class Constants {
             'backup_enabled' => true,
             'backup_time'    => '03:00',
             'backup_keep'    => 7,
+            'interview_style'     => 'first_person',
+            'interview_questions' => 6,
+            'prompt_interview'    => self::default_prompt_interview(),
         ];
     }
 
@@ -188,5 +206,38 @@ class Constants {
             . "- wähle 1 bis 3 IDs, die thematisch wirklich passen\n"
             . "- ausschließlich IDs aus der Liste der verfügbaren Kategorien ({categories_list})\n"
             . "- als Array von Integer-IDs";
+    }
+
+    public static function default_prompt_interview(): string {
+        return "Du bist ein erfahrener Redakteur und führst ein Interview, aus dem später ein Blog-Beitrag entsteht.\n"
+            . "- stelle immer genau EINE Frage pro Runde, kurz und offen formuliert\n"
+            . "- beginne mit einer einladenden Einstiegsfrage zum Thema\n"
+            . "- hake nach, wenn eine Antwort vage bleibt: frage nach konkreten Beispielen, Erfahrungen, Zahlen oder Gründen\n"
+            . "- wiederhole keine Fragen und keine bereits beantworteten Aspekte\n"
+            . "- decke nach und nach verschiedene Seiten des Themas ab (Hintergrund, Praxis, Probleme, Tipps, Ausblick)\n"
+            . "- keine Bewertung oder Zusammenfassung der Antworten, nur die nächste Frage\n"
+            . "- auf Deutsch, freundlich und neugierig";
+    }
+
+    /**
+     * Writing instruction for the post built from an interview, per style.
+     */
+    public static function interview_style_instruction(string $style): string {
+        $common = "Verwende ausschließlich Inhalte, Fakten und Meinungen aus dem Interview. Erfinde keine Erlebnisse, Zahlen, Namen oder Zitate hinzu. Glätte Sprache und Grammatik, ohne den Sinn der Antworten zu verändern.";
+
+        switch ($style) {
+            case 'editorial':
+                return "Schreibe einen redaktionellen Artikel in der dritten Person über die befragte Person und ihre Sicht auf das Thema. "
+                    . "Baue einige prägnante Aussagen als wörtliche Zitate ein (in Anführungszeichen, sinngemäß aus den Antworten übernommen). "
+                    . "Die Fragen des Redakteurs erscheinen nicht als solche im Text.\n" . $common;
+            case 'qa':
+                return "Veröffentliche das Gespräch als klassisches Interview im Frage-Antwort-Format: eine kurze Einleitung, danach die Fragen als <h3> "
+                    . "und die Antworten als Absätze darunter. Fasse Fragen redaktionell knapp, kürze Antworten behutsam und lass übersprungene Fragen weg. "
+                    . "Ende mit einem kurzen Schlusswort.\n" . $common;
+            case 'first_person':
+            default:
+                return "Schreibe den Beitrag in der Ich-Perspektive, in der Stimme der befragten Person, als wäre es ihr eigener Blog-Beitrag. "
+                    . "Die Fragen des Redakteurs erscheinen nicht im Text; die Antworten werden zu einem zusammenhängenden, gut strukturierten Beitrag verarbeitet.\n" . $common;
+        }
     }
 }

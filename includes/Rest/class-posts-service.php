@@ -4,6 +4,7 @@ namespace AutoQuill\Rest;
 use AutoQuill\Core\Constants as C;
 use AutoQuill\Core\Logger;
 use AutoQuill\Database\ArticlesRepository;
+use AutoQuill\Database\InterviewsRepository;
 use AutoQuill\Database\Schema;
 use AutoQuill\Database\SourcesRepository;
 use AutoQuill\Database\TopicsRepository;
@@ -35,12 +36,14 @@ class PostsService {
         $category_ids = (array)  ($params['category_ids'] ?? []);
         $topic_id     = (int)    ($params['topic_id']     ?? 0);
         $article_id   = (int)    ($params['article_id']   ?? 0);
+        $interview_id = (int)    ($params['interview_id'] ?? 0);
         $image_url    = esc_url_raw((string) ($params['image_url'] ?? ''));
         $image_alt    = sanitize_text_field((string) ($params['image_alt'] ?? ''));
 
         Logger::info('posts', 'publish_post-Request', [
             'topic_id'     => $topic_id,
             'article_id'   => $article_id,
+            'interview_id' => $interview_id,
             'title_len'    => strlen($post_title),
             'content_len'  => strlen($post_content),
             'category_ids' => $category_ids,
@@ -95,6 +98,14 @@ class PostsService {
         }
 
         self::link_source_article($article_id, (int) $post_id);
+
+        if ($interview_id > 0) {
+            $interviews = new InterviewsRepository();
+            if ($interviews->find($interview_id)) {
+                update_post_meta((int) $post_id, C::META_INTERVIEW_ID, $interview_id);
+                $interviews->mark_published($interview_id, (int) $post_id);
+            }
+        }
 
         $attachment_id = 0;
         if ($image_url !== '' && wp_http_validate_url($image_url)) {

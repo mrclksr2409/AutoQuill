@@ -31,7 +31,7 @@ auto-quill/
 │   ├── Image/                PixabayClient
 │   ├── Rest/                 REST-Controller und Services
 │   └── Admin/                Menü, Dashboard, Generierungs-Seite, Settings, Backup, Logs, Status
-├── assets/                   admin.js/.css, generate.js, auto-quill-debug.js
+├── assets/                   admin.js/.css, post-editor.js, generate.js, interview.js, auto-quill-debug.js
 ├── lib/plugin-update-checker vendored
 └── wiki/                     Quelle dieses Wikis
 ```

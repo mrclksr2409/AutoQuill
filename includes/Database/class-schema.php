@@ -17,6 +17,7 @@ class Schema {
             C::TABLE_ARTICLES => ['id', 'source_id', 'title', 'article_url', 'article_hash', 'post_id'],
             C::TABLE_TOPICS   => ['id', 'topic_date', 'topics', 'post_id', 'status'],
             C::TABLE_LOGS     => ['id', 'level', 'source', 'message'],
+            C::TABLE_INTERVIEWS => ['id', 'topic', 'notes', 'messages', 'status', 'post_id', 'user_id'],
         ];
     }
 
@@ -28,7 +29,7 @@ class Schema {
         $checked = true;
 
         global $wpdb;
-        $needed = [C::TABLE_SOURCES, C::TABLE_ARTICLES, C::TABLE_TOPICS, C::TABLE_LOGS];
+        $needed = [C::TABLE_SOURCES, C::TABLE_ARTICLES, C::TABLE_TOPICS, C::TABLE_LOGS, C::TABLE_INTERVIEWS];
 
         foreach ($needed as $slug) {
             $full = $wpdb->prefix . $slug;
@@ -52,6 +53,7 @@ class Schema {
         $articles_table = $wpdb->prefix . C::TABLE_ARTICLES;
         $topics_table   = $wpdb->prefix . C::TABLE_TOPICS;
         $logs_table     = $wpdb->prefix . C::TABLE_LOGS;
+        $interviews_table = $wpdb->prefix . C::TABLE_INTERVIEWS;
 
         $sources_sql = "CREATE TABLE $sources_table (
             id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -111,11 +113,30 @@ class Schema {
             KEY created_at (created_at)
         ) $charset_collate;";
 
+        // messages is a JSON list of {role: 'ai'|'user', text, at, skipped?, enough?},
+        // the whole conversation in one row: it is only ever read and written
+        // as a unit, and one interview stays well below LONGTEXT's limit.
+        $interviews_sql = "CREATE TABLE $interviews_table (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            topic VARCHAR(255) NOT NULL,
+            notes TEXT,
+            messages LONGTEXT NOT NULL,
+            status VARCHAR(20) NOT NULL DEFAULT 'open',
+            post_id BIGINT UNSIGNED NULL,
+            user_id BIGINT UNSIGNED NOT NULL DEFAULT 0,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY status (status),
+            KEY updated_at (updated_at)
+        ) $charset_collate;";
+
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta($sources_sql);
         dbDelta($articles_sql);
         dbDelta($topics_sql);
         dbDelta($logs_sql);
+        dbDelta($interviews_sql);
 
         // dbDelta() never throws: it swallows failures (missing GRANTs, locked
         // table, read-only storage engine) and only returns a message array.
@@ -162,13 +183,14 @@ class Schema {
         $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}" . C::TABLE_SOURCES);
         $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}" . C::TABLE_TOPICS);
         $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}" . C::TABLE_LOGS);
+        $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}" . C::TABLE_INTERVIEWS);
         delete_option(C::DB_VERSION_KEY);
     }
 
     public static function table_status(): array {
         global $wpdb;
         $out = [];
-        foreach ([C::TABLE_SOURCES, C::TABLE_ARTICLES, C::TABLE_TOPICS] as $slug) {
+        foreach ([C::TABLE_SOURCES, C::TABLE_ARTICLES, C::TABLE_TOPICS, C::TABLE_INTERVIEWS] as $slug) {
             $full   = $wpdb->prefix . $slug;
             $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $full)) === $full;
             $count  = $exists ? (int) $wpdb->get_var("SELECT COUNT(*) FROM `$full`") : 0;

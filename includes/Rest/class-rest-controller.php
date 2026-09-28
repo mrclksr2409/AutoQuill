@@ -100,6 +100,65 @@ class RestController {
             ],
         ]);
 
+        $interview_id = [
+            'id' => [
+                'type'              => 'integer',
+                'required'          => true,
+                'sanitize_callback' => 'absint',
+            ],
+        ];
+
+        register_rest_route(self::NS, '/interviews', [
+            [
+                'methods'             => 'GET',
+                'callback'            => ['\AutoQuill\Rest\InterviewsService', 'list_interviews'],
+                'permission_callback' => $can,
+                'args'                => [
+                    'page' => [
+                        'type'              => 'integer',
+                        'default'           => 1,
+                        'sanitize_callback' => 'absint',
+                    ],
+                    'per_page' => [
+                        'type'              => 'integer',
+                        'default'           => 20,
+                        'minimum'           => 1,
+                        'maximum'           => 100,
+                        'sanitize_callback' => 'absint',
+                    ],
+                ],
+            ],
+            [
+                'methods'             => 'POST',
+                'callback'            => ['\AutoQuill\Rest\InterviewsService', 'create_interview'],
+                'permission_callback' => $can,
+            ],
+        ]);
+
+        register_rest_route(self::NS, '/interviews/(?P<id>\d+)', [
+            [
+                'methods'             => 'GET',
+                'callback'            => ['\AutoQuill\Rest\InterviewsService', 'get_interview'],
+                'permission_callback' => $can,
+                'args'                => $interview_id,
+            ],
+            [
+                'methods'             => 'DELETE',
+                'callback'            => ['\AutoQuill\Rest\InterviewsService', 'delete_interview'],
+                'permission_callback' => $can,
+                'args'                => $interview_id,
+            ],
+        ]);
+
+        foreach (['answer', 'question', 'write'] as $action) {
+            register_rest_route(self::NS, '/interviews/(?P<id>\d+)/' . $action, [
+                'methods'             => 'POST',
+                'callback'            => ['\AutoQuill\Rest\InterviewsService', $action],
+                'permission_callback' => $can,
+                'args'                => $interview_id,
+            ]);
+        }
+
         register_rest_route(self::NS, '/logs', [
             [
                 'methods'             => 'GET',

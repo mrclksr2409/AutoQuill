@@ -8,6 +8,7 @@
 **Bedienung**
 - [Dashboard](Dashboard)
 - [Blog-Post erstellen](Blog-Post-erstellen)
+- [Interview](Interview)
 - [RSS-Quellen](RSS-Quellen)
 - [Einstellungen](Einstellungen)
 - [Prompts](Prompts)

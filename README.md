@@ -12,6 +12,7 @@ Ein intelligentes WordPress-Plugin, das automatisch RSS-Feeds überwacht, tägli
 ✅ **Artikel ↔ Post-Verknüpfung** - Jeder erzeugte Beitrag bleibt dauerhaft mit seinem Feed-Eintrag verbunden  
 ✅ **Quellenangabe** - Jeder Blog-Beitrag endet mit einem garantierten Link auf den Originalartikel  
 ✅ **KI-Text-Generierung** - Generiert vollständige, professionelle Blog-Posts  
+✅ **Interview-Modus** - Die KI fragt dich als Redakteur zu einem freien Thema aus, aus deinen Antworten entsteht ein Beitrag  
 ✅ **Admin Dashboard** - Benutzerfreundliches Interface zur Verwaltung  
 ✅ **WordPress Cron** - Automatische tägliche Updates zu frei wählbaren Uhrzeiten  
 ✅ **REST API** - Volle API-Integration  
@@ -78,8 +79,11 @@ Ein intelligentes WordPress-Plugin, das automatisch RSS-Feeds überwacht, tägli
   (`admin.php?page=auto-quill&aq_view=generate`), nur über die Übersicht erreichbar.
   Links steht der Originaltext, rechts entsteht der Beitrag. Während die KI arbeitet, läuft ein
   Spinner mit Sekundenzähler.
+- **Interview**: Freies Thema eingeben, die KI stellt als Redakteur Fragen im Chat, aus den Antworten
+  wird ein Blog-Beitrag. Interviews werden gespeichert und lassen sich fortsetzen. Details im
+  [Wiki](https://github.com/mrclksr2409/autoquill/wiki/Interview).
 - **RSS Quellen**: Feed-Verwaltung (hinzufügen/löschen)
-- **Einstellungen**: KI-Provider, API-Keys, Modellauswahl, Veröffentlichung, Zeitplan, Quellenangabe, Prompts,
+- **Einstellungen**: KI-Provider, API-Keys, Modellauswahl, Veröffentlichung, Zeitplan, Quellenangabe, Prompts, Interview,
   Benachrichtigungen, Backup, Updates, Debug
 
 ## Konfiguration
@@ -95,6 +99,9 @@ Ein intelligentes WordPress-Plugin, das automatisch RSS-Feeds überwacht, tägli
 | **Themenauswahl** | Feeds & Zeitplan | Uhrzeit der täglichen KI-Themenauswahl (Ortszeit), sollte nach dem Abruf liegen | 01:00 |
 | **RSS-Rückblick (Tage)** | Feeds & Zeitplan | Zeitfenster für Feed-Artikel, 0 = unbegrenzt | 7 |
 | **Prompts** | Prompts | Vorgaben für Titel, Beitragstext, Auszug, Kategorie | siehe Tab |
+| **Perspektive des Beitrags** | Interview | Ich-Perspektive, redaktioneller Artikel mit Zitaten oder Frage-Antwort | Ich-Perspektive |
+| **Richtwert Fragen** | Interview | Ab so vielen Antworten meldet der Redakteur „genug Material“ (3–15) | 6 |
+| **Prompt: Redakteur** | Interview | Rolle und Fragestil der KI im Interview | siehe Tab |
 | **Post-Status** | Veröffentlichung | draft, publish, pending | draft |
 | **Automatisch veröffentlichen** | Veröffentlichung | Jeden Beitrag sofort veröffentlichen, überschreibt den Post-Status | Nein |
 | **Link zum Originalartikel** | Veröffentlichung | Quellenhinweis an jeden Beitrag anhängen | An |
@@ -153,12 +160,13 @@ nötig etwa bei Modellen, deren Ausgabelimit unter dem von `gpt-4o-mini` liegt.
 
 ### Datenbank-Tabellen
 
-Das Plugin erstellt 4 Tabellen:
+Das Plugin erstellt 5 Tabellen:
 
 - `wp_auto_quill_sources` - RSS-Quellen
 - `wp_auto_quill_articles` - Gecrawlte Artikel (inkl. `post_id` für die Verknüpfung, seit DB-Version 1.4)
 - `wp_auto_quill_topics` - Tägliche Themen-Auswahl
 - `wp_auto_quill_logs` - Diagnose-Logs
+- `wp_auto_quill_interviews` - Interviews mit Gesprächsverlauf (seit DB-Version 1.5)
 
 Die Plugin-Einstellungen werden in der `wp_options`-Tabelle unter dem Key `auto_quill_settings` gespeichert.
 
@@ -186,6 +194,13 @@ GET  /wp-json/auto-quill/v1/search-images
 POST /wp-json/auto-quill/v1/suggest-image-keywords
 POST /wp-json/auto-quill/v1/models            # {provider, api_key?, refresh?} → verfügbare Modelle
 GET  /wp-json/auto-quill/v1/logs
+GET  /wp-json/auto-quill/v1/interviews          # page, per_page
+POST /wp-json/auto-quill/v1/interviews          # {topic, notes?} → legt an, erste Frage
+GET  /wp-json/auto-quill/v1/interviews/{id}
+DELETE /wp-json/auto-quill/v1/interviews/{id}
+POST /wp-json/auto-quill/v1/interviews/{id}/answer    # {answer} oder {skip: true}
+POST /wp-json/auto-quill/v1/interviews/{id}/question  # {replace?} → Frage nachholen/ersetzen
+POST /wp-json/auto-quill/v1/interviews/{id}/write     # Beitrag aus dem Interview (ab 3 Antworten)
 ```
 
 ### Beispiel-API-Aufruf
@@ -273,6 +288,28 @@ und bezieht Updates aus GitHub Releases. WordPress prüft automatisch und zeigt 
 stattdessen dem `main`-Branch.
 
 ## Changelog
+
+### [1.6.0] — 2026-09-28
+
+#### Added
+- **Interview-Modus** unter *AutoQuill → Interview*: Thema (und optional Hinweise zu Zielgruppe und
+  Schwerpunkten) eingeben, die KI stellt als Redakteur nacheinander Fragen, du antwortest im Chat.
+  Fragen lassen sich überspringen oder durch eine andere ersetzen. Nach dem eingestellten Richtwert
+  meldet der Redakteur, dass genug Material da ist; ab drei Antworten schreibt die KI daraus einen
+  Beitrag – mit Titel, Auszug, Kategorien und Bildauswahl wie auf der Generierungs-Seite.
+- Interviews werden samt Verlauf in der neuen Tabelle `wp_auto_quill_interviews` gespeichert
+  (DB-Version 1.5) und lassen sich fortsetzen. Ein gespeicherter Beitrag trägt die Post-Meta
+  `_auto_quill_interview_id`.
+- Neuer Einstellungs-Tab „Interview": Perspektive des Beitrags (Ich-Perspektive, redaktioneller
+  Artikel mit Zitaten, Frage-Antwort-Interview), Richtwert für die Anzahl der Fragen und der Prompt
+  für den Redakteur.
+- Neue REST-Endpoints unter `/wp-json/auto-quill/v1/interviews`.
+- Button „Interview starten" auf der Übersicht.
+
+#### Changed
+- Der Post-Editor (Vorschau, Meta-Felder, Bildauswahl, Speichern) ist aus `generate.js` in das
+  gemeinsame `assets/post-editor.js` gewandert und wird von Generierungs- und Interview-Seite genutzt.
+  `/publish-post` akzeptiert zusätzlich `interview_id`.
 
 ### [1.5.0] — 2026-09-23
 
