@@ -16,7 +16,8 @@ Ein intelligentes WordPress-Plugin, das automatisch RSS-Feeds überwacht, tägli
 ✅ **Admin Dashboard** - Benutzerfreundliches Interface zur Verwaltung  
 ✅ **WordPress Cron** - Automatische tägliche Updates zu frei wählbaren Uhrzeiten  
 ✅ **REST API** - Volle API-Integration  
-✅ **OpenAI & Claude Support** - Flexible KI-Provider, Modellauswahl per Dropdown direkt vom Anbieter  
+✅ **Flexible KI-Provider** - OpenAI, Claude, IONOS AI Model Hub oder ein eigener OpenAI-kompatibler Endpunkt (Mistral, Groq, OpenRouter, Ollama …), eigener API-Schlüssel je Provider, Modellauswahl direkt vom Anbieter  
+✅ **Schreibstil** - Globale Anweisungen für Tonalität, Anrede und Wortwahl aller erzeugten Texte  
 ✅ **Sichere Konfiguration** - Sichere Speicherung von API-Keys  
 ✅ **Tagesbericht per E-Mail** - Einmal täglich, mit einstellbaren Empfängern und Uhrzeit  
 ✅ **Backup** - Tägliche Sicherung von Einstellungen und RSS-Quellen, Wiederherstellen, Download und Import  
@@ -92,9 +93,11 @@ Ein intelligentes WordPress-Plugin, das automatisch RSS-Feeds überwacht, tägli
 
 | Option | Tab | Beschreibung | Standard |
 |--------|-----|-------------|----------|
-| **KI-Provider** | KI-Provider | OpenAI oder Claude | OpenAI |
-| **API-Schlüssel** | KI-Provider | Dein API-Schlüssel | - |
-| **OpenAI-/Claude-Modell** | KI-Provider | Dropdown; die Liste wird mit dem API-Schlüssel beim Anbieter abgerufen (12 h zwischengespeichert, „Modelle neu laden" erzwingt einen Abruf) | `gpt-4o-mini` / `claude-sonnet-4-6` |
+| **KI-Provider** | KI-Provider | OpenAI, Claude, IONOS AI Model Hub oder eigener OpenAI-kompatibler Endpunkt | OpenAI |
+| **API-Schlüssel** | KI-Provider | Ein eigener Schlüssel je Provider (beim eigenen Endpunkt optional) | - |
+| **Basis-URL** | KI-Provider | Nur eigener Endpunkt, z. B. `https://api.mistral.ai/v1` oder `http://localhost:11434/v1` | - |
+| **Modell** | KI-Provider | Dropdown; die Liste wird mit dem API-Schlüssel beim Anbieter abgerufen (12 h zwischengespeichert, „Modelle neu laden" erzwingt einen Abruf). Beim eigenen Endpunkt Textfeld mit Vorschlägen | `gpt-4o-mini` / `claude-sonnet-4-6` / `meta-llama/Llama-3.3-70B-Instruct` |
+| **Schreibstil** | Prompts | Anweisungen für Tonalität, Anrede und Wortwahl aller erzeugten Texte | leer |
 | **RSS-Abruf** | Feeds & Zeitplan | Uhrzeit des täglichen Feed-Abrufs (Ortszeit) | 00:00 |
 | **Themenauswahl** | Feeds & Zeitplan | Uhrzeit der täglichen KI-Themenauswahl (Ortszeit), sollte nach dem Abruf liegen | 01:00 |
 | **RSS-Rückblick (Tage)** | Feeds & Zeitplan | Zeitfenster für Feed-Artikel, 0 = unbegrenzt | 7 |
@@ -222,7 +225,7 @@ curl -X POST http://example.com/wp-json/auto-quill/v1/generate-post \
 - **PHP**: 8.0+
 - **WordPress**: 5.9+
 - **SSL/TLS**: Für sichere API-Anfragen
-- **API-Key**: OpenAI oder Claude API-Key
+- **API-Key**: OpenAI, Claude oder IONOS – oder ein eigener OpenAI-kompatibler Endpunkt
 
 ## FAQ
 
@@ -288,6 +291,21 @@ und bezieht Updates aus GitHub Releases. WordPress prüft automatisch und zeigt 
 stattdessen dem `main`-Branch.
 
 ## Changelog
+
+### [1.7.0] — 2026-09-28
+
+#### Added
+- **Schreibstil** unter *Einstellungen → Prompts*: globale Anweisungen für Tonalität, Anrede,
+  Satzbau und Wortwahl. Gilt für Titel, Beitragstext und Auszug aller Beiträge (RSS und Interview).
+- **IONOS AI Model Hub** als KI-Provider (OpenAI-kompatibel, Rechenzentren in Deutschland).
+- **Eigener OpenAI-kompatibler Endpunkt** mit frei wählbarer Basis-URL, optionalem Schlüssel und
+  Modell-ID – z. B. Mistral, Groq, OpenRouter, Together, Ollama oder LM Studio.
+
+#### Changed
+- API-Schlüssel werden **je Provider** gespeichert (`openai_api_key`, `claude_api_key`,
+  `ionos_api_key`, `custom_api_key`). Der bisherige gemeinsame Schlüssel `ai_api_key` wird beim
+  Update automatisch dem gewählten Provider zugeordnet; alte Sicherungen werden beim
+  Wiederherstellen genauso übernommen.
 
 ### [1.6.0] — 2026-09-28
 

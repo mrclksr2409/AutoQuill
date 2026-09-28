@@ -16,7 +16,8 @@ class Backup {
     const DOUBLE_FIRE_GUARD = 3600;
 
     /** Never part of a downloaded file. */
-    const SECRET_KEYS = ['ai_api_key', 'pixabay_api_key'];
+    /** ai_api_key is the pre-1.7 shared key, still present in older backups. */
+    const SECRET_KEYS = ['ai_api_key', 'openai_api_key', 'claude_api_key', 'ionos_api_key', 'custom_api_key', 'pixabay_api_key'];
 
     const TRIGGERS = ['auto', 'manual', 'pre-restore', 'import'];
 

@@ -39,7 +39,10 @@ Während die KI schreibt, läuft ein Spinner mit Sekundenzähler. Danach erschei
 | **Titel** | KI, nach [Prompt: Titel](Prompts) |
 | **Beitragstext** | KI, nach [Prompt: Beitragstext](Prompts) – HTML mit Zwischenüberschriften, plus Quellenhinweis |
 | **Social-Media-Auszug** | KI, wird als WordPress-Auszug gespeichert |
-| **Kategorien** | Vorschlag der KI aus deinen vorhandenen Kategorien; Mehrfachauswahl mit Strg/Cmd änderbar |
+| **Kategorien** | Vorschlag der KI aus deinen vorhandenen Kategorien |
+
+Alles wird als reine Vorschau angezeigt, nicht als Formularfeld. Änderungen an Titel, Text, Auszug
+oder Kategorien machst du nach dem Speichern wie gewohnt im WordPress-Editor.
 
 Gefällt das Ergebnis nicht, erzeugt **Neu generieren** einen neuen Entwurf.
 

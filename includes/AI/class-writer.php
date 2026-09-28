@@ -57,7 +57,7 @@ class Writer {
         $result = self::write_blog_post($topic, $available_categories, $article);
 
         if (is_wp_error($result)) {
-            $code = $result->get_error_code() === 'no_api_key' ? 400 : 502;
+            $code = in_array($result->get_error_code(), ['no_api_key', 'not_configured'], true) ? 400 : 502;
             Logger::error('writer', 'Blog-Post-Generierung fehlgeschlagen', [
                 'topic_id'   => $topic_id,
                 'article_id' => $article ? (int) $article->id : 0,
@@ -330,7 +330,7 @@ class Writer {
         $settings    = get_option(C::OPTION_KEY, C::defaults());
         $ai_provider = $settings['ai_provider'] ?? 'openai';
 
-        if ($ai_provider !== 'openai' && $ai_provider !== 'claude') {
+        if (!in_array($ai_provider, C::AI_PROVIDERS, true)) {
             return self::generate_basic_post($topic, $article);
         }
 
@@ -456,6 +456,22 @@ class Writer {
     }
 
     /**
+     * The global style instruction, empty when none is configured. After the
+     * interview sections, whose perspective and form must still win.
+     */
+    private static function writing_style_section(array $settings, bool $has_form_rules): string {
+        $style = trim((string) ($settings['writing_style'] ?? ''));
+        if ($style === '') {
+            return '';
+        }
+        $section = "--- Schreibstil (gilt für Titel, Beitragstext und Auszug) ---\n{$style}\n";
+        if ($has_form_rules) {
+            $section .= "Bei Widersprüchen haben die Vorgaben zu Perspektive und Form oben Vorrang.\n";
+        }
+        return $section . "\n";
+    }
+
+    /**
      * @param string $intro          First line of the prompt, naming what the source block is.
      * @param string $extra_sections Additional instruction sections, inserted before the answer format.
      */
@@ -481,6 +497,7 @@ class Writer {
         $prompt .= "--- Vorgaben Auszug ---\n{$section_excerpt}\n\n";
         $prompt .= "--- Vorgaben Kategorien ---\n{$section_category}\n\n";
         $prompt .= $extra_sections;
+        $prompt .= self::writing_style_section($settings, $extra_sections !== '');
         $prompt .= "--- Antwortformat ---\n";
         $prompt .= "Antworte AUSSCHLIESSLICH mit einem einzigen gültigen JSON-Objekt (kein Markdown, keine Codeblöcke, kein Text davor oder danach) nach folgendem Schema:\n";
         $prompt .= "{\n";

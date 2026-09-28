@@ -92,8 +92,21 @@ class Constants {
     /** How the post written from an interview is framed. */
     const INTERVIEW_STYLES = ['first_person', 'editorial', 'qa'];
 
+    /**
+     * openai/claude talk their own APIs; ionos and custom are OpenAI-compatible
+     * endpoints (chat/completions + models) that differ only by base URL.
+     */
+    const AI_PROVIDERS = ['openai', 'claude', 'ionos', 'custom'];
+
+    const OPENAI_BASE_URL = 'https://api.openai.com/v1';
+    const IONOS_BASE_URL  = 'https://openai.inference.de-txl.ionos.com/v1';
+
     const DEFAULT_OPENAI_MODEL = 'gpt-4o-mini';
     const DEFAULT_CLAUDE_MODEL = 'claude-sonnet-4-6';
+    const DEFAULT_IONOS_MODEL  = 'meta-llama/Llama-3.3-70B-Instruct';
+
+    /** Upper bound for the global writing style instruction. */
+    const WRITING_STYLE_MAX_CHARS = 2000;
 
     /** Transient prefix for the model lists fetched from the providers. */
     const MODELS_CACHE_PREFIX = 'auto_quill_models_';
@@ -103,7 +116,11 @@ class Constants {
     const UPDATE_MAIN_BRANCH = 'main';
     const UPDATE_SLUG        = 'auto-quill';
 
-    public static function ai_api_key(): string {
+    /**
+     * Key for the given provider, or for the active one when omitted. Each
+     * provider keeps its own key, so switching providers loses nothing.
+     */
+    public static function ai_api_key(?string $provider = null): string {
         if (defined('AUTO_QUILL_AI_KEY') && AUTO_QUILL_AI_KEY !== '') {
             return (string) AUTO_QUILL_AI_KEY;
         }
@@ -111,7 +128,68 @@ class Constants {
         if (!is_array($settings)) {
             return '';
         }
-        return (string) ($settings['ai_api_key'] ?? '');
+        $provider = $provider ?? self::ai_provider();
+        return (string) ($settings[$provider . '_api_key'] ?? '');
+    }
+
+    public static function ai_provider(): string {
+        $settings = get_option(self::OPTION_KEY, self::defaults());
+        $provider = is_array($settings) ? (string) ($settings['ai_provider'] ?? 'openai') : 'openai';
+        return in_array($provider, self::AI_PROVIDERS, true) ? $provider : 'openai';
+    }
+
+    /**
+     * Base URL (without trailing slash) of an OpenAI-compatible provider;
+     * empty for claude and for an unconfigured custom endpoint.
+     */
+    public static function ai_base_url(string $provider): string {
+        switch ($provider) {
+            case 'openai':
+                return self::OPENAI_BASE_URL;
+            case 'ionos':
+                return self::IONOS_BASE_URL;
+            case 'custom':
+                $settings = get_option(self::OPTION_KEY, self::defaults());
+                return is_array($settings) ? rtrim((string) ($settings['custom_base_url'] ?? ''), '/') : '';
+            default:
+                return '';
+        }
+    }
+
+    /** Only a self-hosted or open endpoint may run without a key. */
+    public static function ai_key_required(string $provider): bool {
+        return $provider !== 'custom';
+    }
+
+    public static function ai_provider_label(string $provider): string {
+        switch ($provider) {
+            case 'claude':
+                return 'Claude';
+            case 'ionos':
+                return 'IONOS';
+            case 'custom':
+                return __('Eigener Endpunkt', 'auto-quill');
+            default:
+                return 'OpenAI';
+        }
+    }
+
+    /**
+     * One-time move of the single legacy key (settings before 1.7) to the
+     * provider it was used with.
+     */
+    public static function maybe_migrate_api_key(): void {
+        $settings = get_option(self::OPTION_KEY);
+        if (!is_array($settings) || !array_key_exists('ai_api_key', $settings)) {
+            return;
+        }
+        $legacy   = (string) $settings['ai_api_key'];
+        $provider = in_array($settings['ai_provider'] ?? '', self::AI_PROVIDERS, true) ? $settings['ai_provider'] : 'openai';
+        if ($legacy !== '' && empty($settings[$provider . '_api_key'])) {
+            $settings[$provider . '_api_key'] = $legacy;
+        }
+        unset($settings['ai_api_key']);
+        update_option(self::OPTION_KEY, $settings);
     }
 
     public static function ai_api_key_from_constant(): bool {
@@ -136,9 +214,15 @@ class Constants {
     public static function defaults(): array {
         return [
             'ai_provider'     => 'openai',
-            'ai_api_key'      => '',
+            'openai_api_key'  => '',
+            'claude_api_key'  => '',
+            'ionos_api_key'   => '',
+            'custom_api_key'  => '',
             'openai_model'    => self::DEFAULT_OPENAI_MODEL,
             'claude_model'    => self::DEFAULT_CLAUDE_MODEL,
+            'ionos_model'     => self::DEFAULT_IONOS_MODEL,
+            'custom_model'    => '',
+            'custom_base_url' => '',
             'pixabay_api_key' => '',
             'post_status'   => 'draft',
             'auto_publish'  => false,
@@ -154,6 +238,8 @@ class Constants {
             'prompt_body'     => self::default_prompt_body(),
             'prompt_excerpt'  => self::default_prompt_excerpt(),
             'prompt_category' => self::default_prompt_category(),
+            // Empty = no style instruction; applies to title, body and excerpt.
+            'writing_style'   => '',
             'debug_logging'   => false,
             'beta_mode'       => false,
             // Off by default: a plugin that starts mailing after an update is a

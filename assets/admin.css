@@ -228,10 +228,26 @@
     min-height: 240px;
 }
 
-.auto-quill-meta-fields textarea[readonly] {
-    background: #f3f4f6;
+.auto-quill-meta-value {
+    margin: 0;
+    line-height: 1.6;
     color: #333;
-    cursor: default;
+}
+
+.auto-quill-meta-fields h2.auto-quill-meta-title {
+    margin: 0;
+    padding: 0;
+    font-size: 1.4em;
+    line-height: 1.3;
+    color: #1d2327;
+}
+
+.auto-quill-meta-value.is-empty,
+.auto-quill-meta-fields h2.auto-quill-meta-title.is-empty {
+    color: #8c8f94;
+    font-style: italic;
+    font-size: 13px;
+    font-weight: normal;
 }
 
 .auto-quill-meta-fields .description {

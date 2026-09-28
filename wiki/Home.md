@@ -5,8 +5,8 @@ interessantesten Themen des Tages auswählt und daraus auf Knopfdruck vollständ
 Blog-Beiträge schreibt – inklusive Titel, Social-Media-Auszug, Kategorien, Beitragsbild und
 garantiertem Quellenhinweis.
 
-> Aktuelle Version: **1.6.0** · Voraussetzungen: WordPress 5.9+, PHP 8.0+, ein API-Schlüssel von
-> OpenAI oder Anthropic (Claude)
+> Aktuelle Version: **1.7.0** · Voraussetzungen: WordPress 5.9+, PHP 8.0+, ein API-Schlüssel von
+> OpenAI, Anthropic (Claude) oder IONOS – oder ein eigener OpenAI-kompatibler Endpunkt
 
 ---
 

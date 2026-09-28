@@ -2,7 +2,7 @@
 
 # Entwicklungs-Notizen
 
-Stand: Version 1.6.0 / DB-Version 1.5
+Stand: Version 1.7.0 / DB-Version 1.5
 
 ## Projektstruktur
 

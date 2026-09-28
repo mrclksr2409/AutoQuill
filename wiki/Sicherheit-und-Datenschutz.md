@@ -24,8 +24,8 @@ Datenbank hat, kann sie lesen – daher die Empfehlung für `wp-config.php`.
 
 | Empfänger | Was | Wann |
 |---|---|---|
-| **OpenAI** oder **Anthropic** | Titel und Beschreibungen der neuen Artikel (Themenauswahl); Artikeltext bis 8 000 Zeichen, deine Prompts und die Namen deiner Kategorien (Beitrag); Titel und Auszug (Bild-Suchbegriffe) | Themenauswahl, Generierung |
-| **OpenAI** oder **Anthropic** | Nur der API-Schlüssel, zum Abruf der Modellliste | Einstellungsseite |
+| **Gewählter KI-Provider** (OpenAI, Anthropic, IONOS oder dein eigener Endpunkt) | Titel und Beschreibungen der neuen Artikel (Themenauswahl); Artikeltext bis 8 000 Zeichen, deine Prompts und die Namen deiner Kategorien (Beitrag); Titel und Auszug (Bild-Suchbegriffe) | Themenauswahl, Generierung |
+| **Gewählter KI-Provider** | Nur der API-Schlüssel, zum Abruf der Modellliste | Einstellungsseite |
 | **Pixabay** | Suchbegriffe | Bildsuche |
 | **RSS-Quellen / Artikelseiten** | Normaler Seitenabruf mit User-Agent `AutoQuill/<Version>` | RSS-Abruf |
 | **GitHub** | Versionsabfrage | Update-Prüfung |

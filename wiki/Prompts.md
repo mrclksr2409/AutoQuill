@@ -1,7 +1,8 @@
 # Prompts
 
-Unter **Einstellungen → Prompts** steuerst du, *wie* die KI schreibt. Die vier Felder beschreiben nur
-die **inhaltlichen Vorgaben** je Bestandteil – den Rest baut AutoQuill selbst.
+Unter **Einstellungen → Prompts** steuerst du, *wie* die KI schreibt. Das Feld **Schreibstil** gilt
+übergreifend, die vier weiteren Felder beschreiben die **inhaltlichen Vorgaben** je Bestandteil – den
+Rest baut AutoQuill selbst.
 
 ## Wie die Anfrage aufgebaut ist
 
@@ -17,12 +18,26 @@ AutoQuill schickt **eine einzige** Anfrage an die KI:
           --- Vorgaben Beitragstext ---   ← dein Feld „Prompt: Beitragstext“
           --- Vorgaben Auszug ---         ← dein Feld „Prompt: Social-Media-Auszug“
           --- Vorgaben Kategorien ---     ← dein Feld „Prompt: Kategorie“
+          --- Schreibstil … ---           ← dein Feld „Schreibstil“ (nur wenn ausgefüllt)
           --- Antwortformat ---           ← JSON-Schema, fest eingebaut
 ```
 
 Deshalb gilt: **Kein eigenes JSON-Schema und keine „Antworte mit JSON“-Hinweise** in die Felder
 schreiben – das ist bereits fest eingebaut. Ist die Antwort kein gültiges JSON, fragt AutoQuill
 einmal automatisch nach.
+
+## Schreibstil
+
+Freitext für Tonalität, Anrede, Satzbau und Wortwahl – zum Beispiel:
+
+```
+Locker und nahbar, Leser werden geduzt. Kurze Sätze, aktive Sprache,
+keine Floskeln und möglichst wenige Anglizismen. Fachbegriffe kurz erklären.
+```
+
+- Gilt für **Titel, Beitragstext und Auszug** aller Beiträge – aus RSS-Themen und aus Interviews.
+- Beim Interview-Beitrag haben die Vorgaben zu **Perspektive und Form** (Tab *Interview*) Vorrang.
+- Leer lassen heißt: keine Stilvorgabe. Maximal 2 000 Zeichen.
 
 ## Die vier Felder
 
