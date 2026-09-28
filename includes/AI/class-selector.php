@@ -43,7 +43,7 @@ class Selector {
         $settings    = get_option(C::OPTION_KEY, C::defaults());
         $ai_provider = is_array($settings) ? ($settings['ai_provider'] ?? 'openai') : 'openai';
 
-        if ($ai_provider !== 'openai' && $ai_provider !== 'claude') {
+        if (!in_array($ai_provider, C::AI_PROVIDERS, true)) {
             Logger::warning('selector', 'Kein gültiger AI-Provider konfiguriert, Fallback-Selektion aktiv', ['ai_provider' => $ai_provider]);
             return self::fallback_analyze($articles);
         }

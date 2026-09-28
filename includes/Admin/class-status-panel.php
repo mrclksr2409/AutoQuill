@@ -15,7 +15,7 @@ class StatusPanel {
             $option = [];
         }
         $masked = $option;
-        foreach (['ai_api_key', 'pixabay_api_key'] as $secret) {
+        foreach (Backup::SECRET_KEYS as $secret) {
             if (!empty($masked[$secret])) {
                 $masked[$secret] = self::mask((string) $masked[$secret]);
             }

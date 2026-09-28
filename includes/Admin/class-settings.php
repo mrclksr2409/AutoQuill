@@ -63,26 +63,71 @@ class Settings {
         $clean = $prev;
 
         if (isset($input['ai_provider'])) {
-            $clean['ai_provider'] = in_array($input['ai_provider'], ['openai', 'claude'], true)
+            $clean['ai_provider'] = in_array($input['ai_provider'], C::AI_PROVIDERS, true)
                 ? $input['ai_provider']
                 : ($prev['ai_provider'] ?? 'openai');
         }
 
-        if (array_key_exists('ai_api_key', $input)) {
-            $new_key = sanitize_text_field((string) $input['ai_api_key']);
-            if ($new_key !== '') {
-                $clean['ai_api_key'] = $new_key;
+        // Backups from before 1.7 carry one shared key; it belongs to the
+        // provider it was saved with.
+        if (!empty($input['ai_api_key'])) {
+            $legacy_provider = (string) ($clean['ai_provider'] ?? 'openai');
+            if (empty($input[$legacy_provider . '_api_key'])) {
+                $input[$legacy_provider . '_api_key'] = $input['ai_api_key'];
+            }
+        }
+        unset($clean['ai_api_key']);
+
+        foreach (C::AI_PROVIDERS as $provider) {
+            $key_field = $provider . '_api_key';
+            if (array_key_exists($key_field, $input)) {
+                $new_key = sanitize_text_field((string) $input[$key_field]);
+                if ($new_key !== '') {
+                    $clean[$key_field] = $new_key;
+                }
+            }
+            // Explicit removal, mainly for a keyless local endpoint that
+            // previously had a key.
+            if (!empty($input[$key_field . '_clear'])) {
+                $clean[$key_field] = '';
             }
         }
 
-        if (array_key_exists('openai_model', $input)) {
-            $model = self::sanitize_model_id($input['openai_model']);
-            $clean['openai_model'] = $model !== '' ? $model : C::DEFAULT_OPENAI_MODEL;
+        $model_defaults = [
+            'openai_model' => C::DEFAULT_OPENAI_MODEL,
+            'claude_model' => C::DEFAULT_CLAUDE_MODEL,
+            'ionos_model'  => C::DEFAULT_IONOS_MODEL,
+            'custom_model' => '',
+        ];
+        foreach ($model_defaults as $model_field => $model_default) {
+            if (array_key_exists($model_field, $input)) {
+                $model = self::sanitize_model_id($input[$model_field]);
+                $clean[$model_field] = $model !== '' ? $model : $model_default;
+            }
         }
 
-        if (array_key_exists('claude_model', $input)) {
-            $model = self::sanitize_model_id($input['claude_model']);
-            $clean['claude_model'] = $model !== '' ? $model : C::DEFAULT_CLAUDE_MODEL;
+        if (array_key_exists('custom_base_url', $input)) {
+            $url = rtrim(esc_url_raw(trim((string) $input['custom_base_url']), ['http', 'https']), '/');
+            $clean['custom_base_url'] = $url;
+            if ($url === '' && trim((string) $input['custom_base_url']) !== '') {
+                add_settings_error(
+                    C::OPTION_KEY,
+                    'auto_quill_custom_base_url',
+                    __('Die Basis-URL des eigenen Endpunkts ist ungültig (nur http/https).', 'auto-quill'),
+                    'error'
+                );
+            }
+        }
+
+        if (($clean['ai_provider'] ?? '') === 'custom'
+            && (empty($clean['custom_base_url']) || empty($clean['custom_model']))
+        ) {
+            add_settings_error(
+                C::OPTION_KEY,
+                'auto_quill_custom_incomplete',
+                __('Für den eigenen Endpunkt fehlen Basis-URL oder Modell — KI-Anfragen schlagen fehl, bis beides eingetragen ist.', 'auto-quill'),
+                'warning'
+            );
         }
 
         if (array_key_exists('pixabay_api_key', $input)) {
@@ -148,6 +193,11 @@ class Settings {
                 __('Die Themenauswahl liegt nicht kurz nach dem RSS-Abruf. Sie arbeitet dann mit Artikeln eines älteren Abrufs — oder läuft gleichzeitig mit ihm.', 'auto-quill'),
                 'warning'
             );
+        }
+
+        if (array_key_exists('writing_style', $input)) {
+            $style = trim(sanitize_textarea_field((string) $input['writing_style']));
+            $clean['writing_style'] = mb_substr($style, 0, C::WRITING_STYLE_MAX_CHARS);
         }
 
         if (array_key_exists('prompt_title', $input)) {
@@ -324,11 +374,97 @@ class Settings {
         return array_slice(array_values($out), 0, 50);
     }
 
+    private static function provider_row_attrs(string $provider, string $active_provider): string {
+        return 'class="auto-quill-provider-row" data-provider="' . esc_attr($provider) . '"'
+            . ($provider !== $active_provider ? ' style="display:none;"' : '');
+    }
+
+    private static function render_provider_hint_row(string $provider, string $active_provider, string $text): void {
+        ?>
+        <tr <?php echo self::provider_row_attrs($provider, $active_provider); ?>>
+            <th scope="row"></th>
+            <td><p class="description" style="margin-top:0;"><?php echo esc_html($text); ?></p></td>
+        </tr>
+        <?php
+    }
+
+    private static function render_base_url_row(string $provider, string $active_provider, string $current): void {
+        ?>
+        <tr <?php echo self::provider_row_attrs($provider, $active_provider); ?>>
+            <th scope="row">
+                <label for="custom_base_url"><?php esc_html_e('Basis-URL', 'auto-quill'); ?></label>
+            </th>
+            <td>
+                <input type="url" id="custom_base_url" class="regular-text code"
+                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[custom_base_url]"
+                       value="<?php echo esc_attr($current); ?>"
+                       placeholder="https://api.mistral.ai/v1">
+                <p class="description">
+                    <?php esc_html_e('Adresse bis einschließlich Versionspfad, ohne /chat/completions. Beispiele:', 'auto-quill'); ?>
+                    <code>https://api.mistral.ai/v1</code>,
+                    <code>https://api.groq.com/openai/v1</code>,
+                    <code>https://openrouter.ai/api/v1</code>,
+                    <code>http://localhost:11434/v1</code> (Ollama)
+                </p>
+            </td>
+        </tr>
+        <?php
+    }
+
+    private static function render_api_key_row(string $provider, string $active_provider, array $settings): void {
+        $field          = $provider . '_api_key';
+        $key_from_const = C::ai_api_key_from_constant();
+        $has_stored_key = !empty($settings[$field]);
+        $placeholder    = $has_stored_key
+            ? __('Gespeicherter Schlüssel — leer lassen, um ihn zu behalten', 'auto-quill')
+            : ($provider === 'custom' ? __('optional', 'auto-quill') : '');
+        ?>
+        <tr <?php echo self::provider_row_attrs($provider, $active_provider); ?>>
+            <th scope="row">
+                <label for="<?php echo esc_attr($field); ?>">
+                    <?php
+                    /* translators: %s: provider name */
+                    printf(esc_html__('API-Schlüssel (%s)', 'auto-quill'), esc_html(C::ai_provider_label($provider)));
+                    ?>
+                </label>
+            </th>
+            <td>
+                <input type="password" id="<?php echo esc_attr($field); ?>"
+                       class="auto-quill-api-key" data-provider="<?php echo esc_attr($provider); ?>"
+                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[<?php echo esc_attr($field); ?>]"
+                       value=""
+                       placeholder="<?php echo esc_attr($placeholder); ?>"
+                       autocomplete="new-password"
+                       <?php disabled($key_from_const); ?>
+                       style="width: 300px;">
+                <?php if ($provider === 'custom' && $has_stored_key && !$key_from_const): ?>
+                    <label style="margin-left:8px;">
+                        <input type="checkbox" name="<?php echo esc_attr(C::OPTION_KEY); ?>[<?php echo esc_attr($field); ?>_clear]" value="1">
+                        <?php esc_html_e('Schlüssel entfernen', 'auto-quill'); ?>
+                    </label>
+                <?php endif; ?>
+                <p class="description">
+                    <?php if ($key_from_const): ?>
+                        <?php esc_html_e('Schlüssel wird aus der Konstante AUTO_QUILL_AI_KEY in wp-config.php geladen und hat Vorrang vor diesem Feld.', 'auto-quill'); ?>
+                    <?php elseif ($provider === 'custom'): ?>
+                        <?php esc_html_e('Nur nötig, wenn der Endpunkt einen Schlüssel verlangt – lokale Server wie Ollama brauchen keinen.', 'auto-quill'); ?>
+                    <?php else: ?>
+                        <?php esc_html_e('Für mehr Sicherheit kann der Schlüssel auch in wp-config.php als AUTO_QUILL_AI_KEY definiert werden (gilt dann für jeden Provider).', 'auto-quill'); ?>
+                    <?php endif; ?>
+                </p>
+            </td>
+        </tr>
+        <?php
+    }
+
     /**
      * A dropdown instead of free text. The options come from the provider
      * (ModelCatalog, loaded by admin.js); the saved model and the default are
      * always present, so the field works without the list and never silently
      * changes the stored value.
+     *
+     * The custom endpoint gets a text field with suggestions instead: its
+     * model list is optional and may not exist at all.
      */
     private static function render_model_row(string $provider, string $label, string $current, string $default, string $active_provider): void {
         $field   = $provider . '_model';
@@ -336,38 +472,58 @@ class Settings {
         foreach (ModelCatalog::cached($provider) as $model) {
             $options[$model['id']] = $model['label'];
         }
-        if (!isset($options[$current])) {
+        if ($current !== '' && !isset($options[$current])) {
             $options = [$current => $current] + $options;
         }
-        if (!isset($options[$default])) {
+        if ($default !== '' && !isset($options[$default])) {
             $options[$default] = $default;
         }
         ?>
-        <tr class="auto-quill-model-row" data-provider="<?php echo esc_attr($provider); ?>"
+        <tr class="auto-quill-model-row auto-quill-provider-row" data-provider="<?php echo esc_attr($provider); ?>"
             <?php echo $provider !== $active_provider ? 'style="display:none;"' : ''; ?>>
             <th scope="row">
                 <label for="<?php echo esc_attr($field); ?>"><?php echo esc_html($label); ?></label>
             </th>
             <td>
-                <select id="<?php echo esc_attr($field); ?>"
-                        class="auto-quill-model-select"
-                        data-provider="<?php echo esc_attr($provider); ?>"
-                        name="<?php echo esc_attr(C::OPTION_KEY); ?>[<?php echo esc_attr($field); ?>]"
-                        style="min-width: 300px;">
-                    <?php foreach ($options as $id => $option_label): ?>
-                        <option value="<?php echo esc_attr((string) $id); ?>" <?php selected($current, (string) $id); ?>>
-                            <?php echo esc_html((string) $option_label); ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
+                <?php if ($provider === 'custom'): ?>
+                    <input type="text" id="<?php echo esc_attr($field); ?>"
+                           class="auto-quill-model-select regular-text code"
+                           data-provider="<?php echo esc_attr($provider); ?>"
+                           list="<?php echo esc_attr($field); ?>_list"
+                           name="<?php echo esc_attr(C::OPTION_KEY); ?>[<?php echo esc_attr($field); ?>]"
+                           value="<?php echo esc_attr($current); ?>"
+                           placeholder="mistral-small-latest"
+                           style="min-width: 300px;">
+                    <datalist id="<?php echo esc_attr($field); ?>_list">
+                        <?php foreach ($options as $id => $option_label): ?>
+                            <option value="<?php echo esc_attr((string) $id); ?>"><?php echo esc_html((string) $option_label); ?></option>
+                        <?php endforeach; ?>
+                    </datalist>
+                <?php else: ?>
+                    <select id="<?php echo esc_attr($field); ?>"
+                            class="auto-quill-model-select"
+                            data-provider="<?php echo esc_attr($provider); ?>"
+                            name="<?php echo esc_attr(C::OPTION_KEY); ?>[<?php echo esc_attr($field); ?>]"
+                            style="min-width: 300px;">
+                        <?php foreach ($options as $id => $option_label): ?>
+                            <option value="<?php echo esc_attr((string) $id); ?>" <?php selected($current, (string) $id); ?>>
+                                <?php echo esc_html((string) $option_label); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                <?php endif; ?>
                 <button type="button" class="button auto-quill-models-refresh" data-provider="<?php echo esc_attr($provider); ?>">
                     <?php esc_html_e('Modelle neu laden', 'auto-quill'); ?>
                 </button>
                 <span class="spinner auto-quill-models-spinner"></span>
                 <p class="description auto-quill-models-status" aria-live="polite"></p>
                 <p class="description"><?php
-                    /* translators: %s: default model name */
-                    printf(esc_html__('Die Liste wird direkt beim Anbieter mit dem API-Schlüssel abgerufen. Standard: %s', 'auto-quill'), '<code>' . esc_html($default) . '</code>');
+                    if ($provider === 'custom') {
+                        esc_html_e('Modell-ID so, wie der Endpunkt sie erwartet. Vorschläge kommen – falls der Endpunkt das unterstützt – aus seiner /models-Liste.', 'auto-quill');
+                    } else {
+                        /* translators: %s: default model name */
+                        printf(esc_html__('Die Liste wird direkt beim Anbieter mit dem API-Schlüssel abgerufen. Standard: %s', 'auto-quill'), '<code>' . esc_html($default) . '</code>');
+                    }
                 ?></p>
             </td>
         </tr>
@@ -406,6 +562,7 @@ class Settings {
                 </h2>
 
                 <div class="auto-quill-tab-panel" data-tab="ki">
+                    <?php $active_provider = C::ai_provider(); ?>
                     <table class="form-table">
                         <tr>
                             <th scope="row">
@@ -413,44 +570,32 @@ class Settings {
                             </th>
                             <td>
                                 <select id="ai_provider" name="<?php echo esc_attr(C::OPTION_KEY); ?>[ai_provider]">
-                                    <option value="openai" <?php selected($settings['ai_provider'] ?? '', 'openai'); ?>>OpenAI</option>
-                                    <option value="claude" <?php selected($settings['ai_provider'] ?? '', 'claude'); ?>>Claude (Anthropic)</option>
+                                    <option value="openai" <?php selected($active_provider, 'openai'); ?>>OpenAI</option>
+                                    <option value="claude" <?php selected($active_provider, 'claude'); ?>>Claude (Anthropic)</option>
+                                    <option value="ionos" <?php selected($active_provider, 'ionos'); ?>><?php esc_html_e('IONOS AI Model Hub', 'auto-quill'); ?></option>
+                                    <option value="custom" <?php selected($active_provider, 'custom'); ?>><?php esc_html_e('Eigener OpenAI-kompatibler Endpunkt', 'auto-quill'); ?></option>
                                 </select>
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <th scope="row">
-                                <label for="ai_api_key"><?php esc_html_e('API-Schlüssel', 'auto-quill'); ?></label>
-                            </th>
-                            <td>
-                                <?php
-                                $key_from_const = C::ai_api_key_from_constant();
-                                $has_stored_key = !empty($settings['ai_api_key']);
-                                $placeholder    = $has_stored_key
-                                    ? esc_attr__('Gespeicherter Schlüssel — leer lassen, um ihn zu behalten', 'auto-quill')
-                                    : esc_attr__('sk-…', 'auto-quill');
-                                ?>
-                                <input type="password" id="ai_api_key"
-                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[ai_api_key]"
-                                       value=""
-                                       placeholder="<?php echo $placeholder; ?>"
-                                       autocomplete="new-password"
-                                       <?php disabled($key_from_const); ?>
-                                       style="width: 300px;">
                                 <p class="description">
-                                    <?php if ($key_from_const): ?>
-                                        <?php esc_html_e('Schlüssel wird aus der Konstante AUTO_QUILL_AI_KEY in wp-config.php geladen und hat Vorrang vor diesem Feld.', 'auto-quill'); ?>
-                                    <?php else: ?>
-                                        <?php esc_html_e('Für mehr Sicherheit kann der Schlüssel auch in wp-config.php als AUTO_QUILL_AI_KEY definiert werden.', 'auto-quill'); ?>
-                                    <?php endif; ?>
+                                    <?php esc_html_e('Jeder Provider behält seinen eigenen API-Schlüssel und sein Modell – ein Wechsel geht also nichts verloren.', 'auto-quill'); ?>
                                 </p>
                             </td>
                         </tr>
 
                         <?php
-                        self::render_model_row('openai', __('OpenAI-Modell', 'auto-quill'), (string) ($settings['openai_model'] ?? C::DEFAULT_OPENAI_MODEL), C::DEFAULT_OPENAI_MODEL, (string) ($settings['ai_provider'] ?? 'openai'));
-                        self::render_model_row('claude', __('Claude-Modell', 'auto-quill'), (string) ($settings['claude_model'] ?? C::DEFAULT_CLAUDE_MODEL), C::DEFAULT_CLAUDE_MODEL, (string) ($settings['ai_provider'] ?? 'openai'));
+                        self::render_provider_hint_row('ionos', $active_provider,
+                            __('Rechenzentren in Deutschland. Den Token erzeugst du im IONOS Data Center Designer unter „Token Manager“; die Modelle sind Open-Source-Modelle wie Llama oder Mistral.', 'auto-quill'));
+                        self::render_provider_hint_row('custom', $active_provider,
+                            __('Jeder Dienst mit OpenAI-kompatibler Schnittstelle (/chat/completions): z. B. Mistral, Groq, OpenRouter, Together oder lokal Ollama und LM Studio.', 'auto-quill'));
+                        self::render_base_url_row('custom', $active_provider, (string) ($settings['custom_base_url'] ?? ''));
+
+                        foreach (C::AI_PROVIDERS as $provider) {
+                            self::render_api_key_row($provider, $active_provider, $settings);
+                        }
+
+                        self::render_model_row('openai', __('OpenAI-Modell', 'auto-quill'), (string) ($settings['openai_model'] ?? C::DEFAULT_OPENAI_MODEL), C::DEFAULT_OPENAI_MODEL, $active_provider);
+                        self::render_model_row('claude', __('Claude-Modell', 'auto-quill'), (string) ($settings['claude_model'] ?? C::DEFAULT_CLAUDE_MODEL), C::DEFAULT_CLAUDE_MODEL, $active_provider);
+                        self::render_model_row('ionos', __('IONOS-Modell', 'auto-quill'), (string) ($settings['ionos_model'] ?? C::DEFAULT_IONOS_MODEL), C::DEFAULT_IONOS_MODEL, $active_provider);
+                        self::render_model_row('custom', __('Modell', 'auto-quill'), (string) ($settings['custom_model'] ?? ''), '', $active_provider);
                         ?>
                     </table>
                 </div>
@@ -507,9 +652,26 @@ class Settings {
 
                 <div class="auto-quill-tab-panel" data-tab="prompts" style="display:none;">
                     <p class="description" style="margin: 1em 0;">
-                        <?php esc_html_e('Die vier Vorgaben unten werden zu einer einzigen KI-Anfrage zusammengeführt. Die KI antwortet mit einem gemeinsamen JSON-Objekt, das Titel, Beitragstext, Auszug und Kategorien enthält. Quelltext und Kategorienliste werden automatisch ergänzt – die Felder unten sollten nur die inhaltlichen Vorgaben pro Bestandteil beschreiben (kein eigenes JSON-Schema und keine "Antworte mit JSON …"-Hinweise mehr nötig).', 'auto-quill'); ?>
+                        <?php esc_html_e('Der Schreibstil und die vier Vorgaben unten werden zu einer einzigen KI-Anfrage zusammengeführt. Die KI antwortet mit einem gemeinsamen JSON-Objekt, das Titel, Beitragstext, Auszug und Kategorien enthält. Quelltext und Kategorienliste werden automatisch ergänzt – die Felder unten sollten nur die inhaltlichen Vorgaben pro Bestandteil beschreiben (kein eigenes JSON-Schema und keine "Antworte mit JSON …"-Hinweise mehr nötig).', 'auto-quill'); ?>
                     </p>
                     <table class="form-table">
+                        <tr>
+                            <th scope="row">
+                                <label for="writing_style"><?php esc_html_e('Schreibstil', 'auto-quill'); ?></label>
+                            </th>
+                            <td>
+                                <textarea id="writing_style" rows="6" class="large-text"
+                                          maxlength="<?php echo (int) C::WRITING_STYLE_MAX_CHARS; ?>"
+                                          placeholder="<?php esc_attr_e('z. B.: Locker und nahbar, Leser werden geduzt. Kurze Sätze, aktive Sprache, keine Floskeln und möglichst wenige Anglizismen. Fachbegriffe kurz erklären, gern mit einem Augenzwinkern.', 'auto-quill'); ?>"
+                                          name="<?php echo esc_attr(C::OPTION_KEY); ?>[writing_style]"><?php
+                                    echo esc_textarea((string) ($settings['writing_style'] ?? ''));
+                                ?></textarea>
+                                <p class="description">
+                                    <?php esc_html_e('Anweisungen für Tonalität, Anrede, Satzbau und Wortwahl. Gilt für Titel, Beitragstext und Auszug aller erzeugten Beiträge – aus RSS-Themen und aus Interviews. Leer lassen, wenn es keine Vorgabe geben soll.', 'auto-quill'); ?>
+                                </p>
+                            </td>
+                        </tr>
+
                         <tr>
                             <th scope="row">
                                 <label for="prompt_title"><?php esc_html_e('Prompt: Titel', 'auto-quill'); ?></label>

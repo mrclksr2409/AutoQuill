@@ -177,7 +177,7 @@ class InterviewsService {
 
         $result = Writer::write_from_interview((string) $row->topic, (string) $row->notes, $messages);
         if (is_wp_error($result)) {
-            $code = $result->get_error_code() === 'no_api_key' ? 400 : 502;
+            $code = in_array($result->get_error_code(), ['no_api_key', 'not_configured'], true) ? 400 : 502;
             Logger::error('interview', 'Beitrag aus Interview fehlgeschlagen', [
                 'id'      => $id,
                 'code'    => $result->get_error_code(),
@@ -243,7 +243,7 @@ class InterviewsService {
             return new \WP_REST_Response([
                 'error'     => $next->get_error_message(),
                 'interview' => self::payload($row),
-            ], $next->get_error_code() === 'no_api_key' ? 400 : 502);
+            ], in_array($next->get_error_code(), ['no_api_key', 'not_configured'], true) ? 400 : 502);
         }
 
         $message = [

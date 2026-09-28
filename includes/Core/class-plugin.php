@@ -14,6 +14,10 @@ use AutoQuill\Rest\RestController;
 class Plugin {
     public static function boot(): void {
         add_action('init', [self::class, 'load_textdomain']);
+
+        // Before Settings registers its sanitize callback, so the move is a
+        // plain write and not a round trip through the form validation.
+        Constants::maybe_migrate_api_key();
         add_action('admin_init', [Schema::class, 'ensure_tables'], 1);
 
         Settings::boot();

@@ -302,11 +302,18 @@
                 this.load($(e.currentTarget).data('provider'), true);
             });
 
-            // A newly typed key may unlock a different set of models.
-            $('#ai_api_key').on('change', () => {
-                if (($('#ai_api_key').val() || '').trim() !== '') {
-                    this.loaded = {};
-                    this.load(this.activeProvider(), true);
+            // A newly typed key (or endpoint URL) may unlock a different set of models.
+            $('.auto-quill-api-key').on('change', (e) => {
+                const provider = $(e.currentTarget).data('provider');
+                if (($(e.currentTarget).val() || '').trim() !== '') {
+                    this.loaded[provider] = false;
+                    this.load(provider, true);
+                }
+            });
+            $('#custom_base_url').on('change', () => {
+                if (($('#custom_base_url').val() || '').trim() !== '') {
+                    this.loaded.custom = false;
+                    this.load('custom', true);
                 }
             });
 
@@ -320,7 +327,7 @@
         },
 
         showRow: function(provider) {
-            $('.auto-quill-model-row').hide()
+            $('.auto-quill-provider-row').hide()
                 .filter('[data-provider="' + provider + '"]').show();
         },
 
@@ -342,7 +349,8 @@
                 timeout: 30000,
                 data: {
                     provider: provider,
-                    api_key: ($('#ai_api_key').val() || '').trim(),
+                    api_key: ($('#' + provider + '_api_key').val() || '').trim(),
+                    base_url: provider === 'custom' ? ($('#custom_base_url').val() || '').trim() : '',
                     refresh: refresh ? 1 : 0,
                 },
                 headers: { 'X-WP-Nonce': AutoQuill.restNonce },
@@ -363,6 +371,16 @@
         },
 
         fill: function($select, models) {
+            // The custom endpoint uses a free text field with suggestions.
+            if ($select.is('input')) {
+                const $list = $('#' + $select.attr('list'));
+                $list.empty();
+                models.forEach((m) => {
+                    $('<option>').val(m.id).text(m.label || m.id).appendTo($list);
+                });
+                return;
+            }
+
             const current = $select.val();
             const ids = models.map((m) => m.id);
 

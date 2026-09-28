@@ -22,9 +22,27 @@ der zuletzt geöffnete Tab aktiv.
 
 | Einstellung | Beschreibung | Standard |
 |---|---|---|
-| **KI-Provider** | *OpenAI* oder *Claude (Anthropic)*. Gilt für Themenauswahl, Beitrag und Bild-Suchbegriffe. | OpenAI |
-| **API-Schlüssel** | Schlüssel des gewählten Anbieters. Nach dem Speichern bleibt das Feld leer – leer lassen heißt *gespeicherten Schlüssel behalten*. Ist `AUTO_QUILL_AI_KEY` in der `wp-config.php` gesetzt, ist das Feld gesperrt. | – |
-| **OpenAI-Modell** / **Claude-Modell** | Dropdown; es wird nur das Feld des gewählten Providers angezeigt. | `gpt-4o-mini` / `claude-sonnet-4-6` |
+| **KI-Provider** | *OpenAI*, *Claude (Anthropic)*, *IONOS AI Model Hub* oder *Eigener OpenAI-kompatibler Endpunkt*. Gilt für Themenauswahl, Beitrag, Interview und Bild-Suchbegriffe. Es werden nur die Felder des gewählten Providers angezeigt. | OpenAI |
+| **API-Schlüssel (…)** | Je Provider ein eigener Schlüssel – ein Wechsel des Providers verliert also nichts. Nach dem Speichern bleibt das Feld leer – leer lassen heißt *gespeicherten Schlüssel behalten*. Ist `AUTO_QUILL_AI_KEY` in der `wp-config.php` gesetzt, gilt er für jeden Provider und die Felder sind gesperrt. Beim eigenen Endpunkt ist der Schlüssel optional. | – |
+| **Basis-URL** (nur eigener Endpunkt) | Adresse bis einschließlich Versionspfad, ohne `/chat/completions`, z. B. `https://api.mistral.ai/v1`, `https://api.groq.com/openai/v1`, `https://openrouter.ai/api/v1` oder `http://localhost:11434/v1` (Ollama). | – |
+| **Modell** | Dropdown (OpenAI, Claude, IONOS) bzw. Textfeld mit Vorschlägen (eigener Endpunkt). | `gpt-4o-mini` / `claude-sonnet-4-6` / `meta-llama/Llama-3.3-70B-Instruct` / – |
+
+### IONOS AI Model Hub
+
+Open-Source-Modelle (Llama, Mistral …) in Rechenzentren in Deutschland, über eine
+OpenAI-kompatible Schnittstelle (`https://openai.inference.de-txl.ionos.com/v1`). Den Token
+erzeugst du im IONOS *Data Center Designer* unter **Token Manager**.
+
+### Eigener OpenAI-kompatibler Endpunkt
+
+Für jeden Dienst, der `/chat/completions` im OpenAI-Format anbietet – Cloud-Anbieter wie Mistral,
+Groq, OpenRouter, Together oder lokale Server wie Ollama und LM Studio. Unterstützt der Endpunkt
+`/models`, erscheinen die Modelle als Vorschläge; sonst trägst du die Modell-ID von Hand ein.
+Kleine lokale Modelle halten das geforderte JSON-Format nicht immer zuverlässig ein – bei
+Parse-Fehlern ein größeres Modell wählen.
+
+> Upgrade von 1.6: Der bisherige gemeinsame Schlüssel wird automatisch dem damals gewählten
+> Provider zugeordnet.
 
 ### Wie die Modellliste entsteht
 
@@ -32,7 +50,7 @@ der zuletzt geöffnete Tab aktiv.
   und speichert sie **12 Stunden** zwischen. **Modelle neu laden** holt sie sofort frisch.
 - Tippst du einen neuen Schlüssel ein, wird die Liste damit neu geladen – schon vor dem Speichern.
 - Bei OpenAI werden Modelle ausgefiltert, die keinen Text erzeugen (Embeddings, Audio, Bild,
-  Moderation …).
+  Moderation …); bei IONOS und eigenen Endpunkten offensichtliche Embedding- und Bildmodelle.
 - Das **gespeicherte Modell bleibt immer auswählbar**, auch wenn der Anbieter es nicht mehr listet
   (Zusatz „aktuell gespeichert, nicht in der Liste“). Ein fehlgeschlagener Abruf ändert also nie
   deine Einstellung.

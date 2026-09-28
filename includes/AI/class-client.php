@@ -12,23 +12,24 @@ class Client {
      *     timeout?: int,
      *     openai_model?: string,
      *     claude_model?: string,
+     *     model?: string,
      *     json_mode?: bool,
      *     json_shape?: string,
      * } $opts
      * @return string|\WP_Error
      */
     public function chat(string $system, string $user, array $opts = []) {
-        $api_key = C::ai_api_key();
-        if ($api_key === '') {
-            Logger::error('client', 'API Key nicht konfiguriert', ['system_len' => strlen($system), 'user_len' => strlen($user)]);
-            return new \WP_Error('no_api_key', 'API Key nicht konfiguriert');
-        }
-
         $settings = get_option(C::OPTION_KEY, C::defaults());
         if (!is_array($settings)) {
             $settings = C::defaults();
         }
-        $provider = $settings['ai_provider'] ?? 'openai';
+        $provider = C::ai_provider();
+        $api_key  = C::ai_api_key($provider);
+
+        if ($api_key === '' && C::ai_key_required($provider)) {
+            Logger::error('client', 'API Key nicht konfiguriert', ['provider' => $provider, 'system_len' => strlen($system), 'user_len' => strlen($user)]);
+            return new \WP_Error('no_api_key', 'API Key nicht konfiguriert');
+        }
 
         if (!isset($opts['openai_model'])) {
             $opts['openai_model'] = $settings['openai_model'] ?? C::DEFAULT_OPENAI_MODEL;
@@ -45,17 +46,39 @@ class Client {
         if ($provider === 'claude') {
             return $this->call_claude($api_key, $system, $user, $opts);
         }
-        return $this->call_openai($api_key, $system, $user, $opts);
+
+        if ($provider === 'ionos' || $provider === 'custom') {
+            $model = (string) ($settings[$provider . '_model'] ?? '');
+            if ($model === '' && $provider === 'ionos') {
+                $model = C::DEFAULT_IONOS_MODEL;
+            }
+            $base_url = C::ai_base_url($provider);
+            if ($base_url === '' || $model === '') {
+                Logger::error('client', 'Eigener Endpunkt unvollständig konfiguriert', [
+                    'provider' => $provider,
+                    'base_url' => $base_url,
+                    'model'    => $model,
+                ]);
+                return new \WP_Error('not_configured', 'Für den eigenen Endpunkt fehlen Basis-URL oder Modell');
+            }
+            $opts['model'] = $model;
+            return $this->call_openai_compatible($provider, $base_url, $api_key, $system, $user, $opts);
+        }
+
+        $opts['model'] = (string) $opts['openai_model'];
+        return $this->call_openai_compatible('openai', C::OPENAI_BASE_URL, $api_key, $system, $user, $opts);
     }
 
     /**
      * @return string|\WP_Error
      */
-    private function call_openai(string $api_key, string $system, string $user, array $opts) {
-        $model   = (string) ($opts['openai_model'] ?? C::DEFAULT_OPENAI_MODEL);
-        $started = microtime(true);
+    private function call_openai_compatible(string $provider, string $base_url, string $api_key, string $system, string $user, array $opts) {
+        $model     = (string) ($opts['model'] ?? C::DEFAULT_OPENAI_MODEL);
+        $label     = C::ai_provider_label($provider);
+        $is_openai = $provider === 'openai';
+        $started   = microtime(true);
 
-        Logger::info('client', 'OpenAI Request startet', [
+        Logger::info('client', $label . ' Request startet', [
             'model'       => $model,
             'timeout'     => (int) ($opts['timeout'] ?? 60),
             'max_tokens'  => (int) ($opts['max_tokens']  ?? 1500),
@@ -64,40 +87,52 @@ class Client {
             'user_len'    => strlen($user),
         ]);
 
-        // max_completion_tokens is accepted by every chat model; max_tokens is
-        // rejected by the reasoning families (o*, gpt-5), which the model
-        // dropdown now offers. Those also only accept the default temperature.
         $payload = [
-            'model'                 => $model,
-            'messages'              => [
+            'model'    => $model,
+            'messages' => [
                 ['role' => 'system', 'content' => $system],
                 ['role' => 'user',   'content' => $user],
             ],
-            'max_completion_tokens' => (int) ($opts['max_tokens'] ?? 1500),
         ];
-        if (!self::is_openai_reasoning_model($model)) {
+        $max_tokens = (int) ($opts['max_tokens'] ?? 1500);
+        if ($is_openai) {
+            // max_completion_tokens is accepted by every OpenAI chat model;
+            // max_tokens is rejected by the reasoning families (o*, gpt-5),
+            // which the model dropdown offers. Those also only accept the
+            // default temperature.
+            $payload['max_completion_tokens'] = $max_tokens;
+            if (!self::is_openai_reasoning_model($model)) {
+                $payload['temperature'] = (float) ($opts['temperature'] ?? 0.7);
+            }
+            // OpenAI's response_format=json_object only supports objects, not
+            // top-level arrays. The Selector wraps array results in an object,
+            // so json_shape='object' is the only mode we activate here.
+            if (($opts['json_shape'] ?? null) === 'object') {
+                $payload['response_format'] = ['type' => 'json_object'];
+            }
+        } else {
+            // Compatible servers (IONOS, vLLM, Ollama, Groq ...) know the
+            // classic max_tokens; response_format support varies, so JSON is
+            // left to the prompt and the tolerant JsonExtractor.
+            $payload['max_tokens']  = $max_tokens;
             $payload['temperature'] = (float) ($opts['temperature'] ?? 0.7);
         }
-        // OpenAI's response_format=json_object only supports objects, not
-        // top-level arrays. The Selector now wraps array results in an
-        // object, so json_shape='object' is the only mode we activate here.
-        if (($opts['json_shape'] ?? null) === 'object') {
-            $payload['response_format'] = ['type' => 'json_object'];
+
+        $headers = ['Content-Type' => 'application/json'];
+        if ($api_key !== '') {
+            $headers['Authorization'] = 'Bearer ' . $api_key;
         }
 
-        $response = wp_remote_post('https://api.openai.com/v1/chat/completions', [
+        $response = wp_remote_post($base_url . '/chat/completions', [
             'timeout' => (int) ($opts['timeout'] ?? 60),
-            'headers' => [
-                'Authorization' => 'Bearer ' . $api_key,
-                'Content-Type'  => 'application/json',
-            ],
-            'body' => wp_json_encode($payload),
+            'headers' => $headers,
+            'body'    => wp_json_encode($payload),
         ]);
 
         $duration_ms = (int) round((microtime(true) - $started) * 1000);
 
         if (is_wp_error($response)) {
-            Logger::error('client', 'OpenAI HTTP-Fehler', [
+            Logger::error('client', $label . ' HTTP-Fehler', [
                 'model'       => $model,
                 'duration_ms' => $duration_ms,
                 'wp_error'    => $response->get_error_message(),
@@ -110,21 +145,21 @@ class Client {
         $body     = json_decode($raw_body, true);
 
         if ($status >= 400 || !is_array($body) || !isset($body['choices'][0]['message']['content'])) {
-            Logger::error('client', 'OpenAI API-Fehler', [
+            Logger::error('client', $label . ' API-Fehler', [
                 'model'        => $model,
                 'status'       => $status,
                 'duration_ms'  => $duration_ms,
                 'json_error'   => json_last_error_msg(),
                 'body_excerpt' => mb_substr($raw_body, 0, 1000),
             ]);
-            return new \WP_Error('api_error', 'OpenAI API-Fehler (HTTP ' . $status . ')');
+            return new \WP_Error('api_error', $label . ' API-Fehler (HTTP ' . $status . ')');
         }
 
         $content       = (string) $body['choices'][0]['message']['content'];
         $finish_reason = (string) ($body['choices'][0]['finish_reason'] ?? '');
 
         if ($finish_reason === 'length') {
-            Logger::error('client', 'OpenAI Antwort abgeschnitten (max_tokens)', [
+            Logger::error('client', $label . ' Antwort abgeschnitten (max_tokens)', [
                 'model'       => $model,
                 'duration_ms' => $duration_ms,
                 'content_len' => strlen($content),
@@ -133,7 +168,7 @@ class Client {
             return new \WP_Error('truncated', 'Antwort wurde abgeschnitten – bitte max_tokens erhöhen');
         }
 
-        Logger::info('client', 'OpenAI Antwort erhalten', [
+        Logger::info('client', $label . ' Antwort erhalten', [
             'model'         => $model,
             'status'        => $status,
             'duration_ms'   => $duration_ms,

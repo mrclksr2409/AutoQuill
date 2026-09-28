@@ -11,7 +11,7 @@ use AutoQuill\Core\Logger;
  * page asks for it on every visit.
  */
 class ModelCatalog {
-    const PROVIDERS = ['openai', 'claude'];
+    const PROVIDERS = C::AI_PROVIDERS;
 
     /**
      * OpenAI's /v1/models lists everything the key can reach, including
@@ -22,17 +22,29 @@ class ModelCatalog {
     const OPENAI_EXCLUDE = '/(audio|realtime|tts|transcribe|search|image|embedding|instruct|moderation|codex|computer-use|deep-research)/';
 
     /**
+     * Compatible endpoints mix chat models with embedding and image models
+     * (IONOS: BAAI/bge-*, FLUX, Stable Diffusion) that chat/completions rejects.
+     */
+    const COMPAT_EXCLUDE = '/(embed|bge-|flux|stable-diffusion|sdxl|whisper|tts|rerank|moderation|guard)/i';
+
+    /**
      * @return array<int, array{id: string, label: string}>|\WP_Error
      */
-    public static function fetch(string $provider, string $api_key, bool $refresh = false) {
+    public static function fetch(string $provider, string $api_key, bool $refresh = false, string $base_url = '') {
         if (!in_array($provider, self::PROVIDERS, true)) {
             return new \WP_Error('invalid_provider', __('Unbekannter KI-Provider.', 'auto-quill'));
         }
-        if ($api_key === '') {
+        if ($api_key === '' && C::ai_key_required($provider)) {
             return new \WP_Error('no_api_key', __('Kein API-Schlüssel hinterlegt. Bitte zuerst einen Schlüssel eingeben.', 'auto-quill'));
         }
+        if ($base_url === '') {
+            $base_url = C::ai_base_url($provider);
+        }
+        if ($provider === 'custom' && $base_url === '') {
+            return new \WP_Error('no_base_url', __('Bitte zuerst die Basis-URL des Endpunkts eintragen.', 'auto-quill'));
+        }
 
-        $cache_key = self::cache_key($provider, $api_key);
+        $cache_key = self::cache_key($provider, $api_key, $base_url);
         if (!$refresh) {
             $cached = get_transient($cache_key);
             if (is_array($cached) && !empty($cached)) {
@@ -40,9 +52,16 @@ class ModelCatalog {
             }
         }
 
-        $models = $provider === 'claude'
-            ? self::fetch_claude($api_key)
-            : self::fetch_openai($api_key);
+        switch ($provider) {
+            case 'claude':
+                $models = self::fetch_claude($api_key);
+                break;
+            case 'openai':
+                $models = self::fetch_openai($api_key);
+                break;
+            default:
+                $models = self::fetch_compatible($provider, $base_url, $api_key);
+        }
 
         if (is_wp_error($models)) {
             return $models;
@@ -59,17 +78,19 @@ class ModelCatalog {
      * @return array<int, array{id: string, label: string}>
      */
     public static function cached(string $provider): array {
-        $api_key = C::ai_api_key();
-        if ($api_key === '') {
+        $api_key  = C::ai_api_key($provider);
+        $base_url = C::ai_base_url($provider);
+        if (($api_key === '' && C::ai_key_required($provider)) || ($provider === 'custom' && $base_url === '')) {
             return [];
         }
-        $cached = get_transient(self::cache_key($provider, $api_key));
+        $cached = get_transient(self::cache_key($provider, $api_key, $base_url));
         return is_array($cached) ? $cached : [];
     }
 
-    private static function cache_key(string $provider, string $api_key): string {
-        // Hashed: the key itself must never end up in wp_options.
-        return C::MODELS_CACHE_PREFIX . $provider . '_' . substr(md5($api_key), 0, 12);
+    private static function cache_key(string $provider, string $api_key, string $base_url = ''): string {
+        // Hashed: the key itself must never end up in wp_options. The URL
+        // is part of it because a custom endpoint may change under one key.
+        return C::MODELS_CACHE_PREFIX . $provider . '_' . substr(md5($api_key . '|' . $base_url), 0, 12);
     }
 
     /**
@@ -97,6 +118,32 @@ class ModelCatalog {
         usort($rows, static fn($a, $b) => [$b['created'], $a['id']] <=> [$a['created'], $b['id']]);
 
         return array_map(static fn($r) => ['id' => $r['id'], 'label' => $r['id']], $rows);
+    }
+
+    /**
+     * GET {base}/models on an OpenAI-compatible endpoint.
+     *
+     * @return array<int, array{id: string, label: string}>|\WP_Error
+     */
+    private static function fetch_compatible(string $provider, string $base_url, string $api_key) {
+        $headers = $api_key !== '' ? ['Authorization' => 'Bearer ' . $api_key] : [];
+        $body    = self::get_json(rtrim($base_url, '/') . '/models', $headers, C::ai_provider_label($provider));
+
+        if (is_wp_error($body)) {
+            return $body;
+        }
+
+        $out = [];
+        foreach ((array) ($body['data'] ?? []) as $model) {
+            $id = (string) ($model['id'] ?? '');
+            if ($id === '' || preg_match(self::COMPAT_EXCLUDE, $id)) {
+                continue;
+            }
+            $out[$id] = ['id' => $id, 'label' => $id];
+        }
+        ksort($out, SORT_NATURAL | SORT_FLAG_CASE);
+
+        return array_values($out);
     }
 
     /**

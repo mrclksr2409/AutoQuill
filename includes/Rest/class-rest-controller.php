@@ -86,12 +86,16 @@ class RestController {
                 'provider' => [
                     'type'     => 'string',
                     'required' => true,
-                    'enum'     => ['openai', 'claude'],
+                    'enum'     => \AutoQuill\Core\Constants::AI_PROVIDERS,
                 ],
                 'api_key' => [
                     'type'              => 'string',
                     'default'           => '',
                     'sanitize_callback' => 'sanitize_text_field',
+                ],
+                'base_url' => [
+                    'type'    => 'string',
+                    'default' => '',
                 ],
                 'refresh' => [
                     'type'    => 'boolean',
