@@ -292,6 +292,11 @@ stattdessen dem `main`-Branch.
 
 ## Changelog
 
+### [1.7.1] — 2026-10-03
+
+#### Changed
+- Bundled Plugin Update Checker updated to v5.7.
+
 ### [1.7.0] — 2026-09-28
 
 #### Added
