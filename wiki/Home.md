@@ -5,7 +5,7 @@ interessantesten Themen des Tages auswählt und daraus auf Knopfdruck vollständ
 Blog-Beiträge schreibt – inklusive Titel, Social-Media-Auszug, Kategorien, Beitragsbild und
 garantiertem Quellenhinweis.
 
-> Aktuelle Version: **1.7.1** · Voraussetzungen: WordPress 5.9+, PHP 8.0+, ein API-Schlüssel von
+> Aktuelle Version: **1.7.2** · Voraussetzungen: WordPress 5.9+, PHP 8.0+, ein API-Schlüssel von
 > OpenAI, Anthropic (Claude) oder IONOS – oder ein eigener OpenAI-kompatibler Endpunkt
 
 ---
@@ -50,7 +50,7 @@ Mehr dazu unter **[Arbeitsablauf](Arbeitsablauf)**.
 | [REST-API](REST-API) | Alle Endpunkte mit Parametern |
 | [Hooks und Filter](Hooks-und-Filter) | Erweitern ohne Code-Änderung |
 | [Datenbank](Datenbank) | Tabellen, Optionen, Post-Meta |
-| [Updates](Updates) | GitHub-Releases, Beta-Modus |
+| [Updates](Updates) | Updates vom main-Branch, Beta-Modus |
 | [Fehlerbehebung](Fehlerbehebung) | Typische Probleme und Lösungen |
 | [FAQ](FAQ) | Häufige Fragen |
 | [Entwicklung](Entwicklung) | Architektur, Code-Struktur, Mitarbeit |
@@ -69,4 +69,4 @@ Mehr dazu unter **[Arbeitsablauf](Arbeitsablauf)**.
 - **Frei wählbare Uhrzeiten** für Abruf, Themenauswahl, Tagesbericht und Backup
 - **Tagesbericht per E-Mail** – nur wenn es etwas zu berichten gibt
 - **Backup** – tägliche Sicherung von Einstellungen und Quellen, mit Wiederherstellen und Import
-- **Automatische Updates** über GitHub-Releases
+- **Automatische Updates** direkt vom GitHub-Branch `main`

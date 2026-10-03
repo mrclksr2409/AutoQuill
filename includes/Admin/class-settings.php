@@ -1148,10 +1148,10 @@ class Settings {
                                            name="<?php echo esc_attr(C::OPTION_KEY); ?>[beta_mode]"
                                            value="1"
                                            <?php checked(!empty($settings['beta_mode'])); ?>>
-                                    <?php esc_html_e('Beta-Updates aktivieren (folgt dem main-Branch)', 'auto-quill'); ?>
+                                    <?php esc_html_e('Beta-Updates aktivieren (folgt dem beta-Branch)', 'auto-quill'); ?>
                                 </label>
                                 <p class="description">
-                                    <?php esc_html_e('Bei aktiviertem Beta-Modus prüft AutoQuill den main-Branch auf neue Commits und installiert diese als Updates. Ist der Beta-Modus deaktiviert, werden ausschließlich offizielle Releases als Updates angeboten.', 'auto-quill'); ?>
+                                    <?php esc_html_e('Bei aktiviertem Beta-Modus bezieht AutoQuill Updates vom beta-Branch und erhält Neuerungen dadurch früher – nur für Testseiten empfohlen. Ist der Beta-Modus deaktiviert, kommen Updates vom stabilen main-Branch.', 'auto-quill'); ?>
                                 </p>
                                 <p class="description">
                                     <?php

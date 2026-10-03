@@ -118,7 +118,7 @@ Ein intelligentes WordPress-Plugin, das automatisch RSS-Feeds überwacht, tägli
 | **Automatische Sicherung** | Backup | Einstellungen und RSS-Quellen täglich sichern | An |
 | **Uhrzeit** | Backup | Wann die Sicherung läuft (Ortszeit) | 03:00 |
 | **Aufbewahren** | Backup | Anzahl aufgehobener Sicherungen (1–100), ältere werden gelöscht | 7 |
-| **Beta-Modus** | System | Updates vom `main`-Branch statt nur aus Releases | Aus |
+| **Beta-Modus** | System | Updates vom `beta`-Branch statt vom stabilen `main`-Branch | Aus |
 | **Debug-Logging** | System | Info-/Debug-Einträge mitschreiben; darunter das Status-Panel | Aus |
 
 #### Tagesbericht
@@ -286,11 +286,19 @@ define('ALTERNATE_WP_CRON', true);
 ## Updates
 
 AutoQuill nutzt den [Plugin Update Checker](https://github.com/YahnisElsts/plugin-update-checker)
-und bezieht Updates aus GitHub Releases. WordPress prüft automatisch und zeigt neue Versionen unter
+und bezieht Updates direkt vom `main`-Branch (Version aus dem Plugin-Header); GitHub-Releases und
+Tags werden ignoriert. WordPress prüft automatisch und zeigt neue Versionen unter
 **Dashboard → Aktualisierungen**. Mit aktivem Beta-Modus (Einstellungen → System) folgt das Plugin
-stattdessen dem `main`-Branch.
+stattdessen dem `beta`-Branch.
 
 ## Changelog
+
+### [1.7.2] — 2026-10-03
+
+#### Changed
+- Updates come straight from the `main` branch; GitHub releases and tags are ignored.
+- **Beta-Modus** now follows the `beta` branch instead of `main`. Toggling it resets the cached
+  update info so the new branch is checked right away.
 
 ### [1.7.1] — 2026-10-03
 

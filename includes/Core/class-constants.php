@@ -114,6 +114,7 @@ class Constants {
 
     const UPDATE_REPO_URL    = 'https://github.com/mrclksr2409/autoquill/';
     const UPDATE_MAIN_BRANCH = 'main';
+    const UPDATE_BETA_BRANCH = 'beta';
     const UPDATE_SLUG        = 'auto-quill';
 
     /**

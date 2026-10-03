@@ -25,7 +25,7 @@ auto-quill/
 │   │   ├── class-notifier.php         # Tagesbericht per E-Mail
 │   │   ├── class-scheduler.php         # Fetch/Selektion zu einstellbaren Uhrzeiten
 │   │   ├── class-backup.php            # Sicherungen: Anlegen, Aufbewahrung, Planung, Export
-│   │   └── class-updater.php           # Plugin Update Checker (GitHub Releases / main)
+│   │   └── class-updater.php           # Plugin Update Checker (main / beta branch)
 │   │
 │   ├── Database/
 │   │   ├── class-schema.php            # dbDelta + Migrations-Verifikation

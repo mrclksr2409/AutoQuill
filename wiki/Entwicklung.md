@@ -61,8 +61,9 @@ dieser Konvention folgen, sonst werden sie stillschweigend nicht geladen.
 
 1. Version in `auto-quill.php` (Header **und** `AUTO_QUILL_VERSION`) und `composer.json` erhöhen
 2. Changelog im README ergänzen
-3. Auf `main` mergen, Tag `vX.Y.Z` setzen und ein GitHub-Release erstellen – Installationen erhalten
-   das Update automatisch, Beta-Installationen schon ab dem Merge
+3. Auf `beta` pushen – Beta-Installationen erhalten das Update sofort
+4. `beta` nach `main` übernehmen – alle Installationen erhalten das Update automatisch
+   (ein GitHub-Release ist dafür nicht nötig)
 
 ## Dieses Wiki bearbeiten
 

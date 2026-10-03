@@ -177,7 +177,7 @@ Darunter: Liste der Sicherungen mit *Wiederherstellen*, *Herunterladen*, *Lösch
 
 | Einstellung | Beschreibung | Standard |
 |---|---|---|
-| **Beta-Modus** | Updates vom `main`-Branch statt nur aus offiziellen Releases – siehe [Updates](Updates) | aus |
+| **Beta-Modus** | Updates vom `beta`-Branch statt vom stabilen `main`-Branch – siehe [Updates](Updates) | aus |
 | **Debug-Logging** | Zeichnet zusätzlich Info- und Debug-Einträge inkl. gekürzter API-Payloads auf | aus |
 
 Darunter das **Status-Panel**: DB-Version, Tabellen und Zeilenzahlen, die gespeicherten

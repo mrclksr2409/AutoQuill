@@ -5,7 +5,8 @@ direkt aus dem GitHub-Repository – wie ein Plugin aus dem offiziellen Verzeich
 
 ## Stabile Updates (Standard)
 
-WordPress prüft regelmäßig auf neue **GitHub-Releases**. Gibt es eine neuere Version, erscheint sie
+WordPress prüft regelmäßig den **`main`-Branch**: Steht dort eine höhere Versionsnummer im
+Plugin-Header, erscheint sie
 unter **Dashboard → Aktualisierungen** und in der Plugin-Liste und lässt sich mit einem Klick
 installieren (oder automatisch, wenn Auto-Updates für das Plugin aktiviert sind).
 
@@ -13,12 +14,12 @@ installieren (oder automatisch, wenn Auto-Updates für das Plugin aktiviert sind
 
 **Einstellungen → System → Beta-Modus**
 
-Statt nur offizieller Releases folgt das Plugin dem **`main`-Branch**: Jeder neue Commit dort wird
-als Update angeboten. Sinnvoll für Testseiten, die Neuerungen früh sehen wollen – **nicht** für
-Produktivseiten.
+Statt `main` folgt das Plugin dem **`beta`-Branch**, auf dem entwickelt wird: Jede höhere
+Versionsnummer dort wird als Update angeboten. Sinnvoll für Testseiten, die Neuerungen früh sehen
+wollen – **nicht** für Produktivseiten.
 
-Zurück zu stabil: Beta-Modus ausschalten. Das nächste Release mit höherer Versionsnummer wird dann
-wieder normal angeboten.
+Zurück zu stabil: Beta-Modus ausschalten. Ein Downgrade findet nicht statt – die Seite bleibt auf
+ihrer Beta-Version, bis auf `main` eine höhere Versionsnummer erscheint.
 
 ## Vor einem Update
 
@@ -30,8 +31,7 @@ wieder normal angeboten.
 
 ## Änderungen nachlesen
 
-Der **Changelog** steht im [README](https://github.com/mrclksr2409/autoquill#changelog), die
-Versionen unter [Releases](https://github.com/mrclksr2409/autoquill/releases).
+Der **Changelog** steht im [README](https://github.com/mrclksr2409/autoquill#changelog).
 
 ## Update wird nicht angezeigt
 
