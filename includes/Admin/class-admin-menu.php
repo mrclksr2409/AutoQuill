@@ -33,6 +33,18 @@ class AdminMenu {
     }
 
     public static function register(): void {
+        // Shared WP-Backend UI look on every AutoQuill screen. The generate
+        // view is part of MENU_SLUG (aq_view=generate), so it is covered too.
+        wpb_admin_ui_register([
+            'pages' => [
+                C::MENU_SLUG,
+                C::INTERVIEW_PAGE_SLUG,
+                C::SOURCES_PAGE_SLUG,
+                C::SETTINGS_PAGE_SLUG,
+                C::LOGS_PAGE_SLUG,
+            ],
+        ]);
+
         $hook = add_menu_page(
             __('AutoQuill', 'auto-quill'),
             __('AutoQuill', 'auto-quill'),
@@ -88,17 +100,23 @@ class AdminMenu {
             return;
         }
 
+        // WP-Backend UI enqueues itself on registered screens; calling it
+        // here as well is a no-op then, and guarantees the 'wpb-admin-ui'
+        // handles exist before they are used as dependencies below.
+        \WPB_Admin_UI::enqueue_assets();
+
         wp_enqueue_style(
             'auto-quill-admin',
             AUTO_QUILL_PLUGIN_URL . 'assets/admin.css',
-            [],
+            [\WPB_Admin_UI::HANDLE],
             AUTO_QUILL_VERSION
         );
 
         wp_enqueue_script(
             'auto-quill-admin',
             AUTO_QUILL_PLUGIN_URL . 'assets/admin.js',
-            ['jquery'],
+            // wpbAdminUI.toast() backs showAlert().
+            ['jquery', \WPB_Admin_UI::HANDLE],
             AUTO_QUILL_VERSION,
             true
         );
@@ -176,8 +194,9 @@ class AdminMenu {
         wp_enqueue_script(
             'auto-quill-post-editor',
             AUTO_QUILL_PLUGIN_URL . 'assets/post-editor.js',
-            // admin.js declared as a dependency, so window.AutoQuill exists.
-            ['jquery', 'auto-quill-admin'],
+            // admin.js declared as a dependency, so window.AutoQuill exists;
+            // wpbAdminUI opens and closes the image picker dialog.
+            ['jquery', 'auto-quill-admin', \WPB_Admin_UI::HANDLE],
             AUTO_QUILL_VERSION,
             true
         );

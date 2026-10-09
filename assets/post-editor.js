@@ -80,7 +80,8 @@
             $(document).on('click', '#auto-quill-image-prev', this.prevImagePage.bind(this));
             $(document).on('click', '#auto-quill-image-next', this.nextImagePage.bind(this));
             $(document).on('click', '.auto-quill-image-card', this.onImageCardClick.bind(this));
-            $(document).on('keydown', this.onKeydown.bind(this));
+            // Esc and a backdrop click are handled by the native <dialog> and
+            // WP-Backend UI.
         },
 
         guardUnload: function() {
@@ -274,12 +275,6 @@
             }
         },
 
-        onKeydown: function(e) {
-            if (e.key === 'Escape' && !$('#auto-quill-image-modal').prop('hidden')) {
-                this.closeImagePicker(e);
-            }
-        },
-
         /** Title, excerpt and categories as read-only text; edited later in WordPress. */
         renderMetaFields: function(title, excerpt, availableCategories, selectedIds) {
             const selected = new Set((selectedIds || []).map((id) => parseInt(id, 10)));
@@ -320,8 +315,7 @@
 
         openImagePicker: function(e) {
             if (e && e.preventDefault) { e.preventDefault(); }
-            const $modal = $('#auto-quill-image-modal');
-            $modal.prop('hidden', false).attr('aria-hidden', 'false');
+            this.toggleModal(true);
 
             $('#auto-quill-image-grid').empty();
             $('#auto-quill-image-pagination').prop('hidden', true);
@@ -361,7 +355,30 @@
 
         closeImagePicker: function(e) {
             if (e && e.preventDefault) { e.preventDefault(); }
-            $('#auto-quill-image-modal').prop('hidden', true).attr('aria-hidden', 'true');
+            this.toggleModal(false);
+        },
+
+        /** The picker is a <dialog class="wpb-modal">, opened via WP-Backend UI. */
+        toggleModal: function(open) {
+            const id = 'auto-quill-image-modal';
+            const ui = window.wpbAdminUI;
+            if (ui) {
+                if (open) {
+                    ui.openModal(id);
+                } else {
+                    ui.closeModal(id);
+                }
+                return;
+            }
+            const dialog = document.getElementById(id);
+            if (!dialog || typeof dialog.showModal !== 'function') {
+                return;
+            }
+            if (open && !dialog.open) {
+                dialog.showModal();
+            } else if (!open && dialog.open) {
+                dialog.close();
+            }
         },
 
         onImageSearchSubmit: function(e) {

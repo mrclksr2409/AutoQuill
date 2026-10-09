@@ -72,14 +72,16 @@ auto-quill/
 │       └── class-notices.php
 │
 ├── assets/
-│   ├── admin.css
+│   ├── admin.css                       # nur AutoQuill-Layout, Look kommt aus WP-Backend UI
 │   ├── admin.js                        # Übersicht: AutoQuill, DashboardTabs, SettingsTabs
 │   ├── post-editor.js                  # Post-Editor (Vorschau, Meta-Felder, Bild, Speichern), geteilt
-│   ├── generate.js                     # nur auf der Generierungs-Seite: Generate, SourceTabs
+│   ├── generate.js                     # nur auf der Generierungs-Seite: Generate
 │   ├── interview.js                    # nur auf der Interview-Seite: Liste, Chat
 │   └── auto-quill-debug.js
 │
-└── lib/plugin-update-checker/          # vendored, YahnisElsts
+└── lib/
+    ├── plugin-update-checker/          # vendored, YahnisElsts
+    └── wp-backend-ui/                  # vendored, gemeinsames Admin-Design (nicht ändern)
 ```
 
 **Autoloader:** `includes/class-autoloader.php` bildet `AutoQuill\Sub\ClassName` auf
@@ -418,6 +420,16 @@ in handgebauten DOM-Code im Browser.
 `AdminMenu::enqueue_assets()` lädt CSS/JS auf allen Plugin-Seiten und legt zwei Objekte an:
 `autoQuill` (`apiUrl`, `nonce`, `restNonce`, `publishButtonLabel`, `i18n`) und `autoQuillDebug`.
 
+**WP-Backend UI** (`lib/wp-backend-ui/`, wird in `auto-quill.php` auf oberster Ebene geladen) liefert
+den Look aller Admin-Seiten. `AdminMenu::register()` meldet die fünf Seiten-Slugs per
+`wpb_admin_ui_register()` an; die Generierungs-Ansicht hängt an `MENU_SLUG` und ist damit abgedeckt.
+`admin.css` hängt vom Style-Handle `wpb-admin-ui` ab, `admin.js` und `post-editor.js` vom
+gleichnamigen Script-Handle (`wpbAdminUI.toast()` für `showAlert`, `openModal()`/`closeModal()` für
+den Bild-Dialog). Seitenkopf über `WPB_Admin_UI::header()`, Flächen als `.wpb-card`, Status als
+`WPB_Admin_UI::badge()`. In `admin.css` gehört nur Layout, das es nur in AutoQuill gibt; Farben
+ausschließlich als `--wpb-*`-Token. Die Bibliothek selbst wird nicht verändert, nur als Ganzes
+ersetzt.
+
 `admin.js` (alle Plugin-Seiten) enthält:
 - `AutoQuill` — Feed-Liste, Recrawl/Reselect, `showAlert`, `errorMessage`
 - `DashboardTabs` — `.auto-quill-dashboard-tabs` / `.auto-quill-dash-panel`, wertet `#dash-<tab>` aus
@@ -430,9 +442,9 @@ rufen `PostEditor.init({i18n, backUrl})` und nach der Generierung `PostEditor.fi
 publishContext)`; `publishContext` landet zusätzlich im Publish-Payload (`topic_id`/`article_id`
 bzw. `interview_id`). Buttons mit `data-aq-busy-disable` sind gesperrt, solange das Overlay läuft.
 
-`generate.js` (nur auf der Generierungs-Seite) enthält:
-- `Generate` — Auto-Start und Aufruf von `/generate-post`
-- `SourceTabs` — `.auto-quill-source-tabs` / `.auto-quill-source-panel`
+`generate.js` (nur auf der Generierungs-Seite) enthält `Generate` — Auto-Start und Aufruf von
+`/generate-post`. Die Quelltext-Tabs (`#source-ai` / `#source-raw`) sind reine Client-Tabs und
+laufen über `data-wpb-tabs` aus WP-Backend UI.
 
 `interview.js` (nur auf der Interview-Seite) enthält `InterviewList` (Start-Formular, Löschen) und
 `Chat` (Verlauf, Antworten, Überspringen, andere Frage, Wiederholen, Beitrag schreiben). KI-Texte
@@ -442,7 +454,7 @@ Geteilt wird über eine kleine, explizite Oberfläche, die `admin.js` setzt:
 `window.AutoQuill = { t, showAlert, errorMessage, apiUrl, restNonce }`; `post-editor.js` ergänzt
 `window.AutoQuill.PostEditor`.
 
-**Die drei Tab-Objekte dürfen keine Klassennamen teilen.** `SettingsTabs.activate()` versteckt
+**Die Tab-Objekte dürfen keine Klassennamen teilen.** `SettingsTabs.activate()` versteckt
 `.auto-quill-tab-panel` global, worauf die Einstellungsseite angewiesen ist (ihr StatusPanel liegt
 außerhalb des `<form>`). Würden sich zwei Seiten dieselbe Klasse teilen, versteckten sie sich
 gegenseitig — deshalb hat jedes Widget ein eigenes Klassenpaar.

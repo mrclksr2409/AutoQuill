@@ -3,7 +3,7 @@
  * Plugin Name: AutoQuill
  * Plugin URI: https://github.com/AutoQuill
  * Description: Sammelt RSS-Feed Artikel, selektiert täglich die Top-Themen via KI und erstellt automatisch Blog-Posts
- * Version: 1.7.2
+ * Version: 1.8.0
  * Author: AutoQuill
  * Author URI: https://example.com
  * License: GPL v2 or later
@@ -18,12 +18,16 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('AUTO_QUILL_VERSION', '1.7.2');
+define('AUTO_QUILL_VERSION', '1.8.0');
 define('AUTO_QUILL_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('AUTO_QUILL_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('AUTO_QUILL_INC_DIR', AUTO_QUILL_PLUGIN_DIR . 'includes/');
 
 require_once AUTO_QUILL_INC_DIR . 'class-autoloader.php';
+
+// Shared admin design system. Loaded at top level: the newest bundled copy
+// across all plugins wins on plugins_loaded.
+require_once AUTO_QUILL_PLUGIN_DIR . 'lib/wp-backend-ui/wp-backend-ui.php';
 
 register_activation_hook(__FILE__,   ['\AutoQuill\Core\Activator',   'activate']);
 register_deactivation_hook(__FILE__, ['\AutoQuill\Core\Deactivator', 'deactivate']);

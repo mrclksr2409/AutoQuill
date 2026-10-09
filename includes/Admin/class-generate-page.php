@@ -120,15 +120,25 @@ class GeneratePage {
     private static function render_error(string $message, string $back_url): void {
         ?>
         <div class="wrap auto-quill-wrap">
-            <h1><?php esc_html_e('Blog-Post erstellen', 'auto-quill'); ?></h1>
+            <?php self::render_header($back_url); ?>
             <div class="notice notice-error"><p><?php echo esc_html($message); ?></p></div>
-            <p>
-                <a href="<?php echo esc_url($back_url); ?>">
-                    &larr; <?php esc_html_e('Zurück zur Übersicht', 'auto-quill'); ?>
-                </a>
-            </p>
         </div>
         <?php
+    }
+
+    private static function render_header(string $back_url): void {
+        \WPB_Admin_UI::header([
+            'title'    => __('Blog-Post erstellen', 'auto-quill'),
+            'subtitle' => __('Beitrag aus einem Feed-Eintrag oder Top-Thema generieren', 'auto-quill'),
+            'icon'     => 'dashicons-rss',
+            'version'  => AUTO_QUILL_VERSION,
+            'actions'  => [
+                [
+                    'label' => __('Zurück zur Übersicht', 'auto-quill'),
+                    'url'   => $back_url,
+                ],
+            ],
+        ]);
     }
 
     /**
@@ -143,82 +153,87 @@ class GeneratePage {
             : (string) ($preview['topic']['title'] ?? '');
         ?>
         <div class="wrap auto-quill-wrap">
-            <p class="auto-quill-back-link">
-                <a href="<?php echo esc_url($back_url); ?>">
-                    &larr; <?php esc_html_e('Zurück zur Übersicht', 'auto-quill'); ?>
-                </a>
-            </p>
-
-            <h1><?php esc_html_e('Blog-Post erstellen', 'auto-quill'); ?></h1>
+            <?php self::render_header($back_url); ?>
 
             <?php Notices::flush(); ?>
 
-            <div class="auto-quill-container">
-                <div class="auto-quill-panel auto-quill-source-column">
-                    <h2><?php esc_html_e('Originaltext', 'auto-quill'); ?></h2>
-
-                    <?php self::render_article_header($article, $headline); ?>
-
-                    <h2 class="nav-tab-wrapper auto-quill-source-tabs">
-                        <a href="#source-ai" class="nav-tab nav-tab-active" data-tab="ai">
-                            <?php esc_html_e('Quelltext für die KI', 'auto-quill'); ?>
-                        </a>
-                        <a href="#source-raw" class="nav-tab" data-tab="raw">
-                            <?php esc_html_e('Roh-HTML', 'auto-quill'); ?>
-                        </a>
-                    </h2>
-
-                    <div class="auto-quill-source-panel" data-tab="ai">
-                        <p class="description">
-                            <?php esc_html_e('Exakt der Text, den das Modell erhalten hat. Was hier nicht steht, darf im Beitrag nicht auftauchen.', 'auto-quill'); ?>
-                            <?php if ($preview['truncated']): ?>
-                                <strong><?php
-                                    printf(
-                                        /* translators: %d: character limit */
-                                        esc_html__('Der Artikel wurde auf %d Zeichen gekürzt.', 'auto-quill'),
-                                        (int) Writer::SOURCE_CONTENT_LIMIT
-                                    );
-                                ?></strong>
-                            <?php endif; ?>
-                        </p>
-                        <pre class="auto-quill-source-text"><?php echo esc_html($preview['ai_source']); ?></pre>
+            <div class="wpb-grid wpb-grid--2">
+                <div class="wpb-card auto-quill-source-column">
+                    <div class="wpb-card__header">
+                        <h2 class="wpb-card__title"><?php esc_html_e('Originaltext', 'auto-quill'); ?></h2>
                     </div>
+                    <div class="wpb-card__body">
+                        <?php self::render_article_header($article, $headline); ?>
 
-                    <div class="auto-quill-source-panel" data-tab="raw" style="display:none;">
-                        <?php if (trim($preview['raw_html']) === ''): ?>
-                            <div class="notice notice-warning inline">
-                                <p><?php esc_html_e('Für diesen Eintrag wurde kein Seiteninhalt gespeichert — die KI hat nur Titel und RSS-Beschreibung erhalten. Das erklärt einen dünnen oder ungenauen Beitrag.', 'auto-quill'); ?></p>
-                            </div>
-                        <?php else: ?>
+                        <?php // Client-side tabs are handled by WP-Backend UI (data-wpb-tabs). ?>
+                        <nav class="nav-tab-wrapper auto-quill-source-tabs" data-wpb-tabs>
+                            <a href="#source-ai" class="nav-tab nav-tab-active" data-tab="ai">
+                                <?php esc_html_e('Quelltext für die KI', 'auto-quill'); ?>
+                            </a>
+                            <a href="#source-raw" class="nav-tab" data-tab="raw">
+                                <?php esc_html_e('Roh-HTML', 'auto-quill'); ?>
+                            </a>
+                        </nav>
+
+                        <div id="source-ai" class="auto-quill-source-panel wpb-tab-panel" data-tab="ai">
                             <p class="description">
-                                <?php esc_html_e('Der gespeicherte Seitenquelltext, unverändert und als Text dargestellt. Zum Ansehen der gerenderten Seite den Link oben verwenden.', 'auto-quill'); ?>
+                                <?php esc_html_e('Exakt der Text, den das Modell erhalten hat. Was hier nicht steht, darf im Beitrag nicht auftauchen.', 'auto-quill'); ?>
+                                <?php if ($preview['truncated']): ?>
+                                    <strong><?php
+                                        printf(
+                                            /* translators: %d: character limit */
+                                            esc_html__('Der Artikel wurde auf %d Zeichen gekürzt.', 'auto-quill'),
+                                            (int) Writer::SOURCE_CONTENT_LIMIT
+                                        );
+                                    ?></strong>
+                                <?php endif; ?>
                             </p>
-                            <pre class="auto-quill-source-text"><?php echo esc_html($preview['raw_html']); ?></pre>
-                        <?php endif; ?>
+                            <pre class="auto-quill-source-text wpb-code"><?php echo esc_html($preview['ai_source']); ?></pre>
+                        </div>
+
+                        <div id="source-raw" class="auto-quill-source-panel wpb-tab-panel" data-tab="raw" hidden>
+                            <?php if (trim($preview['raw_html']) === ''): ?>
+                                <?php
+                                // alert() escapes its output.
+                                echo \WPB_Admin_UI::alert(
+                                    __('Für diesen Eintrag wurde kein Seiteninhalt gespeichert — die KI hat nur Titel und RSS-Beschreibung erhalten. Das erklärt einen dünnen oder ungenauen Beitrag.', 'auto-quill'),
+                                    'warning'
+                                );
+                                ?>
+                            <?php else: ?>
+                                <p class="description">
+                                    <?php esc_html_e('Der gespeicherte Seitenquelltext, unverändert und als Text dargestellt. Zum Ansehen der gerenderten Seite den Link oben verwenden.', 'auto-quill'); ?>
+                                </p>
+                                <pre class="auto-quill-source-text wpb-code"><?php echo esc_html($preview['raw_html']); ?></pre>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
 
-                <div class="auto-quill-panel auto-quill-result-column" id="auto-quill-result-column">
-                    <h2><?php esc_html_e('Generierter Beitrag', 'auto-quill'); ?></h2>
+                <div class="wpb-card auto-quill-result-column" id="auto-quill-result-column">
+                    <div class="wpb-card__header">
+                        <h2 class="wpb-card__title"><?php esc_html_e('Generierter Beitrag', 'auto-quill'); ?></h2>
+                    </div>
+                    <div class="wpb-card__body">
+                        <p class="auto-quill-generate-actions">
+                            <button type="button" class="button button-primary" id="auto-quill-generate-btn" data-aq-busy-disable>
+                                <?php
+                                echo $autostart
+                                    ? esc_html__('Neu generieren', 'auto-quill')
+                                    : esc_html__('Jetzt generieren', 'auto-quill');
+                                ?>
+                            </button>
+                        </p>
 
-                    <p class="auto-quill-generate-actions">
-                        <button type="button" class="button button-primary" id="auto-quill-generate-btn" data-aq-busy-disable>
-                            <?php
-                            echo $autostart
-                                ? esc_html__('Neu generieren', 'auto-quill')
-                                : esc_html__('Jetzt generieren', 'auto-quill');
-                            ?>
-                        </button>
-                    </p>
-
-                    <?php
-                    self::render_post_editor(
-                        $publish_label,
-                        $autostart
-                            ? __('Der Beitrag wird gleich generiert…', 'auto-quill')
-                            : __('Auf „Jetzt generieren" klicken, um den Beitrag zu erstellen.', 'auto-quill')
-                    );
-                    ?>
+                        <?php
+                        self::render_post_editor(
+                            $publish_label,
+                            $autostart
+                                ? __('Der Beitrag wird gleich generiert…', 'auto-quill')
+                                : __('Auf „Jetzt generieren" klicken, um den Beitrag zu erstellen.', 'auto-quill')
+                        );
+                        ?>
+                    </div>
                 </div>
             </div>
 
@@ -237,15 +252,15 @@ class GeneratePage {
     public static function render_post_editor(string $publish_label, string $placeholder): void {
         ?>
         <div class="auto-quill-result-body">
-            <div id="auto-quill-busy" class="auto-quill-busy" hidden>
-                <span class="auto-quill-spinner" aria-hidden="true"></span>
+            <div id="auto-quill-busy" class="wpb-busy" hidden>
+                <span class="wpb-spinner wpb-spinner--lg" aria-hidden="true"></span>
                 <p class="auto-quill-busy-text" role="status" aria-live="polite">
                     <span id="auto-quill-busy-label"></span>
                     <span id="auto-quill-busy-elapsed" class="auto-quill-busy-elapsed"></span>
                 </p>
             </div>
 
-            <div id="auto-quill-generate-error" class="auto-quill-generate-error" hidden></div>
+            <div id="auto-quill-generate-error" class="auto-quill-generate-error wpb-alert wpb-alert--error" role="alert" hidden></div>
 
             <div id="auto-quill-meta-fields" class="auto-quill-meta-fields">
                 <div class="auto-quill-field">
@@ -254,7 +269,7 @@ class GeneratePage {
                 </div>
                 <div class="auto-quill-field auto-quill-field--body">
                     <strong><?php esc_html_e('Text', 'auto-quill'); ?></strong>
-                    <div id="post-preview" class="post-preview">
+                    <div id="post-preview" class="post-preview wpb-card wpb-card--muted">
                         <p><?php echo esc_html($placeholder); ?></p>
                     </div>
                 </div>
@@ -278,7 +293,7 @@ class GeneratePage {
                         <button type="button" class="button" id="auto-quill-pick-image-btn">
                             <?php esc_html_e('Bild auswählen', 'auto-quill'); ?>
                         </button>
-                        <button type="button" class="button-link" id="auto-quill-clear-image-btn" hidden>
+                        <button type="button" class="button-link wpb-link-danger" id="auto-quill-clear-image-btn" hidden>
                             <?php esc_html_e('Bild entfernen', 'auto-quill'); ?>
                         </button>
                     </p>
@@ -289,7 +304,7 @@ class GeneratePage {
                 <?php echo esc_html($publish_label); ?>
             </button>
 
-            <div id="auto-quill-generate-result" class="auto-quill-generate-result" hidden></div>
+            <div id="auto-quill-generate-result" class="auto-quill-generate-result wpb-alert wpb-alert--success" role="status" hidden></div>
         </div>
         <?php
     }
@@ -297,43 +312,41 @@ class GeneratePage {
     /** Pixabay picker used by the post editor. */
     public static function render_image_modal(): void {
         ?>
-        <div id="auto-quill-image-modal" class="auto-quill-modal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="auto-quill-image-modal-title">
-            <div class="auto-quill-modal-overlay" data-modal-close></div>
-            <div class="auto-quill-modal-content">
-                <div class="auto-quill-modal-header">
-                    <h2 id="auto-quill-image-modal-title"><?php esc_html_e('Beitragsbild auswählen', 'auto-quill'); ?></h2>
-                    <button type="button" class="auto-quill-modal-close" data-modal-close aria-label="<?php esc_attr_e('Schließen', 'auto-quill'); ?>">&times;</button>
-                </div>
-                <form class="auto-quill-modal-search" id="auto-quill-image-search-form">
-                    <input type="text" id="auto-quill-image-query"
-                           placeholder="<?php esc_attr_e('Suchbegriff…', 'auto-quill'); ?>"
-                           class="regular-text" autocomplete="off">
-                    <button type="submit" class="button button-primary">
-                        <?php esc_html_e('Suchen', 'auto-quill'); ?>
-                    </button>
-                </form>
-                <div class="auto-quill-modal-body">
-                    <div id="auto-quill-image-status" class="auto-quill-image-status" hidden></div>
-                    <div id="auto-quill-image-grid" class="auto-quill-image-grid"></div>
-                    <div id="auto-quill-image-pagination" class="auto-quill-image-pagination" hidden>
-                        <button type="button" class="button" id="auto-quill-image-prev">&laquo; <?php esc_html_e('Zurück', 'auto-quill'); ?></button>
-                        <span id="auto-quill-image-page-info"></span>
-                        <button type="button" class="button" id="auto-quill-image-next"><?php esc_html_e('Weiter', 'auto-quill'); ?> &raquo;</button>
-                    </div>
-                </div>
-                <div class="auto-quill-modal-footer">
-                    <small>
-                        <?php
-                        printf(
-                            /* translators: %s: link to Pixabay */
-                            esc_html__('Bilder von %s — Pixabay Content License', 'auto-quill'),
-                            '<a href="https://pixabay.com/" target="_blank" rel="noopener noreferrer">Pixabay</a>'
-                        );
-                        ?>
-                    </small>
+        <?php // Native <dialog>: Esc and a backdrop click close it (WP-Backend UI). ?>
+        <dialog id="auto-quill-image-modal" class="wpb-modal wpb-modal--wide" aria-labelledby="auto-quill-image-modal-title">
+            <div class="wpb-modal__header">
+                <h2 class="wpb-modal__title" id="auto-quill-image-modal-title"><?php esc_html_e('Beitragsbild auswählen', 'auto-quill'); ?></h2>
+                <button type="button" class="wpb-modal__close" data-modal-close aria-label="<?php esc_attr_e('Schließen', 'auto-quill'); ?>"><span class="dashicons dashicons-no-alt" aria-hidden="true"></span></button>
+            </div>
+            <form class="auto-quill-modal-search" id="auto-quill-image-search-form">
+                <input type="text" id="auto-quill-image-query"
+                       placeholder="<?php esc_attr_e('Suchbegriff…', 'auto-quill'); ?>"
+                       class="regular-text" autocomplete="off">
+                <button type="submit" class="button button-primary">
+                    <?php esc_html_e('Suchen', 'auto-quill'); ?>
+                </button>
+            </form>
+            <div class="wpb-modal__body">
+                <div id="auto-quill-image-status" class="auto-quill-image-status wpb-muted" hidden></div>
+                <div id="auto-quill-image-grid" class="auto-quill-image-grid"></div>
+                <div id="auto-quill-image-pagination" class="auto-quill-image-pagination" hidden>
+                    <button type="button" class="button" id="auto-quill-image-prev">&laquo; <?php esc_html_e('Zurück', 'auto-quill'); ?></button>
+                    <span id="auto-quill-image-page-info"></span>
+                    <button type="button" class="button" id="auto-quill-image-next"><?php esc_html_e('Weiter', 'auto-quill'); ?> &raquo;</button>
                 </div>
             </div>
-        </div>
+            <div class="wpb-modal__footer wpb-muted">
+                <small>
+                    <?php
+                    printf(
+                        /* translators: %s: link to Pixabay */
+                        esc_html__('Bilder von %s — Pixabay Content License', 'auto-quill'),
+                        '<a href="https://pixabay.com/" target="_blank" rel="noopener noreferrer">Pixabay</a>'
+                    );
+                    ?>
+                </small>
+            </div>
+        </dialog>
         <?php
     }
 
@@ -366,8 +379,8 @@ class GeneratePage {
         }
         ?>
         <div class="auto-quill-source-header">
-            <h3><?php echo esc_html($headline); ?></h3>
-            <p class="auto-quill-source-meta">
+            <h3 class="wpb-card__title"><?php echo esc_html($headline); ?></h3>
+            <p class="auto-quill-source-meta wpb-muted wpb-small">
                 <?php if ($feed_name !== ''): ?>
                     <span><?php echo esc_html($feed_name); ?></span>
                 <?php endif; ?>
@@ -381,9 +394,13 @@ class GeneratePage {
                 <?php endif; ?>
             </p>
             <?php if (!$article): ?>
-                <div class="notice notice-warning inline">
-                    <p><?php esc_html_e('Zu diesem Thema konnte kein Feed-Eintrag zugeordnet werden. Die KI arbeitet nur mit Titel und Zusammenfassung.', 'auto-quill'); ?></p>
-                </div>
+                <?php
+                // alert() escapes its output.
+                echo \WPB_Admin_UI::alert(
+                    __('Zu diesem Thema konnte kein Feed-Eintrag zugeordnet werden. Die KI arbeitet nur mit Titel und Zusammenfassung.', 'auto-quill'),
+                    'warning'
+                );
+                ?>
             <?php endif; ?>
         </div>
         <?php

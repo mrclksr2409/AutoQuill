@@ -28,98 +28,104 @@ class StatusPanel {
         $notify_on   = Notifier::is_enabled();
         $recipients  = $notify_on ? Notifier::recipients() : [];
         ?>
-        <h2 style="margin-top:2em;"><?php esc_html_e('Status', 'auto-quill'); ?></h2>
-        <table class="widefat striped" style="max-width:720px;">
-            <tbody>
-                <tr>
-                    <th style="width:220px;"><?php esc_html_e('DB-Version', 'auto-quill'); ?></th>
-                    <td>
-                        <code><?php echo esc_html((string) $version); ?></code>
-                        <?php if ((string) $version !== C::DB_VERSION): ?>
-                            <span style="color:#a00;">
-                                (<?php echo esc_html__('erwartet', 'auto-quill') . ' ' . esc_html(C::DB_VERSION); ?>)
-                            </span>
-                        <?php endif; ?>
-                    </td>
-                </tr>
-                <?php foreach ($tables as $t): ?>
-                    <tr>
-                        <th><code><?php echo esc_html($t['name']); ?></code></th>
-                        <td>
-                            <?php if ($t['exists']): ?>
-                                <span style="color:green;">✓</span>
-                                <?php echo esc_html(sprintf(_n('%d Zeile', '%d Zeilen', $t['count'], 'auto-quill'), $t['count'])); ?>
-                            <?php else: ?>
-                                <span style="color:#a00;">✗ <?php esc_html_e('fehlt', 'auto-quill'); ?></span>
-                            <?php endif; ?>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-                <tr>
-                    <th><?php echo esc_html(C::OPTION_KEY); ?></th>
-                    <td><pre style="white-space:pre-wrap;margin:0;"><?php
-                        echo esc_html(wp_json_encode($masked, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-                    ?></pre></td>
-                </tr>
-                <tr>
-                    <th><?php esc_html_e('Nächster Fetch', 'auto-quill'); ?></th>
-                    <td>
-                        <?php echo $next_fetch ? esc_html(date_i18n('Y-m-d H:i', $next_fetch)) : esc_html__('nicht geplant', 'auto-quill'); ?>
-                    </td>
-                </tr>
-                <tr>
-                    <th><?php esc_html_e('Nächste Themen-Auswahl', 'auto-quill'); ?></th>
-                    <td>
-                        <?php echo $next_select ? esc_html(date_i18n('Y-m-d H:i', $next_select)) : esc_html__('nicht geplant', 'auto-quill'); ?>
-                    </td>
-                </tr>
-                <tr>
-                    <th><?php esc_html_e('Nächster Tagesbericht', 'auto-quill'); ?></th>
-                    <td>
-                        <?php if (!$notify_on): ?>
-                            <?php esc_html_e('Benachrichtigungen sind deaktiviert', 'auto-quill'); ?>
-                        <?php elseif ($next_digest): ?>
-                            <?php echo esc_html(date_i18n('Y-m-d H:i', $next_digest)); ?>
-                            <?php if (empty($recipients)): ?>
-                                <span style="color:#a00;">
-                                    (<?php esc_html_e('kein gültiger Empfänger', 'auto-quill'); ?>)
-                                </span>
-                            <?php else: ?>
-                                <span class="description">
-                                    <?php echo esc_html(sprintf(
-                                        /* translators: %d: number of recipients */
-                                        _n('%d Empfänger', '%d Empfänger', count($recipients), 'auto-quill'),
-                                        count($recipients)
-                                    )); ?>
-                                </span>
-                            <?php endif; ?>
-                        <?php else: ?>
-                            <span style="color:#a00;"><?php esc_html_e('nicht geplant', 'auto-quill'); ?></span>
-                        <?php endif; ?>
-                    </td>
-                </tr>
-                <tr>
-                    <th><?php esc_html_e('Nächste Sicherung', 'auto-quill'); ?></th>
-                    <td>
-                        <?php if (!Backup::is_enabled()): ?>
-                            <?php esc_html_e('Automatische Sicherung ist deaktiviert', 'auto-quill'); ?>
-                        <?php elseif ($next_backup): ?>
-                            <?php echo esc_html(date_i18n('Y-m-d H:i', $next_backup)); ?>
-                            <span class="description">
-                                <?php echo esc_html(sprintf(
-                                    /* translators: 1: stored backups, 2: limit */
-                                    __('%1$d von max. %2$d gespeichert', 'auto-quill'),
-                                    count(Backup::all()),
-                                    Backup::keep()
-                                )); ?>
-                            </span>
-                        <?php else: ?>
-                            <span style="color:#a00;"><?php esc_html_e('nicht geplant', 'auto-quill'); ?></span>
-                        <?php endif; ?>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+        <div class="wpb-card auto-quill-status">
+            <div class="wpb-card__header">
+                <h2 class="wpb-card__title"><?php esc_html_e('Status', 'auto-quill'); ?></h2>
+            </div>
+            <div class="wpb-card__body wpb-card__body--flush">
+                <table class="widefat striped">
+                    <tbody>
+                        <tr>
+                            <th class="auto-quill-status-label"><?php esc_html_e('DB-Version', 'auto-quill'); ?></th>
+                            <td>
+                                <code><?php echo esc_html((string) $version); ?></code>
+                                <?php if ((string) $version !== C::DB_VERSION): ?>
+                                    <span class="wpb-text-error">
+                                        (<?php echo esc_html__('erwartet', 'auto-quill') . ' ' . esc_html(C::DB_VERSION); ?>)
+                                    </span>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                        <?php foreach ($tables as $t): ?>
+                            <tr>
+                                <th><code><?php echo esc_html($t['name']); ?></code></th>
+                                <td>
+                                    <?php if ($t['exists']): ?>
+                                        <span class="wpb-text-success">✓</span>
+                                        <?php echo esc_html(sprintf(_n('%d Zeile', '%d Zeilen', $t['count'], 'auto-quill'), $t['count'])); ?>
+                                    <?php else: ?>
+                                        <span class="wpb-text-error">✗ <?php esc_html_e('fehlt', 'auto-quill'); ?></span>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                        <tr>
+                            <th><?php echo esc_html(C::OPTION_KEY); ?></th>
+                            <td><pre class="wpb-code"><?php
+                                echo esc_html(wp_json_encode($masked, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+                            ?></pre></td>
+                        </tr>
+                        <tr>
+                            <th><?php esc_html_e('Nächster Fetch', 'auto-quill'); ?></th>
+                            <td>
+                                <?php echo $next_fetch ? esc_html(date_i18n('Y-m-d H:i', $next_fetch)) : esc_html__('nicht geplant', 'auto-quill'); ?>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th><?php esc_html_e('Nächste Themen-Auswahl', 'auto-quill'); ?></th>
+                            <td>
+                                <?php echo $next_select ? esc_html(date_i18n('Y-m-d H:i', $next_select)) : esc_html__('nicht geplant', 'auto-quill'); ?>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th><?php esc_html_e('Nächster Tagesbericht', 'auto-quill'); ?></th>
+                            <td>
+                                <?php if (!$notify_on): ?>
+                                    <?php esc_html_e('Benachrichtigungen sind deaktiviert', 'auto-quill'); ?>
+                                <?php elseif ($next_digest): ?>
+                                    <?php echo esc_html(date_i18n('Y-m-d H:i', $next_digest)); ?>
+                                    <?php if (empty($recipients)): ?>
+                                        <span class="wpb-text-error">
+                                            (<?php esc_html_e('kein gültiger Empfänger', 'auto-quill'); ?>)
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="description">
+                                            <?php echo esc_html(sprintf(
+                                                /* translators: %d: number of recipients */
+                                                _n('%d Empfänger', '%d Empfänger', count($recipients), 'auto-quill'),
+                                                count($recipients)
+                                            )); ?>
+                                        </span>
+                                    <?php endif; ?>
+                                <?php else: ?>
+                                    <span class="wpb-text-error"><?php esc_html_e('nicht geplant', 'auto-quill'); ?></span>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th><?php esc_html_e('Nächste Sicherung', 'auto-quill'); ?></th>
+                            <td>
+                                <?php if (!Backup::is_enabled()): ?>
+                                    <?php esc_html_e('Automatische Sicherung ist deaktiviert', 'auto-quill'); ?>
+                                <?php elseif ($next_backup): ?>
+                                    <?php echo esc_html(date_i18n('Y-m-d H:i', $next_backup)); ?>
+                                    <span class="description">
+                                        <?php echo esc_html(sprintf(
+                                            /* translators: 1: stored backups, 2: limit */
+                                            __('%1$d von max. %2$d gespeichert', 'auto-quill'),
+                                            count(Backup::all()),
+                                            Backup::keep()
+                                        )); ?>
+                                    </span>
+                                <?php else: ?>
+                                    <span class="wpb-text-error"><?php esc_html_e('nicht geplant', 'auto-quill'); ?></span>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
         <?php
     }
 

@@ -201,81 +201,93 @@ class BackupController {
     public static function render_panel(): void {
         $backups = Backup::all();
         ?>
-        <div class="auto-quill-test-mail auto-quill-backups">
-            <h2><?php esc_html_e('Vorhandene Sicherungen', 'auto-quill'); ?></h2>
-            <p class="description">
-                <?php esc_html_e('Gesichert werden alle Einstellungen (inkl. API-Schlüssel) und die RSS-Quellen — keine Artikel, Themen oder Logs. Beim Wiederherstellen werden fehlende RSS-Quellen angelegt und vorhandene aktualisiert, aber keine gelöscht. Der Stand davor wird automatisch als eigene Sicherung abgelegt.', 'auto-quill'); ?>
-            </p>
-
-            <p>
-                <?php self::action_form(C::ACTION_BACKUP_NOW, '', __('Jetzt sichern', 'auto-quill'), 'button button-secondary'); ?>
-            </p>
-
-            <?php if (empty($backups)): ?>
-                <p><?php esc_html_e('Noch keine Sicherungen vorhanden.', 'auto-quill'); ?></p>
-            <?php else: ?>
-                <table class="widefat striped" style="max-width:900px;">
-                    <thead>
-                        <tr>
-                            <th><?php esc_html_e('Datum', 'auto-quill'); ?></th>
-                            <th><?php esc_html_e('Anlass', 'auto-quill'); ?></th>
-                            <th><?php esc_html_e('Plugin-Version', 'auto-quill'); ?></th>
-                            <th><?php esc_html_e('RSS-Quellen', 'auto-quill'); ?></th>
-                            <th><?php esc_html_e('Aktionen', 'auto-quill'); ?></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($backups as $backup):
-                            $id       = (string) ($backup['id'] ?? '');
-                            $date     = wp_date('d.m.Y H:i', (int) ($backup['created'] ?? 0));
-                            $download = wp_nonce_url(
-                                admin_url('admin-post.php?action=' . C::ACTION_BACKUP_DOWNLOAD . '&backup_id=' . rawurlencode($id)),
-                                C::ACTION_BACKUP_DOWNLOAD
-                            );
-                            ?>
+        <div class="wpb-card auto-quill-backups">
+            <div class="wpb-card__header">
+                <div>
+                    <h2 class="wpb-card__title"><?php esc_html_e('Vorhandene Sicherungen', 'auto-quill'); ?></h2>
+                    <p class="wpb-card__description">
+                        <?php esc_html_e('Gesichert werden alle Einstellungen (inkl. API-Schlüssel) und die RSS-Quellen — keine Artikel, Themen oder Logs. Beim Wiederherstellen werden fehlende RSS-Quellen angelegt und vorhandene aktualisiert, aber keine gelöscht. Der Stand davor wird automatisch als eigene Sicherung abgelegt.', 'auto-quill'); ?>
+                    </p>
+                </div>
+                <div class="wpb-row">
+                    <?php self::action_form(C::ACTION_BACKUP_NOW, '', __('Jetzt sichern', 'auto-quill'), 'button button-secondary'); ?>
+                </div>
+            </div>
+            <div class="wpb-card__body<?php echo empty($backups) ? '' : ' wpb-card__body--flush'; ?>">
+                <?php if (empty($backups)): ?>
+                    <p class="wpb-empty"><?php esc_html_e('Noch keine Sicherungen vorhanden.', 'auto-quill'); ?></p>
+                <?php else: ?>
+                    <table class="widefat striped">
+                        <thead>
                             <tr>
-                                <td><?php echo esc_html($date); ?></td>
-                                <td><?php echo esc_html(self::trigger_label((string) ($backup['trigger'] ?? ''))); ?></td>
-                                <td><code><?php echo esc_html((string) ($backup['version'] ?? '–')); ?></code></td>
-                                <td><?php echo (int) count((array) ($backup['sources'] ?? [])); ?></td>
-                                <td class="auto-quill-backup-actions">
-                                    <?php
-                                    self::action_form(
-                                        C::ACTION_BACKUP_RESTORE,
-                                        $id,
-                                        __('Wiederherstellen', 'auto-quill'),
-                                        'button button-primary',
-                                        /* translators: %s: backup date */
-                                        sprintf(__('Einstellungen und RSS-Quellen auf den Stand vom %s zurücksetzen?', 'auto-quill'), $date)
-                                    );
-                                    ?>
-                                    <a class="button" href="<?php echo esc_url($download); ?>"><?php esc_html_e('Herunterladen', 'auto-quill'); ?></a>
-                                    <?php
-                                    self::action_form(
-                                        C::ACTION_BACKUP_DELETE,
-                                        $id,
-                                        __('Löschen', 'auto-quill'),
-                                        'button button-link-delete',
-                                        __('Diese Sicherung endgültig löschen?', 'auto-quill')
-                                    );
-                                    ?>
-                                </td>
+                                <th><?php esc_html_e('Datum', 'auto-quill'); ?></th>
+                                <th><?php esc_html_e('Anlass', 'auto-quill'); ?></th>
+                                <th><?php esc_html_e('Plugin-Version', 'auto-quill'); ?></th>
+                                <th><?php esc_html_e('RSS-Quellen', 'auto-quill'); ?></th>
+                                <th><?php esc_html_e('Aktionen', 'auto-quill'); ?></th>
                             </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            <?php endif; ?>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($backups as $backup):
+                                $id       = (string) ($backup['id'] ?? '');
+                                $date     = wp_date('d.m.Y H:i', (int) ($backup['created'] ?? 0));
+                                $download = wp_nonce_url(
+                                    admin_url('admin-post.php?action=' . C::ACTION_BACKUP_DOWNLOAD . '&backup_id=' . rawurlencode($id)),
+                                    C::ACTION_BACKUP_DOWNLOAD
+                                );
+                                ?>
+                                <tr>
+                                    <td><?php echo esc_html($date); ?></td>
+                                    <td><?php echo esc_html(self::trigger_label((string) ($backup['trigger'] ?? ''))); ?></td>
+                                    <td><code><?php echo esc_html((string) ($backup['version'] ?? '–')); ?></code></td>
+                                    <td><?php echo (int) count((array) ($backup['sources'] ?? [])); ?></td>
+                                    <td class="auto-quill-backup-actions">
+                                        <?php
+                                        self::action_form(
+                                            C::ACTION_BACKUP_RESTORE,
+                                            $id,
+                                            __('Wiederherstellen', 'auto-quill'),
+                                            'button button-primary',
+                                            /* translators: %s: backup date */
+                                            sprintf(__('Einstellungen und RSS-Quellen auf den Stand vom %s zurücksetzen?', 'auto-quill'), $date)
+                                        );
+                                        ?>
+                                        <a class="button" href="<?php echo esc_url($download); ?>"><?php esc_html_e('Herunterladen', 'auto-quill'); ?></a>
+                                        <?php
+                                        self::action_form(
+                                            C::ACTION_BACKUP_DELETE,
+                                            $id,
+                                            __('Löschen', 'auto-quill'),
+                                            'button button-link-delete',
+                                            __('Diese Sicherung endgültig löschen?', 'auto-quill')
+                                        );
+                                        ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php endif; ?>
+            </div>
+        </div>
 
-            <h2 style="margin-top:1.5em;"><?php esc_html_e('Sicherung importieren', 'auto-quill'); ?></h2>
-            <p class="description">
-                <?php esc_html_e('Heruntergeladene Dateien enthalten aus Sicherheitsgründen keine API-Schlüssel. Beim Wiederherstellen einer importierten Sicherung bleiben die aktuell hinterlegten Schlüssel erhalten.', 'auto-quill'); ?>
-            </p>
-            <form method="post" enctype="multipart/form-data" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                <?php wp_nonce_field(C::ACTION_BACKUP_IMPORT); ?>
-                <input type="hidden" name="action" value="<?php echo esc_attr(C::ACTION_BACKUP_IMPORT); ?>">
-                <input type="file" name="backup_file" accept="application/json,.json" required>
-                <button type="submit" class="button"><?php esc_html_e('Importieren', 'auto-quill'); ?></button>
-            </form>
+        <div class="wpb-card auto-quill-backup-import">
+            <div class="wpb-card__header">
+                <div>
+                    <h2 class="wpb-card__title"><?php esc_html_e('Sicherung importieren', 'auto-quill'); ?></h2>
+                    <p class="wpb-card__description">
+                        <?php esc_html_e('Heruntergeladene Dateien enthalten aus Sicherheitsgründen keine API-Schlüssel. Beim Wiederherstellen einer importierten Sicherung bleiben die aktuell hinterlegten Schlüssel erhalten.', 'auto-quill'); ?>
+                    </p>
+                </div>
+            </div>
+            <div class="wpb-card__body">
+                <form method="post" enctype="multipart/form-data" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                    <?php wp_nonce_field(C::ACTION_BACKUP_IMPORT); ?>
+                    <input type="hidden" name="action" value="<?php echo esc_attr(C::ACTION_BACKUP_IMPORT); ?>">
+                    <input type="file" name="backup_file" accept="application/json,.json" required>
+                    <button type="submit" class="button"><?php esc_html_e('Importieren', 'auto-quill'); ?></button>
+                </form>
+            </div>
         </div>
         <?php
     }

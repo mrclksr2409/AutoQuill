@@ -98,32 +98,10 @@
         },
     };
 
-    /**
-     * Fourth tab widget in this plugin, and the third distinct class pair.
-     * SettingsTabs hides .auto-quill-tab-panel globally and DashboardTabs owns
-     * .auto-quill-dash-panel, so reusing either would make the screens hide
-     * each other's content.
-     */
-    const SourceTabs = {
-        init: function() {
-            const $tabs = $('.auto-quill-source-tabs .nav-tab');
-            if (!$tabs.length) {
-                return;
-            }
-
-            $tabs.on('click', function(e) {
-                e.preventDefault();
-                const tab = $(this).data('tab');
-                $tabs.removeClass('nav-tab-active')
-                     .filter('[data-tab="' + tab + '"]').addClass('nav-tab-active');
-                $('.auto-quill-source-panel').hide()
-                     .filter('[data-tab="' + tab + '"]').show();
-            });
-        },
-    };
+    // The source tabs (Quelltext / Roh-HTML) are plain client-side tabs and
+    // handled by WP-Backend UI via data-wpb-tabs; see GeneratePage.
 
     $(document).ready(() => {
         Generate.init();
-        SourceTabs.init();
     });
 })(jQuery);

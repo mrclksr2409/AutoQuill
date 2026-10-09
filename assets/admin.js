@@ -183,9 +183,15 @@
         },
 
         showAlert: function(message, type = 'info') {
+            // Short-lived feedback is a WP-Backend UI toast (plain text only).
+            if (window.wpbAdminUI && typeof window.wpbAdminUI.toast === 'function') {
+                window.wpbAdminUI.toast(message, type);
+                return;
+            }
+
             const $alert = $('<div>')
-                .addClass('auto-quill-alert')
-                .addClass('auto-quill-alert-' + type)
+                .addClass('auto-quill-alert wpb-alert')
+                .addClass('auto-quill-alert-' + type + ' wpb-alert--' + type)
                 .text(message);
 
             $('.wrap').prepend($alert);

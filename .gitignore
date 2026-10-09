@@ -5,6 +5,8 @@ wp-content/
 wp-admin/
 wp-includes/
 wp-*.php
+# Bundled WP-Backend UI loader matches the pattern above but must ship.
+!lib/wp-backend-ui/wp-backend-ui.php
 wp-config.php
 wp-config-sample.php
 

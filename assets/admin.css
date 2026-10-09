@@ -1,201 +1,207 @@
-/* AutoQuill Admin Styles */
+/**
+ * AutoQuill Admin Styles
+ *
+ * The look (colors, borders, radii, shadows, fonts, headings, tabs, buttons,
+ * notices, cards, badges, alerts, spinners, busy overlay, modal) comes from
+ * the bundled WP-Backend UI (lib/wp-backend-ui, style handle 'wpb-admin-ui').
+ * This file only holds layout that is unique to AutoQuill. Any color it still
+ * needs is a --wpb-* token, so it follows the shared design.
+ */
 
-.auto-quill-wrap {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
-}
-
-.auto-quill-wrap h1 {
-    color: #0073aa;
-    margin-bottom: 20px;
-}
-
-.auto-quill-wrap h2 {
-    color: #0073aa;
-    border-bottom: 2px solid #0073aa;
-    padding-bottom: 10px;
-}
-
-.auto-quill-container {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    margin-top: 20px;
-}
-
-@media (max-width: 1200px) {
-    .auto-quill-container {
-        grid-template-columns: 1fr;
-    }
-}
-
-.auto-quill-panel {
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    padding: 20px;
-    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
-}
-
-.auto-quill-panel h2 {
-    margin-top: 0;
-}
-
-/* Topics List */
-.topics-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 15px;
-}
-
-.topic-card {
-    /* Grid stretches items to row height; flex + margin-top:auto on the link
-       keeps the button pinned to the bottom across a row of uneven cards. */
-    display: flex;
-    flex-direction: column;
-    border-left: 4px solid #0073aa;
-    padding: 15px;
-    background: #f9f9f9;
-    border-radius: 4px;
-    transition: all 0.3s ease;
-}
-
-.topic-card:hover {
-    box-shadow: 0 2px 5px rgba(0, 115, 170, 0.2);
-    background: #fff;
-}
-
-.topic-card h3 {
-    margin: 0 0 10px 0;
-    color: #0073aa;
-    font-size: 1.1em;
-}
-
-.topic-card p {
-    margin: 5px 0;
-    line-height: 1.6;
-}
-
-.topic-card p strong {
-    color: #333;
-}
-
-.topic-card .auto-quill-topic-source {
-    font-size: 0.9em;
-    color: #555;
-}
-
-.topic-card .auto-quill-topic-source a {
-    text-decoration: none;
-}
-
-.auto-quill-generate-link {
-    margin-top: 10px;
-}
-
-/* Post Preview */
-.post-preview {
-    border: 1px dashed #ccc;
-    padding: 20px;
-    min-height: 300px;
-    max-height: 600px;
-    overflow-y: auto;
-    background: #f9f9f9;
-    border-radius: 4px;
-}
-
-.post-preview h1,
-.post-preview h2,
-.post-preview h3 {
-    color: #0073aa;
-    margin-top: 15px;
-    margin-bottom: 10px;
-}
-
-.post-preview p {
-    line-height: 1.8;
-    color: #333;
-}
-
-/* Loading State */
-.auto-quill-loading {
-    opacity: 0.6;
-    pointer-events: none;
-}
-
-.auto-quill-loading::after {
-    content: '';
-    display: inline-block;
-    width: 14px;
-    height: 14px;
-    margin-left: 8px;
-    vertical-align: -2px;
-    border: 2px solid currentColor;
-    border-top-color: transparent;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-/* Settings Page */
-.auto-quill-add-source {
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    padding: 20px;
-    margin-bottom: 20px;
-}
-
-.auto-quill-add-source h2 {
-    margin-top: 0;
-}
-
-/* Alerts */
-.auto-quill-alert {
-    padding: 12px 15px;
-    border-radius: 4px;
-    margin-bottom: 15px;
-}
-
-.auto-quill-alert-success {
-    background-color: #d4edda;
-    border: 1px solid #c3e6cb;
-    color: #155724;
-}
-
-.auto-quill-alert-error {
-    background-color: #f8d7da;
-    border: 1px solid #f5c6cb;
-    color: #721c24;
-}
-
-.auto-quill-alert-info {
-    background-color: #d1ecf1;
-    border: 1px solid #bee5eb;
-    color: #0c5460;
-}
-
-/* Dashboard layout */
-.auto-quill-wrap {
-    padding: 20px;
-}
-
-.auto-quill-recrawl-controls {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
-    margin-bottom: 15px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid #eee;
-}
+/* ---------------------------------------------------------------- Dashboard */
 
 .auto-quill-recrawl-controls select {
     min-width: 180px;
+}
+
+/* Grid stretches cards to row height; the flex column keeps the generate
+   button pinned to the bottom across a row of uneven cards. */
+.topic-card {
+    display: flex;
+    flex-direction: column;
+}
+
+.topic-card > .wpb-card__body {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: var(--wpb-space-2);
+}
+
+.topic-card > .wpb-card__body > * {
+    margin: 0;
+}
+
+.topic-card .auto-quill-generate-link {
+    align-self: flex-start;
+    margin-top: auto;
+}
+
+/* Topic rating */
+.auto-quill-rating-line {
+    display: flex;
+    align-items: center;
+    gap: var(--wpb-space-2);
+}
+
+.auto-quill-rating {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    padding: 2px 8px;
+    border-radius: var(--wpb-radius-pill);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.6;
+    font-variant-numeric: tabular-nums;
+    color: var(--wpb-surface);
+    background: var(--wpb-text-subtle);
+}
+
+.auto-quill-rating.is-rating-high {
+    background: var(--wpb-success);
+}
+
+.auto-quill-rating.is-rating-mid {
+    background: var(--wpb-warning);
+}
+
+.auto-quill-rating.is-rating-low {
+    background: var(--wpb-text-subtle);
+}
+
+.auto-quill-rating-reason {
+    line-height: 1.4;
+}
+
+/* Feed list */
+.auto-quill-feed-filters select,
+.auto-quill-feed-filters input[type="search"] {
+    min-width: 170px;
+}
+
+.auto-quill-feed-unlinked-label {
+    white-space: nowrap;
+}
+
+.auto-quill-feed-status {
+    padding: var(--wpb-space-2) 0;
+}
+
+.auto-quill-feed-status.is-error {
+    color: var(--wpb-error);
+}
+
+.auto-quill-feed-table th,
+.auto-quill-feed-table td {
+    vertical-align: top;
+}
+
+/* Outranks the framework's striped-row background. */
+.wpb-admin .wrap .widefat.auto-quill-feed-table tbody tr.is-linked {
+    background: var(--wpb-success-bg);
+}
+
+.auto-quill-feed-excerpt {
+    display: block;
+    margin-top: 3px;
+}
+
+.auto-quill-feed-date,
+.auto-quill-feed-post {
+    white-space: nowrap;
+}
+
+.auto-quill-post-status {
+    display: block;
+    margin-top: var(--wpb-space-1);
+}
+
+.auto-quill-feed-pagination {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    margin-top: 12px;
+}
+
+/* ---------------------------------------------------------------- Generate screen */
+
+.auto-quill-source-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: var(--wpb-space-1) 0 12px;
+}
+
+.auto-quill-generate-actions {
+    margin: 0 0 12px;
+}
+
+/* Anchor for the .wpb-busy overlay. */
+.auto-quill-result-body {
+    position: relative;
+}
+
+.auto-quill-busy-text {
+    margin: 0;
+}
+
+.auto-quill-busy-elapsed {
+    margin-left: 6px;
+    font-variant-numeric: tabular-nums;
+}
+
+/* .wpb-alert sets display:flex, which would otherwise win over [hidden]. */
+.auto-quill-generate-error[hidden],
+.auto-quill-generate-result[hidden],
+.auto-quill-chat-error[hidden],
+.auto-quill-chat-enough[hidden] {
+    display: none;
+}
+
+/* Filled by post-editor.js / interview.js: message plus a retry button. */
+.auto-quill-generate-error,
+.auto-quill-chat-error {
+    align-items: center;
+}
+
+.auto-quill-generate-error p,
+.auto-quill-chat-error p {
+    flex: 1 1 auto;
+    margin: 0;
+}
+
+/* Filled by post-editor.js: message, then a row of links. */
+.auto-quill-generate-result {
+    flex-direction: column;
+    margin-top: var(--wpb-space-4);
+}
+
+.auto-quill-generate-result p {
+    margin: 0;
+}
+
+.auto-quill-result-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--wpb-space-2);
+}
+
+/* Post preview (a .wpb-card--muted) */
+.post-preview {
+    min-height: 300px;
+    max-height: 600px;
+    overflow-y: auto;
+    padding: var(--wpb-space-5);
+}
+
+/* Source note appended to generated posts */
+.post-preview .auto-quill-source {
+    margin-top: 20px;
+    padding-top: 10px;
+    border-top: 1px solid var(--wpb-border);
 }
 
 /* Meta fields */
@@ -212,10 +218,6 @@
     gap: 4px;
 }
 
-.auto-quill-meta-fields label {
-    font-size: 13px;
-}
-
 .auto-quill-meta-fields input[type="text"],
 .auto-quill-meta-fields textarea,
 .auto-quill-meta-fields select {
@@ -230,30 +232,26 @@
 
 .auto-quill-meta-value {
     margin: 0;
-    line-height: 1.6;
-    color: #333;
 }
 
+/* Preview of the generated post title. */
 .auto-quill-meta-fields h2.auto-quill-meta-title {
     margin: 0;
     padding: 0;
     font-size: 1.4em;
     line-height: 1.3;
-    color: #1d2327;
 }
 
+/* Placeholder until the AI has filled the field. */
 .auto-quill-meta-value.is-empty,
 .auto-quill-meta-fields h2.auto-quill-meta-title.is-empty {
-    color: #8c8f94;
+    color: var(--wpb-text-subtle);
     font-style: italic;
     font-size: 13px;
     font-weight: normal;
 }
 
 .auto-quill-meta-fields .description {
-    color: #666;
-    font-weight: normal;
-    font-size: 12px;
     margin-left: 4px;
 }
 
@@ -261,45 +259,14 @@
     margin-top: 15px;
 }
 
-/* Settings tabs */
-.auto-quill-settings-tabs {
-    margin-bottom: 0;
-}
-
-.auto-quill-tab-panel {
-    background: #fff;
-    border: 1px solid #c3c4c7;
-    border-top: 0;
-    padding: 10px 20px;
-    margin-bottom: 20px;
-}
-
-.auto-quill-tab-panel .form-table {
-    margin-top: 0;
-}
-
-.auto-quill-models-spinner.spinner {
-    float: none;
-    vertical-align: middle;
-    margin-top: 0;
-}
-
-.auto-quill-models-status:empty {
-    display: none;
-}
-
-.auto-quill-models-status.is-error {
-    color: #b32d2e;
-}
-
 /* Featured image preview */
 .auto-quill-image-preview {
     width: 100%;
     max-width: 360px;
     aspect-ratio: 16 / 9;
-    border: 1px dashed #c3c4c7;
-    border-radius: 4px;
-    background: #f6f7f7;
+    border: 1px dashed var(--wpb-border-strong);
+    border-radius: var(--wpb-radius-sm);
+    background: var(--wpb-surface-muted);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -308,7 +275,7 @@
 }
 
 .auto-quill-image-preview.is-empty .placeholder {
-    color: #757575;
+    color: var(--wpb-text-subtle);
     font-style: italic;
 }
 
@@ -325,95 +292,26 @@
 
 .auto-quill-image-actions .button-link {
     margin-left: 10px;
-    color: #b32d2e;
-    text-decoration: underline;
 }
 
-/* Image picker modal */
-.auto-quill-modal {
-    position: fixed;
-    inset: 0;
-    z-index: 100000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.auto-quill-modal[hidden] {
-    display: none;
-}
-
-.auto-quill-modal-overlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.55);
-}
-
-.auto-quill-modal-content {
-    position: relative;
-    background: #fff;
-    border-radius: 6px;
-    width: min(900px, 92vw);
-    max-height: 88vh;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
-    overflow: hidden;
-}
-
-.auto-quill-modal-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 18px;
-    border-bottom: 1px solid #e0e0e0;
-}
-
-.auto-quill-modal-header h2 {
-    margin: 0;
-    font-size: 18px;
-}
-
-.auto-quill-modal-close {
-    background: transparent;
-    border: 0;
-    font-size: 26px;
-    line-height: 1;
-    cursor: pointer;
-    color: #555;
-    padding: 0 4px;
-}
-
-.auto-quill-modal-close:hover {
-    color: #000;
-}
-
+/* Image picker (inside <dialog class="wpb-modal">) */
 .auto-quill-modal-search {
     display: flex;
-    gap: 8px;
-    padding: 12px 18px;
-    border-bottom: 1px solid #f0f0f0;
+    gap: var(--wpb-space-2);
+    padding: var(--wpb-space-3) var(--wpb-space-5);
+    border-bottom: 1px solid var(--wpb-border);
 }
 
 .auto-quill-modal-search input[type="text"] {
     flex: 1;
 }
 
-.auto-quill-modal-body {
-    flex: 1 1 auto;
-    padding: 14px 18px;
-    overflow-y: auto;
-}
-
 .auto-quill-image-status {
     padding: 10px 0;
-    color: #555;
-    font-style: italic;
 }
 
 .auto-quill-image-status.is-error {
-    color: #b32d2e;
-    font-style: normal;
+    color: var(--wpb-error);
 }
 
 .auto-quill-image-grid {
@@ -425,16 +323,16 @@
 .auto-quill-image-card {
     cursor: pointer;
     border: 2px solid transparent;
-    border-radius: 4px;
+    border-radius: var(--wpb-radius-sm);
     overflow: hidden;
-    background: #f0f0f1;
+    background: var(--wpb-surface-muted);
     aspect-ratio: 4 / 3;
-    transition: border-color 120ms ease;
+    transition: border-color var(--wpb-transition);
 }
 
 .auto-quill-image-card:hover,
 .auto-quill-image-card:focus {
-    border-color: #2271b1;
+    border-color: var(--wpb-accent);
     outline: none;
 }
 
@@ -453,340 +351,81 @@
     margin-top: 16px;
 }
 
-.auto-quill-modal-footer {
-    padding: 10px 18px;
-    border-top: 1px solid #f0f0f0;
-    color: #555;
-    background: #fafafa;
-}
+/* ---------------------------------------------------------------- Settings */
 
-/* Dashboard tabs */
-.auto-quill-dashboard-tabs {
-    border-bottom: 1px solid #ccc;
-    margin: 0 0 15px 0;
-    padding-bottom: 0;
-    color: inherit;
-}
-
-.auto-quill-panel .auto-quill-dashboard-tabs {
-    border-bottom-width: 1px;
-    border-bottom-color: #ccc;
-}
-
-/* Topic rating */
-.auto-quill-rating-line {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 0 0 8px 0;
-}
-
-.auto-quill-rating {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 34px;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-size: 12px;
-    font-weight: 600;
-    line-height: 1.6;
-    color: #fff;
-    background: #8c8f94;
-}
-
-.auto-quill-rating.is-rating-high {
-    background: #1a7f37;
-}
-
-.auto-quill-rating.is-rating-mid {
-    background: #bb8800;
-}
-
-.auto-quill-rating.is-rating-low {
-    background: #8c8f94;
-}
-
-.auto-quill-rating-reason {
-    font-size: 12px;
-    color: #555;
-    line-height: 1.4;
-}
-
-/* Feed list */
-.auto-quill-feed-filters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
-    margin-bottom: 15px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid #eee;
-}
-
-.auto-quill-feed-filters select,
-.auto-quill-feed-filters input[type="search"] {
-    min-width: 170px;
-}
-
-.auto-quill-feed-unlinked-label {
-    font-size: 13px;
-    white-space: nowrap;
-}
-
-.auto-quill-feed-status {
-    padding: 8px 0;
-    color: #555;
-}
-
-.auto-quill-feed-status.is-error {
-    color: #b32d2e;
-}
-
-.auto-quill-feed-table {
+.auto-quill-models-spinner.spinner {
+    float: none;
+    vertical-align: middle;
     margin-top: 0;
 }
 
-.auto-quill-feed-table th,
-.auto-quill-feed-table td {
-    vertical-align: top;
-}
-
-.auto-quill-feed-table tr.is-linked {
-    background: #f6fbf7;
-}
-
-.auto-quill-feed-title a {
-    font-weight: 600;
-    text-decoration: none;
-}
-
-.auto-quill-feed-excerpt {
-    display: block;
-    margin-top: 3px;
-    font-size: 12px;
-    color: #666;
-    line-height: 1.4;
-}
-
-.auto-quill-feed-date,
-.auto-quill-feed-post {
-    white-space: nowrap;
-    font-size: 12px;
-}
-
-.auto-quill-post-status {
-    display: block;
-    color: #666;
-}
-
-.auto-quill-feed-empty td {
-    padding: 20px 10px;
-    color: #666;
-}
-
-.auto-quill-feed-pagination {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    justify-content: center;
-    margin-top: 12px;
-    font-size: 12px;
-}
-
-/* Source note appended to generated posts */
-.post-preview .auto-quill-source {
-    margin-top: 20px;
-    padding-top: 10px;
-    border-top: 1px solid #ddd;
-    font-size: 13px;
-}
-
-/* ---------------------------------------------------------------- Generate screen */
-
-.auto-quill-back-link {
-    margin: 0 0 4px;
-}
-
-.topic-card .auto-quill-generate-link {
-    align-self: flex-start;
-    margin-top: auto;
-}
-
-.auto-quill-source-header h3 {
-    margin: 0 0 4px;
-    font-size: 1.05em;
-}
-
-.auto-quill-source-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin: 0 0 12px;
-    font-size: 12px;
-    color: #555;
-}
-
-.auto-quill-panel .auto-quill-source-tabs {
-    border-bottom: 1px solid #ccc;
-    margin: 0 0 12px;
-    padding-bottom: 0;
-    color: inherit;
-}
-
-/* Both source tabs show escaped text, never rendered third-party markup. */
-.auto-quill-source-text {
-    max-height: 520px;
-    margin: 0;
-    padding: 12px;
-    overflow: auto;
-    white-space: pre-wrap;
-    word-break: break-word;
-    background: #f6f7f7;
-    border: 1px solid #dcdcde;
-    border-radius: 4px;
-    font-size: 12px;
-    line-height: 1.6;
-}
-
-.auto-quill-generate-actions {
-    margin: 0 0 12px;
-}
-
-/* Anchor for the busy overlay. */
-.auto-quill-result-body {
-    position: relative;
-}
-
-.auto-quill-busy {
-    position: absolute;
-    inset: 0;
-    z-index: 5;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    background: rgba(255, 255, 255, 0.88);
-    border-radius: 4px;
-}
-
-/* display:flex would otherwise win over the hidden attribute. */
-.auto-quill-busy[hidden] {
+.auto-quill-models-status:empty {
     display: none;
 }
 
-.auto-quill-spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid #c3c4c7;
-    border-top-color: #0073aa;
-    border-radius: 50%;
-    animation: spin 0.9s linear infinite;
+.auto-quill-models-status.is-error {
+    color: var(--wpb-error);
 }
 
-.auto-quill-busy-text {
-    margin: 0;
-    text-align: center;
-    font-size: 14px;
-    color: #1d2327;
-}
-
-.auto-quill-busy-elapsed {
-    margin-left: 6px;
-    color: #50575e;
-    font-variant-numeric: tabular-nums;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .auto-quill-spinner,
-    .auto-quill-loading::after {
-        animation: none;
-    }
-}
-
-/* A failure after a minute of waiting needs a box that stays put. */
-.auto-quill-generate-error {
-    margin-bottom: 12px;
-    padding: 12px;
-    background: #fcf0f1;
-    border-left: 4px solid #b32d2e;
-    border-radius: 2px;
-}
-
-.auto-quill-generate-error[hidden] {
-    display: none;
-}
-
-.auto-quill-generate-error p {
-    margin: 0 0 10px;
-}
-
-.auto-quill-generate-result {
-    margin-top: 15px;
-    padding: 12px;
-    background: #f0f7f1;
-    border-left: 4px solid #1a7f37;
-    border-radius: 2px;
-}
-
-.auto-quill-generate-result[hidden] {
-    display: none;
-}
-
-.auto-quill-generate-result p {
-    margin: 0;
-}
-
-.auto-quill-result-links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin: 10px 0 0;
-}
-
-/* Notification recipients */
+/* Notification recipients: scrollable checkbox list. */
 .auto-quill-user-list {
     max-height: 220px;
     overflow-y: auto;
     padding: 8px 10px;
-    background: #fff;
-    border: 1px solid #dcdcde;
-    border-radius: 4px;
+    background: var(--wpb-surface);
+    border: 1px solid var(--wpb-border-strong);
+    border-radius: var(--wpb-radius-sm);
 }
 
 .auto-quill-user-list label {
     display: block;
     margin-bottom: 4px;
-    font-size: 13px;
 }
 
 .auto-quill-user-list .description {
     margin-left: 6px;
-    color: #666;
-}
-
-.auto-quill-test-mail {
-    margin-top: 20px;
-    padding: 15px 20px;
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-}
-
-.auto-quill-test-mail h2 {
-    margin-top: 0;
 }
 
 .auto-quill-backup-actions .button {
     margin: 2px 4px 2px 0;
 }
 
-/* Interview */
-.auto-quill-interview-start,
-.auto-quill-interview-list {
-    margin-top: 20px;
+.auto-quill-status-label {
+    width: 220px;
 }
+
+/* ---------------------------------------------------------------- Logs */
+
+.auto-quill-logs-filter {
+    align-items: flex-end;
+}
+
+.auto-quill-logs-col-time {
+    width: 160px;
+}
+
+.auto-quill-logs-col-level {
+    width: 80px;
+}
+
+.auto-quill-logs-col-source {
+    width: 120px;
+}
+
+.auto-quill-log-context {
+    margin-top: 4px;
+}
+
+.auto-quill-log-context summary {
+    cursor: pointer;
+}
+
+.auto-quill-log-context .wpb-code {
+    max-height: 300px;
+    margin-top: 4px;
+}
+
+/* ---------------------------------------------------------------- Interview */
 
 .auto-quill-interview-start .spinner {
     float: none;
@@ -794,17 +433,16 @@
 }
 
 .auto-quill-interview-start-status.is-error {
-    color: #b32d2e;
+    color: var(--wpb-error);
 }
 
 .auto-quill-interview-notes {
     white-space: pre-wrap;
-    margin-top: -4px;
 }
 
 .auto-quill-interview-progress {
     margin: 0 0 10px;
-    color: #50575e;
+    color: var(--wpb-text-muted);
     font-variant-numeric: tabular-nums;
 }
 
@@ -820,41 +458,40 @@
     max-height: 60vh;
     overflow-y: auto;
     padding: 12px;
-    background: #f6f7f7;
-    border: 1px solid #dcdcde;
-    border-radius: 4px;
+    background: var(--wpb-surface-muted);
+    border: 1px solid var(--wpb-border);
+    border-radius: var(--wpb-radius-sm);
 }
 
 .auto-quill-chat-loading {
     margin: 0;
-    color: #50575e;
 }
 
 .auto-quill-chat-message {
     max-width: 85%;
     padding: 8px 12px;
-    border-radius: 10px;
+    border-radius: var(--wpb-radius);
     line-height: 1.5;
-    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+    box-shadow: var(--wpb-shadow-sm);
 }
 
 .auto-quill-chat-message.is-ai {
     align-self: flex-start;
-    background: #fff;
-    border: 1px solid #dcdcde;
+    background: var(--wpb-surface);
+    border: 1px solid var(--wpb-border);
     border-bottom-left-radius: 2px;
 }
 
 .auto-quill-chat-message.is-user {
     align-self: flex-end;
-    background: #e5f1f8;
-    border: 1px solid #b8d6e8;
+    background: var(--wpb-accent-soft);
+    border: 1px solid var(--wpb-border);
     border-bottom-right-radius: 2px;
 }
 
 .auto-quill-chat-message.is-skipped .auto-quill-chat-text {
     font-style: italic;
-    color: #646970;
+    color: var(--wpb-text-muted);
 }
 
 .auto-quill-chat-author {
@@ -864,7 +501,7 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.03em;
-    color: #50575e;
+    color: var(--wpb-text-muted);
 }
 
 .auto-quill-chat-text {
@@ -877,7 +514,7 @@
     align-items: center;
     gap: 8px;
     margin-top: 10px;
-    color: #50575e;
+    color: var(--wpb-text-muted);
 }
 
 .auto-quill-chat-typing[hidden] {
@@ -893,7 +530,7 @@
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: #0073aa;
+    background: var(--wpb-accent);
     animation: auto-quill-typing 1.2s infinite ease-in-out;
 }
 
@@ -917,28 +554,9 @@
     }
 }
 
-.auto-quill-chat-error {
-    margin-top: 10px;
-    padding: 10px 12px;
-    background: #fcf0f1;
-    border-left: 4px solid #b32d2e;
-    border-radius: 2px;
-}
-
-.auto-quill-chat-error[hidden] {
-    display: none;
-}
-
-.auto-quill-chat-error p {
-    margin: 0 0 8px;
-}
-
+.auto-quill-chat-error,
 .auto-quill-chat-enough {
-    margin: 10px 0 0 !important;
-}
-
-.auto-quill-chat-enough[hidden] {
-    display: none;
+    margin: 10px 0 0;
 }
 
 .auto-quill-chat-form {
@@ -960,8 +578,6 @@
 
 .auto-quill-chat-count {
     margin-left: auto;
-    color: #646970;
-    font-size: 12px;
     font-variant-numeric: tabular-nums;
 }
 

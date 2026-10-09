@@ -541,7 +541,14 @@ class Settings {
         }
         ?>
         <div class="wrap">
-            <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+            <?php
+            \WPB_Admin_UI::header([
+                'title'    => get_admin_page_title(),
+                'subtitle' => __('KI-Provider, Zeitplan, Prompts, Veröffentlichung und System', 'auto-quill'),
+                'icon'     => 'dashicons-rss',
+                'version'  => AUTO_QUILL_VERSION,
+            ]);
+            ?>
 
             <?php settings_errors(C::OPTION_KEY); ?>
             <?php Notices::flush(); ?>
@@ -561,7 +568,7 @@ class Settings {
                     <a href="#tab-system" class="nav-tab" data-tab="system"><?php esc_html_e('System', 'auto-quill'); ?></a>
                 </h2>
 
-                <div class="auto-quill-tab-panel" data-tab="ki">
+                <div class="auto-quill-tab-panel wpb-tab-panel" data-tab="ki">
                     <?php $active_provider = C::ai_provider(); ?>
                     <table class="form-table">
                         <tr>
@@ -600,7 +607,7 @@ class Settings {
                     </table>
                 </div>
 
-                <div class="auto-quill-tab-panel" data-tab="feeds" style="display:none;">
+                <div class="auto-quill-tab-panel wpb-tab-panel" data-tab="feeds" style="display:none;">
                     <p class="description" style="margin: 1em 0;">
                         <?php
                         printf(
@@ -650,7 +657,7 @@ class Settings {
                     </table>
                 </div>
 
-                <div class="auto-quill-tab-panel" data-tab="prompts" style="display:none;">
+                <div class="auto-quill-tab-panel wpb-tab-panel" data-tab="prompts" style="display:none;">
                     <p class="description" style="margin: 1em 0;">
                         <?php esc_html_e('Der Schreibstil und die vier Vorgaben unten werden zu einer einzigen KI-Anfrage zusammengeführt. Die KI antwortet mit einem gemeinsamen JSON-Objekt, das Titel, Beitragstext, Auszug und Kategorien enthält. Quelltext und Kategorienliste werden automatisch ergänzt – die Felder unten sollten nur die inhaltlichen Vorgaben pro Bestandteil beschreiben (kein eigenes JSON-Schema und keine "Antworte mit JSON …"-Hinweise mehr nötig).', 'auto-quill'); ?>
                     </p>
@@ -736,7 +743,7 @@ class Settings {
                     </table>
                 </div>
 
-                <div class="auto-quill-tab-panel" data-tab="interview" style="display:none;">
+                <div class="auto-quill-tab-panel wpb-tab-panel" data-tab="interview" style="display:none;">
                     <?php
                     $interview_style = (string) ($settings['interview_style'] ?? C::defaults()['interview_style']);
                     $style_options   = [
@@ -816,7 +823,7 @@ class Settings {
                     </table>
                 </div>
 
-                <div class="auto-quill-tab-panel" data-tab="publish" style="display:none;">
+                <div class="auto-quill-tab-panel wpb-tab-panel" data-tab="publish" style="display:none;">
                     <table class="form-table">
                         <tr>
                             <th scope="row">
@@ -900,7 +907,7 @@ class Settings {
                     </table>
                 </div>
 
-                <div class="auto-quill-tab-panel" data-tab="images" style="display:none;">
+                <div class="auto-quill-tab-panel wpb-tab-panel" data-tab="images" style="display:none;">
                     <p class="description" style="margin: 1em 0;">
                         <?php esc_html_e('Bildquellen für die Beitragsbild-Suche auf der Generierungs-Seite.', 'auto-quill'); ?>
                     </p>
@@ -942,7 +949,7 @@ class Settings {
                     </table>
                 </div>
 
-                <div class="auto-quill-tab-panel" data-tab="notify" style="display:none;">
+                <div class="auto-quill-tab-panel wpb-tab-panel" data-tab="notify" style="display:none;">
                     <?php
                     $notify_enabled = $settings['notify_enabled'] ?? C::defaults()['notify_enabled'];
                     $notify_time    = (string) ($settings['notify_time'] ?? C::defaults()['notify_time']);
@@ -1075,7 +1082,7 @@ class Settings {
                     </table>
                 </div>
 
-                <div class="auto-quill-tab-panel" data-tab="backup" style="display:none;">
+                <div class="auto-quill-tab-panel wpb-tab-panel" data-tab="backup" style="display:none;">
                     <table class="form-table">
                         <tr>
                             <th scope="row"><?php esc_html_e('Automatische Sicherung', 'auto-quill'); ?></th>
@@ -1132,7 +1139,7 @@ class Settings {
                     </table>
                 </div>
 
-                <div class="auto-quill-tab-panel" data-tab="system" style="display:none;">
+                <div class="auto-quill-tab-panel wpb-tab-panel" data-tab="system" style="display:none;">
                     <table class="form-table">
                         <tr>
                             <th scope="row">
@@ -1192,36 +1199,42 @@ class Settings {
                 <?php submit_button(); ?>
             </form>
 
-            <div class="auto-quill-tab-panel" data-tab="notify" style="display:none;">
-                <div class="auto-quill-test-mail">
-                    <h2><?php esc_html_e('Versand testen', 'auto-quill'); ?></h2>
-                    <?php $current_recipients = Notifier::recipients(); ?>
-                    <p class="description">
-                        <?php esc_html_e('Sendet den Bericht der letzten 24 Stunden sofort — oder, wenn es nichts zu berichten gibt, eine kurze Bestätigung. Die Einstellungen müssen dafür gespeichert sein.', 'auto-quill'); ?>
-                    </p>
-                    <p>
-                        <strong><?php esc_html_e('Aktuelle Empfänger:', 'auto-quill'); ?></strong>
-                        <?php if (empty($current_recipients)): ?>
-                            <span style="color:#a00;"><?php esc_html_e('keine', 'auto-quill'); ?></span>
-                        <?php else: ?>
-                            <?php echo esc_html(implode(', ', $current_recipients)); ?>
-                        <?php endif; ?>
-                    </p>
-                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                        <?php wp_nonce_field(C::NONCE_TEST_MAIL); ?>
-                        <input type="hidden" name="action" value="<?php echo esc_attr(C::ACTION_TEST_MAIL); ?>">
-                        <button type="submit" class="button" <?php disabled(empty($current_recipients)); ?>>
-                            <?php esc_html_e('Test-Mail an alle Empfänger senden', 'auto-quill'); ?>
-                        </button>
-                    </form>
+            <div class="auto-quill-tab-panel wpb-tab-panel" data-tab="notify" style="display:none;">
+                <div class="wpb-card auto-quill-test-mail">
+                    <div class="wpb-card__header">
+                        <div>
+                            <h2 class="wpb-card__title"><?php esc_html_e('Versand testen', 'auto-quill'); ?></h2>
+                            <p class="wpb-card__description">
+                                <?php esc_html_e('Sendet den Bericht der letzten 24 Stunden sofort — oder, wenn es nichts zu berichten gibt, eine kurze Bestätigung. Die Einstellungen müssen dafür gespeichert sein.', 'auto-quill'); ?>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="wpb-card__body">
+                        <?php $current_recipients = Notifier::recipients(); ?>
+                        <p>
+                            <strong><?php esc_html_e('Aktuelle Empfänger:', 'auto-quill'); ?></strong>
+                            <?php if (empty($current_recipients)): ?>
+                                <span class="wpb-text-error"><?php esc_html_e('keine', 'auto-quill'); ?></span>
+                            <?php else: ?>
+                                <?php echo esc_html(implode(', ', $current_recipients)); ?>
+                            <?php endif; ?>
+                        </p>
+                        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                            <?php wp_nonce_field(C::NONCE_TEST_MAIL); ?>
+                            <input type="hidden" name="action" value="<?php echo esc_attr(C::ACTION_TEST_MAIL); ?>">
+                            <button type="submit" class="button" <?php disabled(empty($current_recipients)); ?>>
+                                <?php esc_html_e('Test-Mail an alle Empfänger senden', 'auto-quill'); ?>
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
 
-            <div class="auto-quill-tab-panel" data-tab="backup" style="display:none;">
+            <div class="auto-quill-tab-panel wpb-tab-panel" data-tab="backup" style="display:none;">
                 <?php BackupController::render_panel(); ?>
             </div>
 
-            <div class="auto-quill-tab-panel" data-tab="system" style="display:none;">
+            <div class="auto-quill-tab-panel wpb-tab-panel" data-tab="system" style="display:none;">
                 <?php StatusPanel::render(); ?>
             </div>
         </div>

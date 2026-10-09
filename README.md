@@ -87,6 +87,9 @@ Ein intelligentes WordPress-Plugin, das automatisch RSS-Feeds überwacht, tägli
 - **Einstellungen**: KI-Provider, API-Keys, Modellauswahl, Veröffentlichung, Zeitplan, Quellenangabe, Prompts, Interview,
   Benachrichtigungen, Backup, Updates, Debug
 
+Alle Admin-Seiten nutzen das gemeinsame Design-System *WP-Backend UI* (Seitenkopf, Karten, Badges,
+Hinweise), das AutoQuill mit seinen anderen Plugins teilt.
+
 ## Konfiguration
 
 ### Einstellungen im Admin-Panel
@@ -226,6 +229,9 @@ curl -X POST http://example.com/wp-json/auto-quill/v1/generate-post \
 - **WordPress**: 5.9+
 - **SSL/TLS**: Für sichere API-Anfragen
 - **API-Key**: OpenAI, Claude oder IONOS – oder ein eigener OpenAI-kompatibler Endpunkt
+- **Admin-Design**: [WP-Backend UI](lib/wp-backend-ui/README.md) 1.0.2 – mitgeliefert in
+  `lib/wp-backend-ui/`, keine separate Installation nötig. Nutzen mehrere Plugins die Bibliothek,
+  wird automatisch die neueste mitgelieferte Version geladen.
 
 ## FAQ
 
@@ -292,6 +298,20 @@ Tags werden ignoriert. WordPress prüft automatisch und zeigt neue Versionen unt
 stattdessen dem `beta`-Branch.
 
 ## Changelog
+
+### [1.8.0] — 2026-10-09
+
+#### Changed
+- **Unified admin design:** all AutoQuill screens (Übersicht, Blog-Post erstellen, Interview,
+  RSS Quellen, Einstellungen, Logs) now use the shared design system
+  [WP-Backend UI](lib/wp-backend-ui/README.md) 1.0.2, bundled in `lib/wp-backend-ui/`. Page header
+  with icon and version, cards, badges for post/interview/feed/log status, inline alerts, toasts,
+  busy overlay and spinner, code blocks for logs and source text.
+- The Pixabay image picker is now a native `<dialog>` (Esc and a click on the backdrop close it).
+- The source tabs on the generate screen (*Quelltext für die KI* / *Roh-HTML*) use the library's
+  client-side tabs; `SourceTabs` was removed from `generate.js`.
+- `assets/admin.css` only keeps AutoQuill-specific layout (chat, image grid, rating, feed list);
+  all remaining colors are `--wpb-*` design tokens.
 
 ### [1.7.2] — 2026-10-03
 

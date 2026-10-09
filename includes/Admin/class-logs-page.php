@@ -66,7 +66,14 @@ class LogsPage {
         $cleared       = !empty($_GET['cleared']);
         ?>
         <div class="wrap auto-quill-logs">
-            <h1><?php esc_html_e('AutoQuill Logs', 'auto-quill'); ?></h1>
+            <?php
+            \WPB_Admin_UI::header([
+                'title'    => __('AutoQuill Logs', 'auto-quill'),
+                'subtitle' => __('Warnungen, Fehler und Debug-Ausgaben', 'auto-quill'),
+                'icon'     => 'dashicons-rss',
+                'version'  => AUTO_QUILL_VERSION,
+            ]);
+            ?>
 
             <?php if ($cleared): ?>
                 <div class="notice notice-success is-dismissible"><p><?php esc_html_e('Alle Logs wurden gelöscht.', 'auto-quill'); ?></p></div>
@@ -87,7 +94,7 @@ class LogsPage {
                 </div>
             <?php endif; ?>
 
-            <form method="get" style="margin: 16px 0; display: flex; gap: 8px; align-items: end; flex-wrap: wrap;">
+            <form method="get" class="wpb-toolbar auto-quill-logs-filter">
                 <input type="hidden" name="page" value="<?php echo esc_attr(C::LOGS_PAGE_SLUG); ?>">
                 <label>
                     <?php esc_html_e('Level', 'auto-quill'); ?><br>
@@ -119,7 +126,7 @@ class LogsPage {
                 <button type="submit" class="button"><?php esc_html_e('Filtern', 'auto-quill'); ?></button>
             </form>
 
-            <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+            <div class="wpb-toolbar">
                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" onsubmit="return confirm('<?php echo esc_js(__('Wirklich alle Logs löschen?', 'auto-quill')); ?>');">
                     <input type="hidden" name="action" value="<?php echo esc_attr(self::ACTION_CLEAR); ?>">
                     <?php wp_nonce_field(self::ACTION_CLEAR); ?>
@@ -144,30 +151,29 @@ class LogsPage {
             </p>
 
             <?php if (empty($logs)): ?>
-                <p><em><?php esc_html_e('Keine Einträge im gewählten Zeitraum.', 'auto-quill'); ?></em></p>
+                <p class="wpb-empty"><?php esc_html_e('Keine Einträge im gewählten Zeitraum.', 'auto-quill'); ?></p>
             <?php else: ?>
-                <table class="widefat striped">
+                <table class="widefat striped auto-quill-logs-table">
                     <thead>
                         <tr>
-                            <th style="width: 160px;"><?php esc_html_e('Zeit', 'auto-quill'); ?></th>
-                            <th style="width: 80px;"><?php esc_html_e('Level', 'auto-quill'); ?></th>
-                            <th style="width: 120px;"><?php esc_html_e('Quelle', 'auto-quill'); ?></th>
+                            <th class="auto-quill-logs-col-time"><?php esc_html_e('Zeit', 'auto-quill'); ?></th>
+                            <th class="auto-quill-logs-col-level"><?php esc_html_e('Level', 'auto-quill'); ?></th>
+                            <th class="auto-quill-logs-col-source"><?php esc_html_e('Quelle', 'auto-quill'); ?></th>
                             <th><?php esc_html_e('Nachricht', 'auto-quill'); ?></th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach (array_reverse($logs) as $log): ?>
-                            <?php $color = self::level_color($log['level']); ?>
                             <tr>
                                 <td><code><?php echo esc_html($log['created_at']); ?></code></td>
-                                <td><span style="display:inline-block;padding:2px 8px;border-radius:3px;background:<?php echo esc_attr($color); ?>;color:#fff;font-weight:600;font-size:11px;text-transform:uppercase;"><?php echo esc_html($log['level']); ?></span></td>
+                                <td><?php echo \WPB_Admin_UI::badge((string) $log['level'], self::level_variant((string) $log['level'])); // badge() escapes. ?></td>
                                 <td><code><?php echo esc_html($log['source']); ?></code></td>
                                 <td>
                                     <div><?php echo esc_html($log['message']); ?></div>
                                     <?php if (!empty($log['context'])): ?>
-                                        <details style="margin-top:4px;">
-                                            <summary style="cursor:pointer;color:#2271b1;"><?php esc_html_e('Context anzeigen', 'auto-quill'); ?></summary>
-                                            <pre style="white-space:pre-wrap;background:#f6f7f7;padding:8px;border:1px solid #dcdcde;font-size:11px;max-height:300px;overflow:auto;"><?php echo esc_html(wp_json_encode($log['context'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)); ?></pre>
+                                        <details class="auto-quill-log-context">
+                                            <summary><?php esc_html_e('Context anzeigen', 'auto-quill'); ?></summary>
+                                            <pre class="wpb-code"><?php echo esc_html(wp_json_encode($log['context'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)); ?></pre>
                                         </details>
                                     <?php endif; ?>
                                 </td>
@@ -180,13 +186,14 @@ class LogsPage {
         <?php
     }
 
-    private static function level_color(string $level): string {
+    /** WP-Backend UI badge variant for a log level. */
+    private static function level_variant(string $level): string {
         switch ($level) {
-            case 'error':   return '#b32d2e';
-            case 'warning': return '#dba617';
-            case 'info':    return '#2271b1';
-            case 'debug':   return '#646970';
-            default:        return '#646970';
+            case 'error':   return 'error';
+            case 'warning': return 'warning';
+            case 'info':    return 'info';
+            case 'debug':   return 'neutral';
+            default:        return 'neutral';
         }
     }
 }
