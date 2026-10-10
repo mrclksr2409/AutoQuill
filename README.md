@@ -299,6 +299,12 @@ stattdessen dem `beta`-Branch.
 
 ## Changelog
 
+### [1.8.1] — 2026-10-10
+
+#### Changed
+- Author is now Marcel Kaiser, Author URI and Plugin URI point to GitHub.
+- New "Wiki" link in the plugin row on the Plugins screen.
+
 ### [1.8.0] — 2026-10-09
 
 #### Changed
