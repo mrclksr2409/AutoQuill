@@ -21,9 +21,15 @@ Warum nicht einfach „täglich“? WordPress' `daily` wiederholt sich stur alle
 der Zeitumstellung würde aus 01:00 dauerhaft 00:00 oder 02:00. Mit einzelnen Terminen bleibt die
 Uhrzeit korrekt.
 
-- Eine **geänderte Uhrzeit** wird beim Speichern sofort übernommen.
+- Eine **geänderte Uhrzeit** wird beim Speichern sofort übernommen. Das Speichern anderer
+  Einstellungen lässt die Termine unberührt.
 - Fehlt ein Termin (z. B. nach einer Datenbank-Migration), legt AutoQuill ihn beim nächsten
   Seitenaufruf automatisch neu an.
+- Sicherung und Tagesbericht werden nur eingeplant, solange sie eingeschaltet sind; beim
+  Ausschalten wird der Termin entfernt.
+- Doppelte Läufe werden abgefangen: Eine automatische Sicherung bzw. ein Tagesbericht innerhalb
+  einer Stunde nach dem letzten wird übersprungen (mit Info-Eintrag im Log).
+- Beim **Deaktivieren** des Plugins werden alle vier Termine entfernt.
 - Die nächsten Termine zeigt **Einstellungen → System → Status**.
 
 ## WP-Cron verstehen
@@ -61,6 +67,7 @@ Die meisten Hoster bieten dafür im Kundenmenü einen Punkt *Cronjobs* an.
 wp cron event run auto_quill_daily_fetch
 wp cron event run auto_quill_daily_select
 wp cron event run auto_quill_daily_backup
+wp cron event run auto_quill_daily_digest
 ```
 
 ## Reihenfolge und Abstände

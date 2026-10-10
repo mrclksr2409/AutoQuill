@@ -12,15 +12,22 @@ Einrichtung unter **Einstellungen → Benachrichtigungen**.
    - *Fehler und Warnungen* – aus dem Log, gebündelt
    - *Erstellte Blog-Posts* – mit Status und Bearbeiten-Link
 4. **Empfänger** festlegen: Administratoren ankreuzen und/oder unter **Weitere Adressen** eine
-   Adresse pro Zeile eintragen (auch Verteiler ohne WordPress-Konto).
-5. Speichern – danach **Test-Mail an alle Empfänger senden**.
+   Adresse pro Zeile eintragen (auch Verteiler ohne WordPress-Konto). Insgesamt gehen höchstens
+   50 Mails pro Bericht raus; doppelte Adressen werden zusammengefasst.
+5. Speichern – danach **Test-Mail an alle Empfänger senden**. Der Test verschickt sofort den
+   Bericht der letzten 24 Stunden oder, wenn es nichts zu berichten gibt, eine kurze Bestätigung.
+   Die Meldung danach nennt, an wie viele Empfänger die Mail rausging.
 
 ## Inhalt und Form
 
 - Betreff: `[Seitenname] AutoQuill Tagesbericht – TT.MM.JJJJ`
 - Reiner Text (keine HTML-Mail), damit keine fremden Plugin-Mails beeinflusst werden
 - **Eine Mail pro Empfänger** – niemand sieht die Adressen der anderen
-- Wiederholte Fehler werden gebündelt, z. B. „13× OpenAI API-Fehler“ mit erstem und letztem Auftreten
+- Neue Top-Themen je Tag mit Bewertung in eckigen Klammern und Link zur Übersicht
+- Erstellte Blog-Posts mit Status und Bearbeiten-Link (höchstens 50)
+- Wiederholte Fehler werden gebündelt, z. B. „13x [ERROR] client: OpenAI API-Fehler“ mit erstem und
+  letztem Auftreten; Fehler stehen vor Warnungen, jeweils nach Häufigkeit sortiert. Angezeigt
+  werden höchstens 15 Arten, der Rest als „… und N weitere Arten von Meldungen“
 
 **Gibt es nichts zu berichten, wird nichts verschickt.**
 

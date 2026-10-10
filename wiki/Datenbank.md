@@ -39,7 +39,8 @@ erscheinen und könnte ein zweites Mal verarbeitet werden.
 |---|---|
 | `topic_date` | Datum, **eindeutig** – eine Zeile pro Tag |
 | `topics` | JSON-Array der Themen (siehe unten) |
-| `status`, `post_id`, `selected_topic_*` | Status der Tagesauswahl |
+| `status` | `pending` (ausgewählt), `generated` (zu einem Thema wurde ein Beitrag generiert), `published` (gespeichert) |
+| `post_id`, `selected_topic_id`, `selected_topic_title` | Zuletzt gespeicherter Beitrag bzw. zuletzt generiertes Thema des Tages |
 | `created_at`, `updated_at` | Zeitstempel |
 
 ```json
@@ -80,7 +81,42 @@ Interviews werden nicht automatisch aufgeräumt und sind nicht Teil der Sicherun
 | `auto_quill_db_version` | Schema-Version (aktuell `1.5`) |
 | `auto_quill_backups` | Sicherungen, nicht automatisch geladen |
 | `auto_quill_last_digest` | Zeitpunkt des letzten Tagesberichts (UTC) |
-| `_transient_auto_quill_models_*` | Zwischengespeicherte Modelllisten (12 h) |
+| `_transient_auto_quill_models_*` | Zwischengespeicherte Modelllisten (12 h), benannt nach einem Hash des Schlüssels |
+| `_transient_auto_quill_pixabay_*` | Zwischengespeicherte Pixabay-Suchergebnisse (1 h) |
+| `_transient_auto_quill_notice_*` | Kurzlebige Admin-Hinweise je Benutzer (30 s) |
+
+### Schlüssel in `auto_quill_settings`
+
+| Schlüssel | Einstellung | Standard |
+|---|---|---|
+| `ai_provider` | KI-Provider: `openai`, `claude`, `ionos`, `custom` | `openai` |
+| `openai_api_key`, `claude_api_key`, `ionos_api_key`, `custom_api_key` | API-Schlüssel je Provider | leer |
+| `openai_model`, `claude_model`, `ionos_model`, `custom_model` | Modell je Provider | `gpt-4o-mini`, `claude-sonnet-4-6`, `meta-llama/Llama-3.3-70B-Instruct`, leer |
+| `custom_base_url` | Basis-URL des eigenen Endpunkts | leer |
+| `pixabay_api_key` | Pixabay-Schlüssel | leer |
+| `post_status` | `draft`, `publish` oder `pending` | `draft` |
+| `auto_publish` | Automatisch veröffentlichen | `false` |
+| `source_link_enabled`, `source_link_template` | Quellenhinweis | `true`, `Quelle: {source_link}` |
+| `rss_lookback_days` | RSS-Rückblick in Tagen (0–365) | `7` |
+| `fetch_time`, `select_time` | Uhrzeiten Abruf und Themenauswahl (`HH:MM`, Ortszeit) | `00:00`, `01:00` |
+| `writing_style` | Schreibstil | leer |
+| `prompt_title`, `prompt_body`, `prompt_excerpt`, `prompt_category` | Die vier Prompts | siehe [Prompts](Prompts#standard-prompts) |
+| `interview_style` | `first_person`, `editorial` oder `qa` | `first_person` |
+| `interview_questions` | Richtwert Fragen (3–15) | `6` |
+| `prompt_interview` | Prompt: Redakteur | siehe Tab *Interview* |
+| `notify_enabled`, `notify_time` | Tagesbericht an/aus, Uhrzeit | `false`, `08:00` |
+| `notify_users` | Benutzer-IDs der Empfänger | leer |
+| `notify_emails` | Weitere Adressen | leer |
+| `notify_events` | Inhalte: `topics`, `errors`, `posts` | alle drei |
+| `backup_enabled`, `backup_time`, `backup_keep` | Automatische Sicherung | `true`, `03:00`, `7` |
+| `beta_mode` | Beta-Modus | `false` |
+| `debug_logging` | Debug-Logging | `false` |
+| `posts_per_day` | Altlast ohne Funktion (wird gespeichert, aber nirgends ausgewertet) | `1` |
+
+Bestehende Installationen bekommen neue Schlüssel nicht automatisch in die Option geschrieben;
+AutoQuill liest deshalb immer mit Rückfall auf diese Standardwerte. Ein gemeinsamer Schlüssel
+`ai_api_key` aus Versionen vor 1.7.0 wird beim ersten Laden automatisch dem damals gewählten
+Provider zugeordnet und entfernt.
 
 ## Post-Meta der erzeugten Beiträge
 
@@ -94,7 +130,8 @@ Interviews werden nicht automatisch aufgeräumt und sind nicht Teil der Sicherun
 | `_auto_quill_interview_id` | ID des Interviews, aus dem der Beitrag entstand |
 
 Die Felder sind geschützt (Unterstrich) und in der WordPress-REST-API nicht sichtbar. Im Editor
-zeigt die Box **„AutoQuill-Quelle“** sie an.
+zeigt die Seitenbox **„AutoQuill-Quelle“** Feed-Name und Originalartikel an – nur bei Beiträgen
+mit `_auto_quill_source_url`, also nicht bei Interview-Beiträgen.
 
 ### Alle AutoQuill-Beiträge finden
 

@@ -1,21 +1,28 @@
 # RSS-Quellen
 
-**AutoQuill → RSS Quellen** verwaltet die Feeds, aus denen AutoQuill Artikel sammelt.
+**AutoQuill → RSS Quellen** verwaltet die Feeds, aus denen AutoQuill Artikel sammelt. Die Seite hat
+zwei Karten: *Neue RSS-Quelle hinzufügen* und *Bestehende RSS-Quellen*.
 
 ## Quelle hinzufügen
 
 | Feld | Beschreibung |
 |---|---|
-| **Titel** | Anzeigename, erscheint im Dashboard, im Quellenhinweis (`{feed_name}`) und im Filter |
-| **RSS-Feed URL** | Vollständige URL des Feeds (`http://` oder `https://`), RSS oder Atom |
+| **Titel** | Anzeigename, erscheint im Dashboard, im Quellenhinweis (`{feed_name}`), in der Box „AutoQuill-Quelle“ und im Filter |
+| **RSS-Feed URL** | Vollständige URL des Feeds (nur `http://` oder `https://`), RSS oder Atom |
 
-Neue Quellen sind sofort **aktiv**. Die erste Abfrage erfolgt beim nächsten geplanten Abruf – oder
-sofort über **Übersicht → Feeds neu holen**.
+Beide Felder sind Pflicht; ungültige URLs werden mit „Ungültige Eingabe.“ abgelehnt. Neue Quellen
+sind sofort **aktiv**. Die erste Abfrage erfolgt beim nächsten geplanten Abruf – oder sofort über
+die Übersicht (**Feeds neu holen + Topics neu wählen**).
 
-## Quelle löschen
+## Bestehende Quellen
 
-**Löschen** entfernt nur den Feed-Eintrag. Bereits abgerufene Artikel bleiben bis zum nächsten
-Aufräumen erhalten, erzeugte Beiträge bleiben unberührt.
+Die Tabelle zeigt Titel, Feed-URL, **Status** (*Aktiv* / *Inaktiv*) und die Aktion **Löschen**.
+Abgerufen werden nur aktive Quellen. Einen Schalter zum Deaktivieren gibt es in der Oberfläche
+nicht; der Aktiv-Status kommt nur beim Wiederherstellen einer [Sicherung](Backup-und-Wiederherstellung)
+aus der Sicherung.
+
+**Löschen** (mit Sicherheitsabfrage) entfernt nur den Feed-Eintrag. Bereits abgerufene Artikel
+bleiben bis zum nächsten Aufräumen erhalten, erzeugte Beiträge bleiben unberührt.
 
 ## Die richtige Feed-URL finden
 
@@ -30,7 +37,9 @@ Aufräumen erhalten, erzeugte Beiträge bleiben unberührt.
 - Einträge älter als der **RSS-Rückblick** (Einstellungen → Feeds & Zeitplan, Standard 7 Tage) werden
   ignoriert und später aus der Datenbank entfernt; `0` = unbegrenzt
 - Duplikate werden über Feed-URL + Artikel-Link erkannt, auch wenn sich der Titel ändert
-- Pro neuem Eintrag wird die Artikelseite geladen (Timeout 10 s, max. 3 Weiterleitungen)
+- Die Beschreibung aus dem Feed wird ohne HTML gespeichert (max. 1 000 Zeichen)
+- Pro neuem Eintrag wird die Artikelseite geladen (Timeout 10 s, max. 3 Weiterleitungen,
+  User-Agent `AutoQuill/<Version>`, max. 50 000 Zeichen)
 
 ## Tipps zur Auswahl
 

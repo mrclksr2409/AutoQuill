@@ -6,6 +6,10 @@ Alle AutoQuill-Seiten, Aktionen und REST-Endpunkte erfordern die Berechtigung `m
 (Administratoren). Formulare und Aktionen sind mit WordPress-Nonces gegen fremd ausgelöste Anfragen
 (CSRF) geschützt, die REST-Endpunkte über den Cookie-Nonce des angemeldeten Benutzers.
 
+Weil eine Generierung einen kostenpflichtigen KI-Aufruf auslöst, startet die Generierungs-Seite
+nur automatisch, wenn der Link aus dem Dashboard ein gültiges Nonce trägt; ein fremder oder
+kopierter Link öffnet die Seite nur, ohne zu generieren.
+
 ## API-Schlüssel
 
 | Wo | Schutz |
@@ -13,6 +17,7 @@ Alle AutoQuill-Seiten, Aktionen und REST-Endpunkte erfordern die Berechtigung `m
 | **`wp-config.php`** (empfohlen) | `AUTO_QUILL_AI_KEY`, `AUTO_QUILL_PIXABAY_KEY` – nie in der Datenbank, haben Vorrang vor dem Formular |
 | **Einstellungsformular** | In der Datenbank (`wp_options`), im Formular nie wieder angezeigt (Passwortfeld bleibt leer) |
 | **Status-Panel** | Maskiert, z. B. `sk-•••••••abc` |
+| **Log** | Felder mit Namen wie `api_key`, `authorization`, `password`, `secret` oder `token` werden als `***redacted***` gespeichert |
 | **Interne Sicherungen** | Enthalten, liegen in der Datenbank |
 | **Heruntergeladene Sicherungen** | **Nicht** enthalten |
 | **Zwischengespeicherte Modelllisten** | Nur ein Hash des Schlüssels im Namen, nie der Schlüssel selbst |
@@ -24,11 +29,12 @@ Datenbank hat, kann sie lesen – daher die Empfehlung für `wp-config.php`.
 
 | Empfänger | Was | Wann |
 |---|---|---|
-| **Gewählter KI-Provider** (OpenAI, Anthropic, IONOS oder dein eigener Endpunkt) | Titel und Beschreibungen der neuen Artikel (Themenauswahl); Artikeltext bis 8 000 Zeichen, deine Prompts und die Namen deiner Kategorien (Beitrag); Titel und Auszug (Bild-Suchbegriffe) | Themenauswahl, Generierung |
+| **Gewählter KI-Provider** (OpenAI, Anthropic, IONOS oder dein eigener Endpunkt) | Titel und Beschreibungen der neuen Artikel (Themenauswahl); Artikeltext bis 8 000 Zeichen, deine Prompts, dein Schreibstil und die Namen deiner Kategorien (Beitrag); Titel und Auszug (Bild-Suchbegriffe) | Themenauswahl, Generierung |
+| **Gewählter KI-Provider** | Thema, deine Hinweise und der Gesprächsverlauf mit deinen Antworten | Interview (jede Frage und das Schreiben des Beitrags) |
 | **Gewählter KI-Provider** | Nur der API-Schlüssel, zum Abruf der Modellliste | Einstellungsseite |
-| **Pixabay** | Suchbegriffe | Bildsuche |
-| **RSS-Quellen / Artikelseiten** | Normaler Seitenabruf mit User-Agent `AutoQuill/<Version>` | RSS-Abruf |
-| **GitHub** | Versionsabfrage | Update-Prüfung |
+| **Pixabay** | Suchbegriffe und der Pixabay-Schlüssel; beim Speichern wird das gewählte Bild heruntergeladen | Bildsuche, Speichern |
+| **RSS-Quellen / Artikelseiten** | Feed-Abruf über SimplePie; Artikelseiten mit User-Agent `AutoQuill/<Version>` | RSS-Abruf |
+| **GitHub** | Versionsabfrage (Plugin-Header auf dem Branch `main` bzw. `beta`) | Update-Prüfung |
 | **Mailserver** | Tagesbericht | wenn eingeschaltet |
 
 Es werden **keine Besucherdaten** deiner Website übertragen. AutoQuill setzt keine Cookies im Frontend
@@ -37,6 +43,14 @@ und bindet dort nichts ein.
 Für die Datenschutzerklärung relevant sind in erster Linie **Beitragsbilder von Pixabay**: Sie werden
 in die eigene Mediathek geladen und von dort ausgeliefert – es entsteht keine Verbindung zwischen
 Besuchern und Pixabay.
+
+Im **Interview** gibst du selbst Inhalte ein, die an den KI-Provider gehen. Wer personenbezogene
+oder vertrauliche Daten vermeiden muss, sollte einen Provider mit passendem Standort und Vertrag
+wählen (z. B. IONOS mit Rechenzentren in Deutschland) oder einen eigenen, lokal betriebenen
+Endpunkt.
+
+Das Admin-Design (*WP-Backend UI*) ist im Plugin enthalten und lädt keine Schriften oder Skripte
+von fremden Servern.
 
 ## Urheberrecht und Inhalte
 
@@ -55,3 +69,5 @@ Besuchern und Pixabay.
 - Von der KI erzeugtes HTML wird mit `wp_kses_post()` gefiltert, bevor es angezeigt oder
   gespeichert wird.
 - Artikelseiten werden mit `wp_safe_remote_get()` geladen, das Anfragen an interne Adressen blockiert.
+- Feed-Inhalte (Titel, Beschreibungen, URLs) gelten als fremder Inhalt und werden serverseitig
+  escaped; der Roh-HTML-Quelltext auf der Generierungs-Seite wird nur als Text angezeigt.

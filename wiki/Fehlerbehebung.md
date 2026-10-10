@@ -8,13 +8,21 @@ Erster Schritt fast immer: **AutoQuill → Logs**, Level *Error*/*Warning*, und 
 ## KI & API
 
 ### „API Key nicht konfiguriert“
-Kein Schlüssel gespeichert. **Einstellungen → KI-Provider → API-Schlüssel** eintragen und speichern
-(oder `AUTO_QUILL_AI_KEY` in der `wp-config.php` setzen).
+Für den gewählten Provider ist kein Schlüssel gespeichert – jeder Provider hat ein eigenes Feld.
+**Einstellungen → KI-Provider → API-Schlüssel (…)** eintragen und speichern (oder
+`AUTO_QUILL_AI_KEY` in der `wp-config.php` setzen).
 
-### „Der API-Schlüssel wurde abgelehnt“ / HTTP 401
+### „Für den eigenen Endpunkt fehlen Basis-URL oder Modell“
+Beim *Eigenen OpenAI-kompatiblen Endpunkt* müssen **Basis-URL** und **Modell** ausgefüllt sein;
+AutoQuill warnt schon beim Speichern. Die Basis-URL endet mit dem Versionspfad (z. B. `/v1`),
+**ohne** `/chat/completions`.
+
+### „Der API-Schlüssel wurde von … abgelehnt“ / „API-Fehler (HTTP 401)“
 - Schlüssel und **Provider passen nicht zusammen** (OpenAI-Schlüssel beginnen mit `sk-`,
-  Anthropic-Schlüssel mit `sk-ant-`).
+  Anthropic-Schlüssel mit `sk-ant-`; für IONOS brauchst du einen Token aus dem *Token Manager*).
 - Schlüssel wurde beim Anbieter widerrufen oder hat einen Tippfehler.
+- Ist `AUTO_QUILL_AI_KEY` gesetzt, gilt diese Konstante für jeden Provider – nach einem
+  Providerwechsel passt sie womöglich nicht mehr.
 
 ### HTTP 429 – Rate Limit / Quota
 Zu viele Anfragen oder **kein Guthaben** beim Anbieter. Im Dashboard des Anbieters Guthaben und
@@ -33,8 +41,11 @@ wiederholt. Lösungen:
 - Budget über den [Filter `auto_quill_max_tokens`](Hooks-und-Filter) erhöhen
 
 ### Modellliste lädt nicht
-- Schlüssel prüfen (siehe 401 oben)
-- Server erreicht `api.openai.com` / `api.anthropic.com` nicht (Firewall des Hosters)
+- Schlüssel prüfen (siehe 401 oben); „Kein API-Schlüssel hinterlegt“ heißt, dass weder im Feld noch
+  gespeichert ein Schlüssel vorhanden ist
+- Server erreicht `api.openai.com`, `api.anthropic.com` bzw. den IONOS-Endpunkt nicht (Firewall
+  des Hosters)
+- Eigener Endpunkt: Nicht jeder Dienst bietet `/models` an – dann die Modell-ID von Hand eintragen
 - Das gespeicherte Modell bleibt trotzdem nutzbar
 
 ---
@@ -42,7 +53,10 @@ wiederholt. Lösungen:
 ## Generierung
 
 ### Generierung bricht nach ~30 oder ~60 Sekunden ab / „Die Anfrage hat zu lange gedauert“
-Die KI braucht für lange Beiträge bis zu 90 Sekunden. Häufig beendet vorher etwas anderes die Anfrage:
+Die KI braucht für lange Beiträge bis zu 90 Sekunden (so lange wartet AutoQuill auf den Anbieter;
+die Seite selbst bricht nach 120 Sekunden ab). AutoQuill versucht, die PHP-Laufzeit für die
+Generierung zu verlängern, viele Hoster lassen das aber nicht zu. Häufig beendet vorher etwas
+anderes die Anfrage:
 - **PHP `max_execution_time`** – mindestens 120 setzen
 - **Webserver-/Proxy-Timeout** (nginx `fastcgi_read_timeout`, Cloudflare 100 s, Load Balancer)
 - Abhilfe auch: schnelleres Modell oder kürzere Beiträge
@@ -66,7 +80,21 @@ entfernen – das Format ist fest eingebaut.
 
 ### Kategorien fehlen oder passen nicht
 Die KI wählt nur aus **vorhandenen** WordPress-Kategorien. Sinnvolle Kategorien anlegen,
-[Prompt Kategorie](Prompts) schärfen oder vor dem Speichern von Hand korrigieren.
+[Prompt Kategorie](Prompts) schärfen oder nach dem Speichern im WordPress-Editor korrigieren
+(auf der Generierungs-Seite sind die Kategorien nur eine Vorschau).
+
+---
+
+## Interview
+
+### „Die nächste Frage konnte nicht geladen werden“
+Deine Antwort ist trotzdem gespeichert. **Frage erneut anfordern** klicken. Steht im Log
+(`interview`) „Interview-Frage konnte auch im Retry nicht geparst werden“, hat das Modell nicht im
+geforderten JSON-Format geantwortet – bei kleinen lokalen Modellen häufiger; ein größeres Modell
+hilft.
+
+### „Für einen Beitrag braucht es mindestens 3 beantwortete Fragen“
+Übersprungene Fragen zählen nicht. Weitere Fragen beantworten, dann **Beitrag schreiben**.
 
 ---
 
@@ -82,7 +110,8 @@ Die KI wählt nur aus **vorhandenen** WordPress-Kategorien. Sinnvolle Kategorien
 | Auswahl liegt vor dem Abruf | Warnung beim Speichern | Uhrzeiten anpassen |
 | KI-Fehler | Log `selector` / `client` | siehe *KI & API* oben |
 
-Sofort-Lösung: **Übersicht → Feeds neu holen + Topics neu wählen**.
+Sofort-Lösung: Im Menü **AutoQuill** (Übersicht), Tab *Top-Themen* →
+**Feeds neu holen + Topics neu wählen**.
 
 ### Ein Feed liefert nichts
 - Feed-URL im Browser öffnen – es muss XML erscheinen.
@@ -138,6 +167,11 @@ der Seite noch keiner hinterlegt, jetzt unter **KI-Provider** / **Bilder** eintr
 ### „Zugriff verweigert“
 Alle AutoQuill-Seiten erfordern Administratorrechte (`manage_options`).
 
+### Generierungs-Seite startet nicht von selbst
+Die Seite startet nur automatisch, wenn sie über **Blog-Post generieren** im Dashboard geöffnet
+wurde. Bei einem kopierten Link, einem Lesezeichen oder nach einem Neuladen erscheint stattdessen
+**Jetzt generieren** – das ist Absicht und verhindert ungewollte, kostenpflichtige KI-Aufrufe.
+
 ### Status-Panel zeigt die DB-Version rot
 Eine Datenbank-Migration steht aus oder ist fehlgeschlagen. Eine Admin-Seite neu laden (die Migration
 wird wiederholt) und im Log (`db.schema`) nach dem Grund suchen – meist fehlende `ALTER`-Rechte des
@@ -145,5 +179,5 @@ Datenbankbenutzers.
 
 ---
 
-Nicht dabei? Ein [Issue](https://github.com/mrclksr2409/autoquill/issues) eröffnen – mit
+Nicht dabei? Ein [Issue](https://github.com/mrclksr2409/AutoQuill/issues) eröffnen – mit
 WordPress- und PHP-Version, AutoQuill-Version, Provider/Modell und dem Log-Export.

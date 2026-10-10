@@ -19,22 +19,26 @@ Alle Uhrzeiten sind einstellbar, siehe [Zeitplan und Cron](Zeitplan-und-Cron).
 
 Für jede **aktive** Quelle:
 
-1. Der Feed wird mit SimplePie gelesen, die **neuesten 20 Einträge** werden betrachtet.
+1. Der Feed wird mit SimplePie (in WordPress enthalten) gelesen, die **neuesten 20 Einträge**
+   werden betrachtet.
 2. Einträge, die älter als der **RSS-Rückblick** sind (Standard 7 Tage), werden übersprungen.
 3. Bereits bekannte Einträge werden erkannt (Prüfsumme aus Feed-URL + Artikel-Link) und übersprungen.
 4. Für neue Einträge wird zusätzlich die **Artikelseite selbst** geladen (max. 50 000 Zeichen), damit
    die KI später mehr als nur den Anreißer aus dem Feed hat.
 5. Am Ende werden Artikel gelöscht, die älter als der Rückblick sind – **außer** sie sind bereits
-   mit einem Beitrag verknüpft.
+   mit einem Beitrag verknüpft. (Dieses Aufräumen läuft beim Abruf aller Feeds, nicht beim Abruf
+   eines einzelnen Feeds aus dem Dashboard.)
 
 ## 2. Themenauswahl
 
 - Grundlage sind die bis zu **50 Artikel, die in den letzten 24 Stunden neu abgerufen** wurden.
-- Die KI bekommt Titel und Beschreibung und wählt **5 Themen**. Jedes Thema erhält eine
-  Bewertung von **0–100** („Wie lohnend wäre ein eigener Beitrag?“ – Relevanz, Aktualität,
-  Substanz) und eine kurze Begründung.
+- Die KI bekommt Titel und Beschreibung (bis 400 Zeichen) und wählt **5 Themen**. Jedes Thema
+  erhält eine Bewertung von **0–100** („Wie lohnend wäre ein eigener Beitrag?“ – Relevanz,
+  Aktualität, Substanz) und eine kurze Begründung.
 - Die Themen werden **absteigend nach Bewertung** gespeichert und im Dashboard angezeigt.
 - Pro Tag gibt es genau eine Themenliste; ein erneuter Lauf am selben Tag überschreibt sie.
+- Nach jeder erfolgreichen Auswahl feuert die Action `auto_quill_topics_selected`
+  (siehe [Hooks und Filter](Hooks-und-Filter)).
 
 > Weil nur **neu abgerufene** Artikel zählen, sollte die Themenauswahl kurz **nach** dem Abruf
 > laufen. AutoQuill warnt beim Speichern, wenn das nicht der Fall ist.
@@ -44,8 +48,9 @@ Für jede **aktive** Quelle:
 Im [Dashboard](Dashboard) wählst du ein Top-Thema **oder** einen beliebigen Feed-Eintrag und
 klickst **Blog-Post generieren**. Auf der [Generierungs-Seite](Blog-Post-erstellen):
 
-1. Die KI erhält den Artikeltext (bis 8 000 Zeichen) und deine vier [Prompts](Prompts) in **einer**
-   Anfrage und antwortet mit Titel, Beitragstext, Auszug und passenden Kategorien.
+1. Die KI erhält den Artikeltext (bis 8 000 Zeichen), deinen **Schreibstil** und deine vier
+   [Prompts](Prompts) in **einer** Anfrage und antwortet mit Titel, Beitragstext, Auszug und
+   passenden Kategorien.
 2. Am Ende wird serverseitig der **Quellenhinweis** angehängt.
 3. Du vergleichst den Beitrag mit dem Originaltext, wählst optional ein Beitragsbild.
 
@@ -56,11 +61,21 @@ Einstellung. Beitrag und Feed-Artikel bleiben dauerhaft miteinander verknüpft: 
 du, zu welchem Eintrag es schon einen Beitrag gibt, und im Beitragseditor zeigt die Box
 **„AutoQuill-Quelle“** den Weg zurück zum Original.
 
+## Alternative: Beitrag aus einem Interview
+
+Nicht jeder Beitrag braucht einen Feed-Eintrag. Unter **AutoQuill → Interview** (oder über den
+Button **Interview starten** auf der Übersicht) stellt dir die KI als Redakteur Fragen zu einem
+freien Thema; aus deinen Antworten entsteht ein Beitrag. Speichern und Veröffentlichen
+funktionieren genauso wie oben. Details: [Interview](Interview).
+
 ## Manuell eingreifen
 
-Jeder automatische Schritt lässt sich im Dashboard sofort auslösen:
+Jeder automatische Schritt lässt sich im Dashboard (Tab **Top-Themen**) sofort auslösen:
 
 | Button | Wirkung |
 |---|---|
 | **Feeds neu holen + Topics neu wählen** | Abruf (alle aktiven Feeds oder ein ausgewählter) und direkt danach Themenauswahl |
 | **Nur Topics neu wählen** | Nur die Themenauswahl, z. B. nach Änderung des Modells |
+
+Sicherung und Tagesbericht lassen sich unter **Einstellungen → Backup** (*Jetzt sichern*) bzw.
+**Einstellungen → Benachrichtigungen** (*Test-Mail an alle Empfänger senden*) sofort auslösen.

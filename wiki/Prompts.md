@@ -12,7 +12,7 @@ AutoQuill schickt **eine einzige** Anfrage an die KI:
 [System]  Du bist ein professioneller Blog-Autor … Antworte immer im geforderten JSON-Format.
 
 [Nutzer]  Du erstellst einen Blog-Beitrag aus folgendem Quelltext.
-          Quelltext (Originalartikel): Titel, Beschreibung, Inhalt (max. 8 000 Zeichen)
+          Quelltext (Originalartikel): Titel, Beschreibung, Inhalt (max. 8 000 Zeichen), Quell-URL
           Verfügbare Kategorien: - ID 3: Technik  - ID 7: Wirtschaft …
           --- Vorgaben Titel ---          ← dein Feld „Prompt: Titel“
           --- Vorgaben Beitragstext ---   ← dein Feld „Prompt: Beitragstext“
@@ -25,6 +25,10 @@ AutoQuill schickt **eine einzige** Anfrage an die KI:
 Deshalb gilt: **Kein eigenes JSON-Schema und keine „Antworte mit JSON“-Hinweise** in die Felder
 schreiben – das ist bereits fest eingebaut. Ist die Antwort kein gültiges JSON, fragt AutoQuill
 einmal automatisch nach.
+
+Beim **Interview-Beitrag** ist der Aufbau derselbe, nur steht statt des Originalartikels das
+Gespräch (Thema, deine Hinweise, Verlauf) im Quelltext, und vor dem Schreibstil kommt ein fester
+Abschnitt **Perspektive und Form** (aus *Einstellungen → Interview*).
 
 ## Schreibstil
 
@@ -47,6 +51,9 @@ keine Floskeln und möglichst wenige Anglizismen. Fachbegriffe kurz erklären.
 | **Prompt: Beitragstext** | Länge, Aufbau, Stil, Tonalität des Beitrags | – |
 | **Prompt: Social-Media-Auszug** | WordPress-Auszug (Teaser, Social Media) | – |
 | **Prompt: Kategorie** | Welche und wie viele Kategorien | `{categories_list}` – deine WordPress-Kategorien mit IDs |
+
+Technisch werden beide Platzhalter in allen vier Feldern ersetzt; beim Interview steht
+`{topic_title}` für das Thema des Interviews.
 
 Ein **leeres Feld** wird beim Speichern durch den Standard ersetzt – so kommst du jederzeit zurück.
 
@@ -100,8 +107,9 @@ daraus das Antwort-Budget:
 Tokens = Wörter × 4 + 1000, mindestens 6 500, höchstens 16 000
 ```
 
-Steht keine Wortzahl im Prompt, wird mit 1 200 Wörtern gerechnet. Wird die Antwort trotzdem
-abgeschnitten, wiederholt AutoQuill einmal mit 1,6-fachem Budget. Modelle mit kleinem
+Erkannt werden Angaben wie `Wörter`, `Wörtern`, `Worte` oder `words`. Steht keine Wortzahl im
+Prompt, wird mit 1 200 Wörtern gerechnet. Wird die Antwort trotzdem abgeschnitten, wiederholt
+AutoQuill einmal mit 1,6-fachem Budget (höchstens 16 000 Tokens). Modelle mit kleinem
 Ausgabelimit brauchen ggf. eine Korrektur über den Filter
 [`auto_quill_max_tokens`](Hooks-und-Filter).
 

@@ -3,6 +3,10 @@
 Eigener Code gehört in ein kleines eigenes Plugin oder die `functions.php` des (Child-)Themes –
 nicht in die AutoQuill-Dateien, sonst ist er beim nächsten Update weg.
 
+AutoQuill stellt genau **einen eigenen Action-Hook** (`auto_quill_topics_selected`) und
+**einen Filter** (`auto_quill_max_tokens`) bereit. Dazu kommen die vier Cron-Hooks, an die sich
+ebenfalls eigener Code hängen kann.
+
 ## Actions
 
 | Hook | Parameter | Wann |
@@ -12,6 +16,9 @@ nicht in die AutoQuill-Dateien, sonst ist er beim nächsten Update weg.
 | `auto_quill_daily_backup` | – | Geplante Sicherung (Cron, nur wenn eingeschaltet) |
 | `auto_quill_daily_digest` | – | Geplanter Tagesbericht (Cron, nur wenn eingeschaltet) |
 | `auto_quill_topics_selected` | `array $topics` | Nach jeder erfolgreichen Themenauswahl, auch manuell ausgelöst |
+
+`$topics` ist das gespeicherte Themen-Array, absteigend nach Bewertung sortiert – jedes Element mit
+`article_id`, `title`, `summary`, `rating` (0–100 oder `null`) und `rating_reason`.
 
 ### Beispiel: Slack-Nachricht bei neuen Themen
 
@@ -56,9 +63,14 @@ add_filter('auto_quill_max_tokens', fn($tokens) => min($tokens, 8000));
 add_filter('auto_quill_max_tokens', fn($tokens) => max($tokens, 32000));
 ```
 
+> Die automatische Wiederholung bei abgeschnittener Antwort nutzt das 1,6-fache Budget, aber
+> höchstens 16 000 Tokens. Liegt der gefilterte Wert schon darüber, entfällt die Wiederholung.
+
+Der Filter gilt für Beiträge aus Feed-Einträgen **und** aus Interviews.
+
 ## Konstanten (`wp-config.php`)
 
 | Konstante | Wirkung |
 |---|---|
-| `AUTO_QUILL_AI_KEY` | KI-API-Schlüssel, hat Vorrang vor der Einstellung |
+| `AUTO_QUILL_AI_KEY` | KI-API-Schlüssel, hat Vorrang vor der Einstellung – für **jeden** Provider |
 | `AUTO_QUILL_PIXABAY_KEY` | Pixabay-Schlüssel, hat Vorrang vor der Einstellung |

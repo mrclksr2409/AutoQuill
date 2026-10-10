@@ -23,6 +23,9 @@ früheren Stand zurücksetzen. Alles unter **Einstellungen → Backup**.
 Die Anzahl gilt für **alle** Sicherungen zusammen – automatische, manuelle, importierte und die vor
 einer Wiederherstellung. Ältere werden gelöscht; wird die Zahl verkleinert, sofort.
 
+Liegt die letzte automatische Sicherung weniger als eine Stunde zurück (etwa weil WP-Cron einen
+Termin doppelt ausgelöst hat), wird die neue übersprungen.
+
 ## Die Sicherungsliste
 
 Unter den Einstellungen stehen alle vorhandenen Sicherungen, neueste zuerst:
@@ -51,6 +54,9 @@ an den Prompts.
 
 Die Erfolgsmeldung nennt, wie viele Quellen neu angelegt und wie viele aktualisiert wurden.
 
+Sicherungen aus Versionen vor 1.7.0 enthalten noch einen gemeinsamen API-Schlüssel (`ai_api_key`);
+beim Wiederherstellen wird er dem in der Sicherung gewählten Provider zugeordnet.
+
 ## Herunterladen
 
 **Herunterladen** speichert eine Sicherung als JSON-Datei
@@ -63,8 +69,8 @@ Aufbau:
 {
   "plugin": "auto-quill",
   "format": 1,
-  "created": "2026-09-23T01:00:00+00:00",
-  "version": "1.5.0",
+  "created": "2026-10-10T01:00:00+00:00",
+  "version": "1.8.1",
   "settings": { "ai_provider": "claude", "prompt_body": "…", "fetch_time": "00:00", "…": "…" },
   "sources": [
     { "title": "Heise", "feed_url": "https://www.heise.de/rss/heise-atom.xml", "is_active": 1 }
@@ -74,9 +80,13 @@ Aufbau:
 
 ## Importieren
 
-Eine heruntergeladene Datei (max. 1 MB) auswählen und **Importieren**. Die Datei wird geprüft und
-erscheint dann als Sicherung mit Anlass *Import* in der Liste – **angewendet wird sie erst mit
-„Wiederherstellen“**. Die aktuell hinterlegten API-Schlüssel bleiben dabei erhalten.
+Eine heruntergeladene Datei (max. 1 MB) auswählen und **Importieren**. Die Datei wird geprüft
+(`"plugin": "auto-quill"` und ein `settings`-Objekt müssen vorhanden sein) und erscheint dann als
+Sicherung mit Anlass *Import* in der Liste – **angewendet wird sie erst mit „Wiederherstellen“**.
+
+Beim Import werden nur bekannte Einstellungen übernommen, API-Schlüssel in der Datei ignoriert und
+Quellen ohne gültige `http`/`https`-URL verworfen. Die aktuell hinterlegten API-Schlüssel bleiben
+beim Wiederherstellen erhalten.
 
 Typische Anwendungen:
 

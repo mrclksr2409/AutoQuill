@@ -23,6 +23,7 @@
 - [Hooks und Filter](Hooks-und-Filter)
 - [Datenbank](Datenbank)
 - [Updates](Updates)
+- [Changelog](Changelog)
 - [Fehlerbehebung](Fehlerbehebung)
 - [FAQ](FAQ)
 - [Entwicklung](Entwicklung)
