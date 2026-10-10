@@ -1,11 +1,11 @@
 <?php
 /**
  * Plugin Name: AutoQuill
- * Plugin URI: https://github.com/AutoQuill
+ * Plugin URI: https://github.com/mrclksr2409/AutoQuill
  * Description: Sammelt RSS-Feed Artikel, selektiert täglich die Top-Themen via KI und erstellt automatisch Blog-Posts
  * Version: 1.8.0
- * Author: AutoQuill
- * Author URI: https://example.com
+ * Author: Marcel Kaiser
+ * Author URI: https://github.com/mrclksr2409
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: auto-quill

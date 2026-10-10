@@ -14,6 +14,7 @@ use AutoQuill\Rest\RestController;
 class Plugin {
     public static function boot(): void {
         add_action('init', [self::class, 'load_textdomain']);
+        add_filter('plugin_row_meta', [self::class, 'row_meta'], 10, 2);
 
         // Before Settings registers its sanitize callback, so the move is a
         // plain write and not a round trip through the form validation.
@@ -48,5 +49,17 @@ class Plugin {
             false,
             dirname(plugin_basename(AUTO_QUILL_PLUGIN_DIR . 'auto-quill.php')) . '/languages'
         );
+    }
+
+    /** Wiki link in the plugin's row on the Plugins screen. */
+    public static function row_meta($links, $file) {
+        if ($file === plugin_basename(AUTO_QUILL_PLUGIN_DIR . 'auto-quill.php')) {
+            $links[] = sprintf(
+                '<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>',
+                esc_url('https://github.com/mrclksr2409/AutoQuill/wiki'),
+                esc_html__('Wiki', 'auto-quill')
+            );
+        }
+        return $links;
     }
 }
