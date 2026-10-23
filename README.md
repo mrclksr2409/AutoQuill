@@ -196,6 +196,7 @@ GET  /wp-json/auto-quill/v1/topics
 GET  /wp-json/auto-quill/v1/articles          # page, per_page (max 100), source_id, search, linked
 POST /wp-json/auto-quill/v1/generate-post     # {article_id} ODER {topic_id, topic_index}
 POST /wp-json/auto-quill/v1/publish-post
+POST /wp-json/auto-quill/v1/posts/{id}/featured-image  # {image_url, image_alt?} → Beitragsbild nachträglich setzen
 GET  /wp-json/auto-quill/v1/search-images
 POST /wp-json/auto-quill/v1/suggest-image-keywords
 POST /wp-json/auto-quill/v1/models            # {provider, api_key?, refresh?} → verfügbare Modelle
@@ -298,6 +299,22 @@ Tags werden ignoriert. WordPress prüft automatisch und zeigt neue Versionen unt
 stattdessen dem `beta`-Branch.
 
 ## Changelog
+
+### [1.8.2] — 2026-10-23
+
+#### Fixed
+- Featured images from Pixabay are no longer silently lost when the download fails
+  (e.g. `429 Too Many Requests`, reported by WordPress as `http_404`). Transient errors
+  (timeouts, 408, 425, 429, 5xx) are retried up to three times with a short back-off (2 s, 5 s);
+  every attempt is logged.
+
+#### Added
+- `publish-post` returns an `image` object (`status`: `none` / `set` / `failed`, `attempts`,
+  `error`, `attachment_id`). If the image failed, the success box on the generate and interview
+  screen shows the reason and a button **Bild erneut übernehmen**.
+- New endpoint `POST /posts/{id}/featured-image` (`image_url`, `image_alt`) to set the featured
+  image of an existing post; also requires `edit_post` on that post.
+- `AutoQuill\Image\FeaturedImage` encapsulates sideload, retry and error messages.
 
 ### [1.8.1] — 2026-10-10
 

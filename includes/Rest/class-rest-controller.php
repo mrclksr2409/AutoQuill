@@ -66,6 +66,27 @@ class RestController {
             'permission_callback' => $can,
         ]);
 
+        register_rest_route(self::NS, '/posts/(?P<id>\d+)/featured-image', [
+            'methods'             => 'POST',
+            'callback'            => ['\AutoQuill\Rest\PostsService', 'set_featured_image'],
+            'permission_callback' => $can,
+            'args'                => [
+                'id' => [
+                    'type'              => 'integer',
+                    'required'          => true,
+                    'sanitize_callback' => 'absint',
+                ],
+                'image_url' => [
+                    'type'     => 'string',
+                    'required' => true,
+                ],
+                'image_alt' => [
+                    'type'    => 'string',
+                    'default' => '',
+                ],
+            ],
+        ]);
+
         register_rest_route(self::NS, '/suggest-image-keywords', [
             'methods'             => 'POST',
             'callback'            => ['\AutoQuill\Rest\ImagesService', 'suggest_keywords'],

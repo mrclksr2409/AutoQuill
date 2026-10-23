@@ -8,6 +8,7 @@ use AutoQuill\Database\InterviewsRepository;
 use AutoQuill\Database\Schema;
 use AutoQuill\Database\SourcesRepository;
 use AutoQuill\Database\TopicsRepository;
+use AutoQuill\Image\FeaturedImage;
 
 class PostsService {
     public static function get_today_topics(\WP_REST_Request $request): \WP_REST_Response {
@@ -107,33 +108,13 @@ class PostsService {
             }
         }
 
-        $attachment_id = 0;
+        // A failed download never fails the request: the post is saved, and
+        // the client gets the reason plus a way to retry the image only.
+        $image = ['status' => 'none', 'attachment_id' => 0, 'attempts' => 0, 'error' => ''];
         if ($image_url !== '' && wp_http_validate_url($image_url)) {
-            require_once ABSPATH . 'wp-admin/includes/file.php';
-            require_once ABSPATH . 'wp-admin/includes/media.php';
-            require_once ABSPATH . 'wp-admin/includes/image.php';
-
-            $sideload = media_sideload_image($image_url, (int) $post_id, $image_alt !== '' ? $image_alt : null, 'id');
-
-            if (is_wp_error($sideload)) {
-                Logger::warning('posts', 'Featured-Image-Sideload fehlgeschlagen', [
-                    'post_id'   => (int) $post_id,
-                    'image_url' => $image_url,
-                    'code'      => $sideload->get_error_code(),
-                    'message'   => $sideload->get_error_message(),
-                ]);
-            } else {
-                $attachment_id = (int) $sideload;
-                set_post_thumbnail((int) $post_id, $attachment_id);
-                if ($image_alt !== '') {
-                    update_post_meta($attachment_id, '_wp_attachment_image_alt', $image_alt);
-                }
-                Logger::info('posts', 'Featured Image gesetzt', [
-                    'post_id'       => (int) $post_id,
-                    'attachment_id' => $attachment_id,
-                ]);
-            }
+            $image = FeaturedImage::attach((int) $post_id, $image_url, $image_alt);
         }
+        $attachment_id = $image['attachment_id'];
 
         Logger::info('posts', 'Post erstellt', [
             'post_id'       => (int) $post_id,
@@ -150,6 +131,7 @@ class PostsService {
             // 'raw' context: the default HTML-escapes "&", which would then be
             // double-escaped once the client puts it in an href.
             'edit_url'    => (string) get_edit_post_link((int) $post_id, 'raw'),
+            'image'       => $image,
             'message'     => sprintf(
                 /* translators: 1: post ID, 2: post status */
                 __('Post %1$s erstellt und als %2$s gespeichert', 'auto-quill'),
@@ -157,6 +139,37 @@ class PostsService {
                 $post_status
             ),
         ], 201);
+    }
+
+    /**
+     * POST /posts/{id}/featured-image: retries the featured image of a post
+     * that was saved without one because the download failed.
+     */
+    public static function set_featured_image(\WP_REST_Request $request): \WP_REST_Response {
+        $post_id   = (int) $request['id'];
+        $image_url = esc_url_raw((string) $request->get_param('image_url'));
+        $image_alt = sanitize_text_field((string) $request->get_param('image_alt'));
+
+        if (!get_post($post_id)) {
+            return new \WP_REST_Response(['error' => __('Post nicht gefunden', 'auto-quill')], 404);
+        }
+        if (!current_user_can('edit_post', $post_id)) {
+            return new \WP_REST_Response(['error' => __('Keine Berechtigung für diesen Post', 'auto-quill')], 403);
+        }
+        if ($image_url === '' || !wp_http_validate_url($image_url)) {
+            return new \WP_REST_Response(['error' => __('Ungültige Bild-URL', 'auto-quill')], 400);
+        }
+
+        $image = FeaturedImage::attach($post_id, $image_url, $image_alt);
+        if ($image['status'] !== 'set') {
+            return new \WP_REST_Response(['error' => $image['error'], 'image' => $image], 502);
+        }
+
+        return new \WP_REST_Response([
+            'success' => true,
+            'post_id' => $post_id,
+            'image'   => $image,
+        ], 200);
     }
 
     /**

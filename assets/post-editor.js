@@ -25,6 +25,8 @@
         // Extra fields sent to publish-post (topic_id, article_id, interview_id).
         publishContext: {},
         selectedImage: null,
+        // Image sent with the last publish, kept for the featured-image retry.
+        publishedImage: null,
         imageQuery: '',
         imagePage: 1,
         imageTotalHits: 0,
@@ -218,6 +220,7 @@
                 payload.image_url = this.selectedImage.url;
                 payload.image_alt = this.selectedImage.alt || '';
             }
+            this.publishedImage = this.selectedImage ? $.extend({}, this.selectedImage) : null;
 
             $.ajax({
                 url: this.apiUrl + 'publish-post',
@@ -269,10 +272,61 @@
                 );
             }
 
-            $box.append($links).prop('hidden', false);
+            $box.append($links);
+            this.renderImageStatus($box, response);
+            $box.prop('hidden', false);
             if ($box[0] && $box[0].scrollIntoView) {
                 $box[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
+        },
+
+        /**
+         * Warns when the post was saved but its featured image was not, and
+         * offers to retry only the image.
+         */
+        renderImageStatus: function($box, response) {
+            const image = response.image || {};
+            $box.find('.auto-quill-image-status').remove();
+            if (image.status !== 'failed') {
+                return;
+            }
+
+            const $status = $('<div>').addClass('auto-quill-image-status wpb-alert wpb-alert--warning');
+            $status.append($('<p>').text(this.t('imageFailed') + ' ' + (image.error || '')));
+
+            if (this.publishedImage && this.publishedImage.url && response.post_id) {
+                const $retry = $('<button type="button">').addClass('button')
+                    .text(this.t('imageRetry'))
+                    .on('click', () => this.retryFeaturedImage(response.post_id, $status, $retry));
+                $status.append($('<p>').append($retry));
+            }
+
+            $box.append($status);
+        },
+
+        retryFeaturedImage: function(postId, $status, $retry) {
+            const image = this.publishedImage;
+            $retry.prop('disabled', true).text(this.t('imageRetrying'));
+
+            $.ajax({
+                url: this.apiUrl + 'posts/' + parseInt(postId, 10) + '/featured-image',
+                type: 'POST',
+                dataType: 'json',
+                data: JSON.stringify({ image_url: image.url, image_alt: image.alt || '' }),
+                headers: {
+                    'X-WP-Nonce': this.restNonce,
+                    'Content-Type': 'application/json',
+                },
+                success: () => {
+                    $status.removeClass('wpb-alert--warning').addClass('wpb-alert--success')
+                        .empty().append($('<p>').text(this.t('imageRetrySuccess')));
+                },
+                error: (xhr, textStatus) => {
+                    const message = this.errorMessage(xhr, 'imageRetryError', textStatus);
+                    $status.find('p').first().text(this.t('imageFailed') + ' ' + message);
+                    $retry.prop('disabled', false).text(this.t('imageRetry'));
+                },
+            });
         },
 
         /** Title, excerpt and categories as read-only text; edited later in WordPress. */

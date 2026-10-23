@@ -132,9 +132,15 @@ aber nur den Anreißer. Keine Umgehung vorgesehen – ggf. andere Quelle wählen
 - Log `pixabay` für den HTTP-Status prüfen.
 
 ### Beitrag angelegt, aber ohne Beitragsbild
-Das Herunterladen in die Mediathek ist gescheitert. Log `posts` („Featured-Image-Sideload fehlgeschlagen“) zeigt den Grund – meist fehlende
-Schreibrechte in `wp-content/uploads` oder blockierte ausgehende Verbindung. Der Beitrag selbst ist
-trotzdem gespeichert; das Bild lässt sich im Editor nachtragen.
+Das Herunterladen in die Mediathek ist gescheitert. Vorübergehende Fehler – etwa Pixabays
+„Too Many Requests“ (HTTP 429, von WordPress als `http_404` gemeldet) – versucht AutoQuill bis zu
+dreimal. Klappt es trotzdem nicht, zeigt der Erfolgskasten den Grund und den Button
+**Bild erneut übernehmen**; einfach kurz warten und klicken.
+
+Log `posts` („Featured-Image-Sideload fehlgeschlagen“) zeigt je Versuch Code, HTTP-Status und ob
+wiederholt wurde. Andere häufige Gründe: fehlende Schreibrechte in `wp-content/uploads`, blockierte
+ausgehende Verbindung oder ein abgelaufener Pixabay-Link (HTTP 403/404, gültig ca. 24 Stunden).
+Der Beitrag selbst ist immer gespeichert; das Bild lässt sich auch im Editor nachtragen.
 
 ---
 

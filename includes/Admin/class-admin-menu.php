@@ -213,6 +213,11 @@ class AdminMenu {
             'editPost'          => __('Post bearbeiten', 'auto-quill'),
             'backToList'        => __('Zurück zur Übersicht', 'auto-quill'),
             'publishRetryLabel' => Dashboard::publish_button_label($settings),
+            'imageFailed'       => __('Der Post wurde gespeichert, das Beitragsbild aber nicht.', 'auto-quill'),
+            'imageRetry'        => __('Bild erneut übernehmen', 'auto-quill'),
+            'imageRetrying'     => __('Bild wird geladen…', 'auto-quill'),
+            'imageRetrySuccess' => __('Beitragsbild gesetzt.', 'auto-quill'),
+            'imageRetryError'   => __('Das Bild konnte erneut nicht geladen werden.', 'auto-quill'),
         ];
     }
 

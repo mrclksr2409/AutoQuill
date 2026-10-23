@@ -47,7 +47,8 @@ auto-quill/
 │   │   └── class-json-extractor.php    # Tolerantes JSON-Parsing der KI-Antworten
 │   │
 │   ├── Image/
-│   │   └── class-pixabay-client.php
+│   │   ├── class-pixabay-client.php
+│   │   └── class-featured-image.php    # Sideload + Retry des Beitragsbilds
 │   │
 │   ├── Rest/
 │   │   ├── class-rest-controller.php   # Routen-Registrierung
@@ -395,6 +396,7 @@ Namespace `auto-quill/v1`, alle Routen mit `permission_callback` → `current_us
 | GET | `/articles` | `ArticlesService::list_articles` |
 | POST | `/generate-post` | `Writer::generate_post` |
 | POST | `/publish-post` | `PostsService::publish_post` |
+| POST | `/posts/{id}/featured-image` | `PostsService::set_featured_image` |
 | GET | `/search-images` | `ImagesService::search` |
 | POST | `/suggest-image-keywords` | `ImagesService::suggest_keywords` |
 | POST | `/models` | `ModelsService::list_models` |

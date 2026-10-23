@@ -6,6 +6,7 @@ die Seite [Updates](Updates).
 
 | Version | Datum | Schwerpunkt |
 |---|---|---|
+| [1.8.2](#182--2026-10-23) | 2026-10-23 | Beitragsbild: automatische Wiederholung und Rückmeldung |
 | [1.8.1](#181--2026-10-10) | 2026-10-10 | Autor Marcel Kaiser, Wiki-Link in der Plugin-Liste |
 | [1.8.0](#180--2026-10-09) | 2026-10-09 | Einheitliches Admin-Design mit WP-Backend UI |
 | [1.7.2](#172--2026-10-03) | 2026-10-03 | Updates vom `main`-Branch, Beta folgt `beta` |
@@ -20,6 +21,14 @@ die Seite [Updates](Updates).
 | [1.1.0](#110) | – | Pixabay-Bildauswahl, Logs-Seite, Prompt-Vorlagen |
 
 ---
+
+## 1.8.2 – 2026-10-23
+
+- **Beitragsbild zuverlässiger:** Scheitert der Download von Pixabay vorübergehend (z. B.
+  „Too Many Requests“), versucht AutoQuill es bis zu dreimal mit kurzer Pause.
+- **Rückmeldung:** Fehlt das Bild nach dem Speichern trotzdem, zeigt der Erfolgskasten den Grund
+  und den Button **Bild erneut übernehmen**.
+- Neuer REST-Endpunkt `POST /posts/{id}/featured-image`; `publish-post` liefert zusätzlich `image`.
 
 ## 1.8.1 – 2026-10-10
 

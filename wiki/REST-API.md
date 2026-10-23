@@ -13,6 +13,7 @@ außen z. B. über [Anwendungspasswörter](https://make.wordpress.org/core/2020/
 | GET | [`/articles`](#get-articles) | Feed-Einträge, paginiert |
 | POST | [`/generate-post`](#post-generate-post) | Beitrag von der KI schreiben lassen (speichert noch nichts) |
 | POST | [`/publish-post`](#post-publish-post) | Beitrag in WordPress anlegen |
+| POST | [`/posts/{id}/featured-image`](#post-postsidfeatured-image) | Beitragsbild nachträglich setzen |
 | POST | [`/suggest-image-keywords`](#post-suggest-image-keywords) | Bild-Suchbegriffe von der KI |
 | GET | [`/search-images`](#get-search-images) | Pixabay-Suche |
 | POST | [`/models`](#post-models) | Verfügbare Modelle des Anbieters |
@@ -118,9 +119,27 @@ generiert wurde.
 `post_title` und `post_content` sind Pflicht (sonst `400`). Legt den Beitrag mit dem eingestellten
 Status an (Autor: der anfragende Benutzer), lädt optional das Bild in die Mediathek und setzt es als
 Beitragsbild, verknüpft Beitrag und Feed-Artikel bzw. – mit `interview_id` – Beitrag und Interview.
-Antwort `201`: `success`, `post_id`, `post_status`, `article_id`, `edit_url`, `message`.
+Antwort `201`: `success`, `post_id`, `post_status`, `article_id`, `edit_url`, `image`, `message`.
 
-Scheitert nur das Herunterladen des Bildes, wird der Beitrag trotzdem angelegt (Warnung im Log).
+`image` beschreibt das Beitragsbild:
+
+```json
+{ "status": "failed", "attachment_id": 0, "attempts": 3, "error": "Pixabay hat zu viele Anfragen gemeldet (HTTP 429). …" }
+```
+
+`status` ist `none` (kein Bild gesendet), `set` oder `failed`. Vorübergehende Fehler (Timeout,
+HTTP 408, 425, 429, 5xx) werden bis zu dreimal versucht, mit 2 bzw. 5 Sekunden Pause. Scheitert
+das Bild endgültig, wird der Beitrag trotzdem angelegt; jeder Versuch steht im Log `posts`.
+
+## POST /posts/{id}/featured-image
+
+```json
+{ "image_url": "https://pixabay.com/get/…", "image_alt": "…" }
+```
+
+Lädt das Bild (mit denselben Wiederholungen) und setzt es als Beitragsbild des Beitrags `id`.
+Braucht zusätzlich `edit_post` für diesen Beitrag. Antwort `200`: `success`, `post_id`, `image`;
+scheitert das Bild, `502` mit `error` und `image`.
 
 ## POST /suggest-image-keywords
 
