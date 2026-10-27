@@ -301,7 +301,7 @@ stattdessen dem `beta`-Branch.
 
 ## Changelog
 
-### [Unreleased]
+### [1.9.1] — 2026-10-27
 
 #### Fixed
 - Notification recipients: the user list now offers every user with access to AutoQuill

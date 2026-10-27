@@ -6,6 +6,7 @@ die Seite [Updates](Updates).
 
 | Version | Datum | Schwerpunkt |
 |---|---|---|
+| [1.9.1](#191--2026-10-27) | 2026-10-27 | Tagesbericht: alle Benutzer mit Zugriff als Empfänger |
 | [1.9.0](#190--2026-10-27) | 2026-10-27 | Rollen mit Zugriff auf AutoQuill wählbar |
 | [1.8.2](#182--2026-10-23) | 2026-10-23 | Beitragsbild: automatische Wiederholung und Rückmeldung |
 | [1.8.1](#181--2026-10-10) | 2026-10-10 | Autor Marcel Kaiser, Wiki-Link in der Plugin-Liste |
@@ -22,6 +23,12 @@ die Seite [Updates](Updates).
 | [1.1.0](#110) | – | Pixabay-Bildauswahl, Logs-Seite, Prompt-Vorlagen |
 
 ---
+
+## 1.9.1 – 2026-10-27
+
+- **Empfänger des Tagesberichts:** Zur Auswahl stehen jetzt alle Benutzer mit Zugriff auf
+  AutoQuill – Administratoren und die Rollen aus **Einstellungen → Zugriff** – statt nur der
+  Administratoren.
 
 ## 1.9.0 – 2026-10-27
 

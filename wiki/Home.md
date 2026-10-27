@@ -6,7 +6,7 @@ Blog-Beiträge schreibt – inklusive Titel, Social-Media-Auszug, Kategorien, Be
 garantiertem Quellenhinweis. Alternativ interviewt dich die KI als Redakteur, und aus deinen
 Antworten entsteht ein Beitrag.
 
-> Aktuelle Version: **1.9.0** · Voraussetzungen: WordPress 5.9+, PHP 8.0+, ein API-Schlüssel von
+> Aktuelle Version: **1.9.1** · Voraussetzungen: WordPress 5.9+, PHP 8.0+, ein API-Schlüssel von
 > OpenAI, Anthropic (Claude) oder IONOS – oder ein eigener OpenAI-kompatibler Endpunkt
 >
 > Autor: [Marcel Kaiser](https://github.com/mrclksr2409) · Repository:
