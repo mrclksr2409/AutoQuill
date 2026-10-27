@@ -2,7 +2,9 @@
 
 Namespace: **`/wp-json/auto-quill/v1/`**
 
-Alle Endpunkte erfordern einen angemeldeten Benutzer mit `manage_options`. Aus dem Browser heraus
+Alle Endpunkte erfordern einen angemeldeten Benutzer mit der Capability `auto_quill_use`
+(Administratoren und die unter **Einstellungen → Zugriff** gewählten Rollen); `/models` und
+`/logs` erfordern `manage_options`. Aus dem Browser heraus
 funktioniert das über den Cookie plus Header `X-WP-Nonce` (`wp_create_nonce('wp_rest')`), von
 außen z. B. über [Anwendungspasswörter](https://make.wordpress.org/core/2020/11/05/application-passwords-integration-guide/)
 (Benutzer → Profil → Anwendungspasswörter).

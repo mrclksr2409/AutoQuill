@@ -1,6 +1,7 @@
 <?php
 namespace AutoQuill\Admin;
 
+use AutoQuill\Core\Access;
 use AutoQuill\Core\Constants as C;
 use AutoQuill\Database\SourcesRepository;
 
@@ -11,7 +12,7 @@ class SourcesController {
     }
 
     public static function handle_add(): void {
-        if (!current_user_can('manage_options')) {
+        if (!current_user_can(Access::CAP)) {
             wp_die(esc_html__('Zugriff verweigert', 'auto-quill'));
         }
         check_admin_referer(C::ACTION_ADD, 'auto_quill_nonce');
@@ -41,7 +42,7 @@ class SourcesController {
     }
 
     public static function handle_delete(): void {
-        if (!current_user_can('manage_options')) {
+        if (!current_user_can(Access::CAP)) {
             wp_die(esc_html__('Zugriff verweigert', 'auto-quill'));
         }
         $id = absint($_POST['source_id'] ?? 0);
@@ -68,7 +69,7 @@ class SourcesController {
     }
 
     public static function render(): void {
-        if (!current_user_can('manage_options')) {
+        if (!current_user_can(Access::CAP)) {
             wp_die(esc_html__('Zugriff verweigert', 'auto-quill'));
         }
 

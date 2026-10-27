@@ -2,8 +2,12 @@
 
 ## Zugriffsrechte
 
-Alle AutoQuill-Seiten, Aktionen und REST-Endpunkte erfordern die Berechtigung `manage_options`
-(Administratoren). Formulare und Aktionen sind mit WordPress-Nonces gegen fremd ausgelöste Anfragen
+Dashboard, Generierungs-Seite, Interviews, RSS-Quellen und die zugehörigen REST-Endpunkte
+erfordern die Capability `auto_quill_use`. Administratoren haben sie immer, weitere Rollen nur,
+wenn sie unter **Einstellungen → Zugriff** ausgewählt sind und Beiträge veröffentlichen dürfen
+(`publish_posts`). Die Capability wird zur Laufzeit über den Filter `user_has_cap` vergeben und
+nie in einer Rolle gespeichert. Einstellungen, Logs, Backups sowie die Endpunkte `/models` und
+`/logs` erfordern weiterhin `manage_options`. Formulare und Aktionen sind mit WordPress-Nonces gegen fremd ausgelöste Anfragen
 (CSRF) geschützt, die REST-Endpunkte über den Cookie-Nonce des angemeldeten Benutzers.
 
 Weil eine Generierung einen kostenpflichtigen KI-Aufruf auslöst, startet die Generierungs-Seite

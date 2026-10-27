@@ -1,6 +1,7 @@
 <?php
 namespace AutoQuill\Admin;
 
+use AutoQuill\Core\Access;
 use AutoQuill\Core\Constants as C;
 use AutoQuill\Core\Logger;
 
@@ -48,7 +49,7 @@ class AdminMenu {
         $hook = add_menu_page(
             __('AutoQuill', 'auto-quill'),
             __('AutoQuill', 'auto-quill'),
-            'manage_options',
+            Access::CAP,
             C::MENU_SLUG,
             ['\AutoQuill\Admin\Dashboard', 'render'],
             'dashicons-rss',
@@ -60,7 +61,7 @@ class AdminMenu {
             C::MENU_SLUG,
             __('Interview', 'auto-quill'),
             __('Interview', 'auto-quill'),
-            'manage_options',
+            Access::CAP,
             C::INTERVIEW_PAGE_SLUG,
             ['\AutoQuill\Admin\InterviewPage', 'render']
         );
@@ -70,7 +71,7 @@ class AdminMenu {
             C::MENU_SLUG,
             __('RSS Quellen', 'auto-quill'),
             __('RSS Quellen', 'auto-quill'),
-            'manage_options',
+            Access::CAP,
             C::SOURCES_PAGE_SLUG,
             ['\AutoQuill\Admin\SourcesController', 'render']
         );
@@ -126,20 +127,11 @@ class AdminMenu {
             $settings = C::defaults();
         }
 
-        wp_enqueue_script(
-            'auto-quill-debug',
-            AUTO_QUILL_PLUGIN_URL . 'assets/auto-quill-debug.js',
-            ['jquery'],
-            AUTO_QUILL_VERSION,
-            true
-        );
-
-        wp_localize_script('auto-quill-debug', 'autoQuillDebug', [
-            'restUrl'      => rest_url('auto-quill/v1/logs'),
-            'restNonce'    => wp_create_nonce('wp_rest'),
-            'debugEnabled' => Logger::is_debug_enabled(),
-            'pollInterval' => 2000,
-        ]);
+        // The log stream is admin-only (REST /logs); for other roles it would
+        // only produce 403s in the console.
+        if (current_user_can('manage_options')) {
+            self::enqueue_debug_stream();
+        }
 
         wp_localize_script('auto-quill-admin', 'autoQuill', [
             'apiUrl'             => rest_url('auto-quill/v1/'),
@@ -185,6 +177,23 @@ class AdminMenu {
 
         self::enqueue_generate_assets($hook, $settings);
         self::enqueue_interview_assets($hook, $settings);
+    }
+
+    private static function enqueue_debug_stream(): void {
+        wp_enqueue_script(
+            'auto-quill-debug',
+            AUTO_QUILL_PLUGIN_URL . 'assets/auto-quill-debug.js',
+            ['jquery'],
+            AUTO_QUILL_VERSION,
+            true
+        );
+
+        wp_localize_script('auto-quill-debug', 'autoQuillDebug', [
+            'restUrl'      => rest_url('auto-quill/v1/logs'),
+            'restNonce'    => wp_create_nonce('wp_rest'),
+            'debugEnabled' => Logger::is_debug_enabled(),
+            'pollInterval' => 2000,
+        ]);
     }
 
     /**

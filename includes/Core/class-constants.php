@@ -258,6 +258,9 @@ class Constants {
             'interview_style'     => 'first_person',
             'interview_questions' => 6,
             'prompt_interview'    => self::default_prompt_interview(),
+            // Roles besides administrator that may use the working screens;
+            // see Access.
+            'access_roles'        => [],
         ];
     }
 

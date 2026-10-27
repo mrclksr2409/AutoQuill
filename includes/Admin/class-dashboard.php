@@ -2,6 +2,7 @@
 namespace AutoQuill\Admin;
 
 use AutoQuill\AI\Selector;
+use AutoQuill\Core\Access;
 use AutoQuill\Core\Constants as C;
 use AutoQuill\Database\ArticlesRepository;
 use AutoQuill\Database\SourcesRepository;
@@ -33,7 +34,7 @@ class Dashboard {
 
     public static function handle_fetch_now(): void {
         check_ajax_referer(C::NONCE_SCOPE, 'nonce');
-        if (!current_user_can('manage_options')) {
+        if (!current_user_can(Access::CAP)) {
             wp_send_json_error(['message' => __('Zugriff verweigert', 'auto-quill')], 403);
         }
 
@@ -44,7 +45,7 @@ class Dashboard {
 
     public static function handle_recrawl(): void {
         check_ajax_referer(C::NONCE_SCOPE, 'nonce');
-        if (!current_user_can('manage_options')) {
+        if (!current_user_can(Access::CAP)) {
             wp_send_json_error(['message' => __('Zugriff verweigert', 'auto-quill')], 403);
         }
 
@@ -66,7 +67,7 @@ class Dashboard {
 
     public static function handle_reselect(): void {
         check_ajax_referer(C::NONCE_SCOPE, 'nonce');
-        if (!current_user_can('manage_options')) {
+        if (!current_user_can(Access::CAP)) {
             wp_send_json_error(['message' => __('Zugriff verweigert', 'auto-quill')], 403);
         }
 
@@ -300,7 +301,7 @@ class Dashboard {
     }
 
     private static function render_list(): void {
-        if (!current_user_can('manage_options')) {
+        if (!current_user_can(Access::CAP)) {
             wp_die(esc_html__('Zugriff verweigert', 'auto-quill'));
         }
 

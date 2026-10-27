@@ -21,6 +21,7 @@ class Plugin {
         Constants::maybe_migrate_api_key();
         add_action('admin_init', [Schema::class, 'ensure_tables'], 1);
 
+        Access::boot();
         Settings::boot();
         SourcesController::boot();
         BackupController::boot();

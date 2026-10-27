@@ -388,7 +388,8 @@ id, created_at, level VARCHAR(10), source VARCHAR(40), message TEXT, context LON
 
 ## REST API
 
-Namespace `auto-quill/v1`, alle Routen mit `permission_callback` → `current_user_can('manage_options')`.
+Namespace `auto-quill/v1`, alle Routen mit `permission_callback` → `current_user_can(Access::CAP)`;
+`/models` und `/logs` → `current_user_can('manage_options')`.
 
 | Methode | Route | Callback |
 |---|---|---|
@@ -490,7 +491,11 @@ unbemerkt nie geschrieben wird.
   haben Vorrang. Leere Eingabefelder überschreiben gespeicherte Schlüssel nicht.
 - **Nonces:** Admin-AJAX über `check_ajax_referer(C::NONCE_SCOPE)`, REST über den Cookie-Nonce.
   Ein abgelaufener Nonce kommt als nackter 403 zurück; `AutoQuill.errorMessage()` übersetzt das.
-- **Capability:** durchgehend `manage_options`.
+- **Capability:** Arbeitsseiten (Dashboard, Generieren, Interview, RSS-Quellen), ihre AJAX-Aktionen
+  und REST-Routen prüfen `Access::CAP` (`auto_quill_use`). `Access::grant()` vergibt sie über
+  `user_has_cap` an `manage_options` und an die Rollen aus `access_roles`, sofern der Benutzer
+  `publish_posts` hat; liest dabei `$allcaps` statt `user_can()`, um den Filter nicht erneut
+  auszulösen. Einstellungen, Logs, Backups, `/models` und `/logs` bleiben auf `manage_options`.
 - **Feed-Daten sind nicht vertrauenswürdig.** Titel, Beschreibungen und URLs kommen von Dritten.
   Jede Ausgabe läuft durch `esc_html()`/`esc_url()`/`esc_attr()`; `esc_url()` leert Schemata wie
   `javascript:`, weshalb an beiden Stellen auf ein leeres Ergebnis geprüft wird, statt ein totes

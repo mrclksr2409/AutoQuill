@@ -189,7 +189,8 @@ Weg zurück zum Originalartikel.
 
 ### REST Endpoints
 
-Alle Endpoints erfordern die Capability `manage_options`.
+Alle Endpoints erfordern die Capability `auto_quill_use` (Administratoren plus die unter
+Einstellungen → Zugriff gewählten Rollen); `/models` und `/logs` erfordern `manage_options`.
 
 ```
 GET  /wp-json/auto-quill/v1/topics
@@ -299,6 +300,19 @@ Tags werden ignoriert. WordPress prüft automatisch und zeigt neue Versionen unt
 stattdessen dem `beta`-Branch.
 
 ## Changelog
+
+### [Unreleased]
+
+#### Added
+- New settings tab **Zugriff**: choose which roles besides administrators may use the dashboard,
+  the generate screen, interviews and RSS sources. Only roles with `publish_posts` are offered.
+- `AutoQuill\Core\Access` grants the capability `auto_quill_use` at runtime via `user_has_cap`
+  (administrators always); nothing is written to roles.
+
+#### Changed
+- Working screens, their AJAX actions and REST routes check `auto_quill_use` instead of
+  `manage_options`. Settings, logs, backups and the `/models` and `/logs` routes stay on
+  `manage_options`; the console log stream is only loaded for administrators.
 
 ### [1.8.2] — 2026-10-23
 

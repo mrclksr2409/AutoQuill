@@ -48,10 +48,11 @@ Im WordPress-Menü erscheint der Eintrag **AutoQuill** (Symbol: RSS) mit diesen 
 | **AutoQuill** | Die [Übersicht](Dashboard) mit Top-Themen und allen Feed-Einträgen |
 | **Interview** | Der [Interview-Modus](Interview) |
 | **RSS Quellen** | [Feed-Verwaltung](RSS-Quellen) |
-| **Einstellungen** | Alle [Einstellungen](Einstellungen) in neun Tabs |
+| **Einstellungen** | Alle [Einstellungen](Einstellungen) in zehn Tabs |
 | **Logs** | [Log-Seite](Logs-und-Debugging) |
 
-Alle Seiten erfordern Administratorrechte (`manage_options`). In der Plugin-Liste steht neben
+Einstellungen und Logs erfordern Administratorrechte (`manage_options`); welche weiteren Rollen
+Dashboard, Interview und RSS-Quellen nutzen dürfen, legt **Einstellungen → Zugriff** fest. In der Plugin-Liste steht neben
 AutoQuill zusätzlich ein Link **Wiki**, der direkt zu dieser Dokumentation führt.
 
 ## API-Schlüssel sicher hinterlegen (empfohlen)

@@ -2,6 +2,7 @@
 namespace AutoQuill\Admin;
 
 use AutoQuill\AI\ModelCatalog;
+use AutoQuill\Core\Access;
 use AutoQuill\Core\Constants as C;
 use AutoQuill\Core\Notifier;
 
@@ -252,6 +253,15 @@ class Settings {
         $clean['beta_mode']     = !empty($input['beta_mode']);
 
         self::sanitize_notifications($input, $prev, $clean);
+
+        // Same marker pattern as notify_users: unticking every role must stick.
+        if (!empty($input['access_roles_present'])) {
+            $roles = isset($input['access_roles']) && is_array($input['access_roles'])
+                ? array_map('strval', $input['access_roles'])
+                : [];
+            $clean['access_roles'] = array_values(array_intersect(array_keys(Access::selectable_roles()), $roles));
+        }
+        unset($clean['access_roles_present']);
 
         // An enabled-but-nobody-listening state is the real trap; say so instead
         // of silently never sending.
@@ -564,6 +574,7 @@ class Settings {
                     <a href="#tab-publish" class="nav-tab" data-tab="publish"><?php esc_html_e('Veröffentlichung', 'auto-quill'); ?></a>
                     <a href="#tab-images" class="nav-tab" data-tab="images"><?php esc_html_e('Bilder', 'auto-quill'); ?></a>
                     <a href="#tab-notify" class="nav-tab" data-tab="notify"><?php esc_html_e('Benachrichtigungen', 'auto-quill'); ?></a>
+                    <a href="#tab-access" class="nav-tab" data-tab="access"><?php esc_html_e('Zugriff', 'auto-quill'); ?></a>
                     <a href="#tab-backup" class="nav-tab" data-tab="backup"><?php esc_html_e('Backup', 'auto-quill'); ?></a>
                     <a href="#tab-system" class="nav-tab" data-tab="system"><?php esc_html_e('System', 'auto-quill'); ?></a>
                 </h2>
@@ -1076,6 +1087,43 @@ class Settings {
                                 ?></textarea>
                                 <p class="description">
                                     <?php esc_html_e('Eine Adresse pro Zeile, auch für Verteiler ohne WordPress-Konto. Ungültige Einträge werden beim Speichern verworfen.', 'auto-quill'); ?>
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="auto-quill-tab-panel wpb-tab-panel" data-tab="access" style="display:none;">
+                    <?php
+                    $access_roles     = Access::allowed_roles();
+                    $selectable_roles = Access::selectable_roles();
+                    ?>
+                    <p class="description" style="margin: 1em 0;">
+                        <?php esc_html_e('Legt fest, wer neben den Administratoren mit AutoQuill arbeiten darf: Dashboard, Blog-Posts generieren, Interviews und RSS-Quellen. Einstellungen, Logs und Backups bleiben immer den Administratoren vorbehalten, weil sie API-Schlüssel und diese Auswahl enthalten.', 'auto-quill'); ?>
+                    </p>
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row"><?php esc_html_e('Rollen mit Zugriff', 'auto-quill'); ?></th>
+                            <td>
+                                <input type="hidden"
+                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[access_roles_present]"
+                                       value="1">
+                                <label style="display:block; margin-bottom:4px;">
+                                    <input type="checkbox" checked disabled>
+                                    <?php echo esc_html(translate_user_role('Administrator')); ?>
+                                    <span class="description"><?php esc_html_e('(immer)', 'auto-quill'); ?></span>
+                                </label>
+                                <?php foreach ($selectable_roles as $role_slug => $role_name): ?>
+                                    <label style="display:block; margin-bottom:4px;">
+                                        <input type="checkbox"
+                                               name="<?php echo esc_attr(C::OPTION_KEY); ?>[access_roles][]"
+                                               value="<?php echo esc_attr($role_slug); ?>"
+                                               <?php checked(in_array($role_slug, $access_roles, true)); ?>>
+                                        <?php echo esc_html($role_name); ?>
+                                    </label>
+                                <?php endforeach; ?>
+                                <p class="description">
+                                    <?php esc_html_e('Zur Auswahl stehen nur Rollen, die Beiträge selbst veröffentlichen dürfen – AutoQuill legt Beiträge mit dem eingestellten Status an und lädt Beitragsbilder in die Mediathek. Die Beiträge gehören dem Benutzer, der sie erstellt.', 'auto-quill'); ?>
                                 </p>
                             </td>
                         </tr>

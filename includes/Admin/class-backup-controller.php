@@ -98,6 +98,9 @@ class BackupController {
         if (array_key_exists('notify_events', $settings)) {
             $input['notify_events_present'] = 1;
         }
+        if (array_key_exists('access_roles', $settings)) {
+            $input['access_roles_present'] = 1;
+        }
         // Missing or empty keys keep the current ones (Settings::sanitize).
         foreach (Backup::SECRET_KEYS as $key) {
             if (!isset($input[$key])) {

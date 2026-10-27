@@ -1,6 +1,8 @@
 <?php
 namespace AutoQuill\Rest;
 
+use AutoQuill\Core\Access;
+
 class RestController {
     const NS = 'auto-quill/v1';
 
@@ -10,6 +12,11 @@ class RestController {
 
     public static function register(): void {
         $can = function () {
+            return current_user_can(Access::CAP);
+        };
+        // Model lists use the stored API keys, logs carry API payloads: both
+        // belong to the settings, which stay admin-only.
+        $admin = function () {
             return current_user_can('manage_options');
         };
 
@@ -102,7 +109,7 @@ class RestController {
         register_rest_route(self::NS, '/models', [
             'methods'             => 'POST',
             'callback'            => ['\AutoQuill\Rest\ModelsService', 'list_models'],
-            'permission_callback' => $can,
+            'permission_callback' => $admin,
             'args'                => [
                 'provider' => [
                     'type'     => 'string',
@@ -188,12 +195,12 @@ class RestController {
             [
                 'methods'             => 'GET',
                 'callback'            => ['\AutoQuill\Rest\LogsService', 'list_logs'],
-                'permission_callback' => $can,
+                'permission_callback' => $admin,
             ],
             [
                 'methods'             => 'DELETE',
                 'callback'            => ['\AutoQuill\Rest\LogsService', 'clear_logs'],
-                'permission_callback' => $can,
+                'permission_callback' => $admin,
             ],
         ]);
     }

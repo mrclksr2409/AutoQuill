@@ -2,6 +2,7 @@
 namespace AutoQuill\Admin;
 
 use AutoQuill\AI\Writer;
+use AutoQuill\Core\Access;
 use AutoQuill\Core\Constants as C;
 use AutoQuill\Database\SourcesRepository;
 
@@ -87,7 +88,7 @@ class GeneratePage {
     }
 
     public static function render(): void {
-        if (!current_user_can('manage_options')) {
+        if (!current_user_can(Access::CAP)) {
             wp_die(esc_html__('Zugriff verweigert', 'auto-quill'));
         }
 

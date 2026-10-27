@@ -1,13 +1,13 @@
 # Einstellungen
 
-**AutoQuill → Einstellungen** ist in neun Tabs gegliedert – in der Reihenfolge, in der man das Plugin
+**AutoQuill → Einstellungen** ist in zehn Tabs gegliedert – in der Reihenfolge, in der man das Plugin
 einrichtet. Ein Klick auf **Änderungen speichern** speichert **alle** Tabs auf einmal; danach bleibt
 der zuletzt geöffnete Tab aktiv. Hinweise und Warnungen (z. B. zu Uhrzeiten oder fehlenden
 Empfängern) erscheinen nach dem Speichern oben auf der Seite.
 
 Jeder Tab ist direkt verlinkbar, z. B. `admin.php?page=auto-quill-settings#tab-notify`. Die
-Kürzel lauten `ki`, `feeds`, `prompts`, `interview`, `publish`, `images`, `notify`, `backup` und
-`system`; alte Links auf `#tab-debug`, `#tab-updates` und `#tab-schedule` führen weiterhin zum
+Kürzel lauten `ki`, `feeds`, `prompts`, `interview`, `publish`, `images`, `notify`, `access`,
+`backup` und `system`; alte Links auf `#tab-debug`, `#tab-updates` und `#tab-schedule` führen weiterhin zum
 richtigen Tab.
 
 | Tab | Inhalt |
@@ -19,6 +19,7 @@ richtigen Tab.
 | [Veröffentlichung](#tab-veröffentlichung) | Post-Status, Quellenhinweis |
 | [Bilder](#tab-bilder) | Pixabay-Schlüssel |
 | [Benachrichtigungen](#tab-benachrichtigungen) | Tagesbericht per E-Mail |
+| [Zugriff](#tab-zugriff) | Rollen, die mit AutoQuill arbeiten dürfen |
 | [Backup](#tab-backup) | Automatische Sicherung, Liste, Import |
 | [System](#tab-system) | Beta-Updates, Debug-Logging, Status |
 
@@ -183,6 +184,19 @@ Darunter die Karte **Versand testen** mit den aktuellen Empfängern und dem Butt
 **Test-Mail an alle Empfänger senden**: Er verschickt sofort den Bericht der letzten 24 Stunden –
 oder, wenn es nichts zu berichten gibt, eine kurze Bestätigung. Die Einstellungen müssen dafür
 gespeichert sein. Details: [Tagesbericht](Tagesbericht).
+
+---
+
+## Tab: Zugriff
+
+| Einstellung | Beschreibung | Standard |
+|---|---|---|
+| **Rollen mit Zugriff** | Rollen, die neben den Administratoren das Dashboard, die Generierungs-Seite, Interviews und die RSS-Quellen nutzen dürfen. Administratoren haben immer Zugriff. Zur Auswahl stehen nur Rollen mit `publish_posts` (in einer Standardinstallation Redakteur und Autor), weil AutoQuill Beiträge mit dem eingestellten Status anlegt und Beitragsbilder in die Mediathek lädt. | keine |
+
+**Einstellungen**, **Logs** und **Backups** bleiben immer den Administratoren (`manage_options`)
+vorbehalten: Sie enthalten API-Schlüssel, API-Payloads und diese Rollenauswahl. Die Berechtigung
+wird nicht in der Rolle gespeichert, sondern bei jeder Prüfung aus der Einstellung abgeleitet –
+eine Änderung wirkt sofort, und beim Deinstallieren bleibt nichts zurück.
 
 ---
 

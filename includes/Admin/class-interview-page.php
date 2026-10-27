@@ -1,6 +1,7 @@
 <?php
 namespace AutoQuill\Admin;
 
+use AutoQuill\Core\Access;
 use AutoQuill\Core\Constants as C;
 use AutoQuill\Database\InterviewsRepository;
 use AutoQuill\Database\Schema;
@@ -30,7 +31,7 @@ class InterviewPage {
     }
 
     public static function render(): void {
-        if (!current_user_can('manage_options')) {
+        if (!current_user_can(Access::CAP)) {
             wp_die(esc_html__('Zugriff verweigert', 'auto-quill'));
         }
 

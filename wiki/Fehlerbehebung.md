@@ -171,7 +171,9 @@ der Seite noch keiner hinterlegt, jetzt unter **KI-Provider** / **Bilder** eintr
 ## Admin
 
 ### „Zugriff verweigert“
-Alle AutoQuill-Seiten erfordern Administratorrechte (`manage_options`).
+Einstellungen, Logs und Backups erfordern Administratorrechte (`manage_options`). Dashboard,
+Interviews und RSS-Quellen stehen zusätzlich den Rollen offen, die unter
+**Einstellungen → Zugriff** ausgewählt sind.
 
 ### Generierungs-Seite startet nicht von selbst
 Die Seite startet nur automatisch, wenn sie über **Blog-Post generieren** im Dashboard geöffnet
