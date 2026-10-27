@@ -301,7 +301,7 @@ stattdessen dem `beta`-Branch.
 
 ## Changelog
 
-### [Unreleased]
+### [1.9.0] — 2026-10-27
 
 #### Added
 - New settings tab **Zugriff**: choose which roles besides administrators may use the dashboard,

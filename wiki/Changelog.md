@@ -6,6 +6,7 @@ die Seite [Updates](Updates).
 
 | Version | Datum | Schwerpunkt |
 |---|---|---|
+| [1.9.0](#190--2026-10-27) | 2026-10-27 | Rollen mit Zugriff auf AutoQuill wählbar |
 | [1.8.2](#182--2026-10-23) | 2026-10-23 | Beitragsbild: automatische Wiederholung und Rückmeldung |
 | [1.8.1](#181--2026-10-10) | 2026-10-10 | Autor Marcel Kaiser, Wiki-Link in der Plugin-Liste |
 | [1.8.0](#180--2026-10-09) | 2026-10-09 | Einheitliches Admin-Design mit WP-Backend UI |
@@ -21,6 +22,13 @@ die Seite [Updates](Updates).
 | [1.1.0](#110) | – | Pixabay-Bildauswahl, Logs-Seite, Prompt-Vorlagen |
 
 ---
+
+## 1.9.0 – 2026-10-27
+
+- **Zugriff für weitere Rollen:** Unter **Einstellungen → Zugriff** lässt sich festlegen, welche
+  Rollen neben den Administratoren Dashboard, Generierung, Interviews und RSS-Quellen nutzen
+  dürfen. Zur Auswahl stehen Rollen, die Beiträge veröffentlichen dürfen (z. B. Redakteur, Autor).
+- Einstellungen, Logs und Backups bleiben den Administratoren vorbehalten.
 
 ## 1.8.2 – 2026-10-23
 
