@@ -301,6 +301,13 @@ stattdessen dem `beta`-Branch.
 
 ## Changelog
 
+### [Unreleased]
+
+#### Fixed
+- Notification recipients: the user list now offers every user with access to AutoQuill
+  (administrators plus the roles chosen under Einstellungen → Zugriff), not only `manage_options`;
+  the send-time check uses the same capability.
+
 ### [1.9.0] — 2026-10-27
 
 #### Added

@@ -34,7 +34,7 @@ Einrichtung unter **Einstellungen → Benachrichtigungen**.
 ## Gut zu wissen
 
 - **Benutzer werden über ihre ID gespeichert**, nicht über die Adresse. Ändert jemand seine
-  Mailadresse, gilt die neue sofort. Gelöschte Benutzer oder solche ohne Administratorrechte
+  Mailadresse, gilt die neue sofort. Gelöschte Benutzer oder solche ohne Zugriff auf AutoQuill
   bekommen keine Mail mehr (mit Warnung im Log).
 - **Der Berichtszeitraum** reicht von der letzten Mail bis jetzt, höchstens 7 Tage.
 - **Fehler kann der Bericht nur melden, solange sie im Log stehen.** Das Log hält maximal 7 Tage

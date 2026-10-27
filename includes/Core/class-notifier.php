@@ -111,8 +111,8 @@ class Notifier {
             }
             // A digest carries error text and post titles; it must not keep
             // flowing to someone who was demoted.
-            if (!user_can($user, 'manage_options')) {
-                Logger::warning('notifier', 'Empfänger hat keine Administratorrechte mehr', ['user_id' => (int) $id]);
+            if (!user_can($user, Access::CAP)) {
+                Logger::warning('notifier', 'Empfänger hat keinen Zugriff auf AutoQuill mehr', ['user_id' => (int) $id]);
                 continue;
             }
 

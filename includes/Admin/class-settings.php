@@ -970,12 +970,7 @@ class Settings {
                         ? $settings['notify_events']
                         : C::defaults()['notify_events'];
 
-                    $admin_users = get_users([
-                        'capability' => 'manage_options',
-                        'fields'     => ['ID', 'display_name', 'user_email'],
-                        'number'     => 200,
-                        'orderby'    => 'display_name',
-                    ]);
+                    $admin_users = Access::users(200);
 
                     $event_labels = [
                         'topics' => __('Neue Top-Themen', 'auto-quill'),
@@ -1052,7 +1047,7 @@ class Settings {
                                        name="<?php echo esc_attr(C::OPTION_KEY); ?>[notify_users_present]"
                                        value="1">
                                 <?php if (empty($admin_users)): ?>
-                                    <p class="description"><?php esc_html_e('Keine Benutzer mit Administratorrechten gefunden.', 'auto-quill'); ?></p>
+                                    <p class="description"><?php esc_html_e('Keine Benutzer mit Zugriff auf AutoQuill gefunden.', 'auto-quill'); ?></p>
                                 <?php else: ?>
                                     <div class="auto-quill-user-list">
                                         <?php foreach ($admin_users as $user): ?>

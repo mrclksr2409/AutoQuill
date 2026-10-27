@@ -59,6 +59,39 @@ class Access {
     }
 
     /**
+     * Users who currently have CAP, e.g. as notification recipients.
+     *
+     * get_users()'s capability query reads role definitions and cannot see a
+     * capability granted through user_has_cap, so the candidate roles are
+     * resolved here and every user is checked once more.
+     *
+     * @return object[] Rows with ID, display_name, user_email.
+     */
+    public static function users(int $limit = 200): array {
+        $roles = self::allowed_roles();
+        foreach (wp_roles()->roles as $slug => $role) {
+            if (!empty($role['capabilities']['manage_options'])) {
+                $roles[] = (string) $slug;
+            }
+        }
+        if (empty($roles)) {
+            return [];
+        }
+
+        $users = get_users([
+            'role__in' => array_values(array_unique($roles)),
+            'fields'   => ['ID', 'display_name', 'user_email'],
+            'number'   => $limit,
+            'orderby'  => 'display_name',
+        ]);
+
+        return array_values(array_filter(
+            $users,
+            static fn($user) => user_can((int) $user->ID, self::CAP)
+        ));
+    }
+
+    /**
      * Roles that can be granted access, administrator excluded (it always
      * has access).
      *

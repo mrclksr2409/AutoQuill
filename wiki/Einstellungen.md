@@ -175,7 +175,7 @@ leeres Textfeld stellt den Standard wieder her.
 | **Tagesbericht** | Einmal täglich eine Zusammenfassung per E-Mail | aus |
 | **Uhrzeit** | Versandzeit (Ortszeit) | 08:00 |
 | **Inhalte** | *Neue Top-Themen*, *Fehler und Warnungen*, *Erstellte Blog-Posts* | alle |
-| **Empfänger: Benutzer** | Auswahl aus den Benutzern mit Administratorrechten (`manage_options`); angezeigt werden höchstens 200. Gespeichert wird die Benutzer-ID, die Adresse wird beim Versand frisch gelesen. | – |
+| **Empfänger: Benutzer** | Auswahl aus allen Benutzern mit Zugriff auf AutoQuill – Administratoren und die Rollen aus dem Tab [Zugriff](#tab-zugriff); angezeigt werden höchstens 200. Gespeichert wird die Benutzer-ID, die Adresse wird beim Versand frisch gelesen. | – |
 | **Weitere Adressen** | Freie Adressen, eine pro Zeile, auch für Verteiler ohne WordPress-Konto. Ungültige Einträge und Duplikate werden beim Speichern verworfen; höchstens 50. | – |
 
 Ist der Tagesbericht aktiv, aber kein Empfänger hinterlegt, warnt AutoQuill beim Speichern.
