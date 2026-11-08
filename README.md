@@ -301,6 +301,11 @@ stattdessen dem `beta`-Branch.
 
 ## Changelog
 
+### [1.9.2] — 2026-11-08
+
+#### Geändert
+- Plugin Update Checker auf v6.0 aktualisiert.
+
 ### [1.9.1] — 2026-10-27
 
 #### Fixed

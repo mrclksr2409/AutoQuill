@@ -1,7 +1,7 @@
 <?php
 namespace AutoQuill\Core;
 
-use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
+use YahnisElsts\PluginUpdateChecker\v6\PucFactory;
 
 class Updater {
     private static ?object $checker = null;

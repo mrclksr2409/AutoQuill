@@ -6,6 +6,7 @@ die Seite [Updates](Updates).
 
 | Version | Datum | Schwerpunkt |
 |---|---|---|
+| [1.9.2](#192--2026-11-08) | 2026-11-08 | Plugin Update Checker 6.0 |
 | [1.9.1](#191--2026-10-27) | 2026-10-27 | Tagesbericht: alle Benutzer mit Zugriff als Empfänger |
 | [1.9.0](#190--2026-10-27) | 2026-10-27 | Rollen mit Zugriff auf AutoQuill wählbar |
 | [1.8.2](#182--2026-10-23) | 2026-10-23 | Beitragsbild: automatische Wiederholung und Rückmeldung |
@@ -23,6 +24,10 @@ die Seite [Updates](Updates).
 | [1.1.0](#110) | – | Pixabay-Bildauswahl, Logs-Seite, Prompt-Vorlagen |
 
 ---
+
+## 1.9.2 – 2026-11-08
+
+- Plugin Update Checker auf v6.0 aktualisiert.
 
 ## 1.9.1 – 2026-10-27
 
