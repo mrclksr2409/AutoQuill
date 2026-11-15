@@ -6,6 +6,7 @@ die Seite [Updates](Updates).
 
 | Version | Datum | Schwerpunkt |
 |---|---|---|
+| [1.9.3](#193--2026-11-15) | 2026-11-15 | Aktive Tage für Themenauswahl und Tagesbericht |
 | [1.9.2](#192--2026-11-08) | 2026-11-08 | Plugin Update Checker 6.0 |
 | [1.9.1](#191--2026-10-27) | 2026-10-27 | Tagesbericht: alle Benutzer mit Zugriff als Empfänger |
 | [1.9.0](#190--2026-10-27) | 2026-10-27 | Rollen mit Zugriff auf AutoQuill wählbar |
@@ -24,6 +25,13 @@ die Seite [Updates](Updates).
 | [1.1.0](#110) | – | Pixabay-Bildauswahl, Logs-Seite, Prompt-Vorlagen |
 
 ---
+
+## 1.9.3 – 2026-11-15
+
+- **Aktive Tage:** Unter **Einstellungen → Feeds & Zeitplan** lässt sich festlegen, an welchen
+  Wochentagen Themenauswahl und Tagesbericht laufen, z. B. nur Mo/Mi/Fr. An den anderen Tagen
+  entstehen keine KI-Kosten und keine Mails; der RSS-Abruf läuft weiter täglich.
+- Die Themenauswahl berücksichtigt alle Artikel seit dem letzten aktiven Tag statt fest 24 Stunden.
 
 ## 1.9.2 – 2026-11-08
 

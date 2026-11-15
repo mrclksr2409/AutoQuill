@@ -3,6 +3,7 @@ namespace AutoQuill\AI;
 
 use AutoQuill\Core\Constants as C;
 use AutoQuill\Core\Logger;
+use AutoQuill\Core\Scheduler;
 use AutoQuill\Database\ArticlesRepository;
 use AutoQuill\Database\TopicsRepository;
 
@@ -10,14 +11,17 @@ class Selector {
     public static function select_top_topics(): void {
         Logger::info('selector', 'Topic-Selection startet');
 
-        $articles = (new ArticlesRepository())->recent(24, 50);
+        // Reaches back to the previous active day, so days without a selection
+        // leave no gap; 24h when every day is active.
+        $window   = Scheduler::selection_window_hours();
+        $articles = (new ArticlesRepository())->recent($window, 50);
 
         if (empty($articles)) {
-            Logger::warning('selector', 'Keine neuen Artikel zum Analysieren gefunden (Zeitfenster: 24h)');
+            Logger::warning('selector', 'Keine neuen Artikel zum Analysieren gefunden', ['window_hours' => $window]);
             return;
         }
 
-        Logger::info('selector', 'Artikel geladen', ['count' => count($articles)]);
+        Logger::info('selector', 'Artikel geladen', ['count' => count($articles), 'window_hours' => $window]);
 
         $topics = self::analyze_articles($articles);
 

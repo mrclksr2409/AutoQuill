@@ -56,6 +56,9 @@ class Constants {
     /** UTC timestamp of the last sent digest. */
     const OPTION_LAST_DIGEST = 'auto_quill_last_digest';
 
+    /** ISO-8601 weekday numbers, Monday first. */
+    const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7];
+
     /** Sections a digest can contain. */
     const NOTIFY_EVENTS = ['topics', 'errors', 'posts'];
 
@@ -235,6 +238,10 @@ class Constants {
             // articles, so it should run after the fetch.
             'fetch_time'  => '00:00',
             'select_time' => '01:00',
+            // ISO weekdays (1 = Monday … 7 = Sunday) on which selection and
+            // digest run. The fetch stays daily: it costs no tokens and keeps
+            // short feeds from dropping items between active days.
+            'run_days'    => self::WEEKDAYS,
             'prompt_title'    => self::default_prompt_title(),
             'prompt_body'     => self::default_prompt_body(),
             'prompt_excerpt'  => self::default_prompt_excerpt(),

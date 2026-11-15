@@ -81,13 +81,14 @@ Parse-Fehlern ein größeres Modell wählen.
 | Einstellung | Beschreibung | Standard |
 |---|---|---|
 | **RSS-Abruf** | Uhrzeit des täglichen Feed-Abrufs (Ortszeit der Seite) | 00:00 |
-| **Themenauswahl** | Uhrzeit der täglichen KI-Themenauswahl | 01:00 |
+| **Themenauswahl** | Uhrzeit der KI-Themenauswahl | 01:00 |
+| **Aktive Tage** | Wochentage, an denen Themenauswahl und Tagesbericht laufen. Mindestens ein Tag muss gewählt sein. Der RSS-Abruf läuft unabhängig davon täglich. Details: [Zeitplan und Cron](Zeitplan-und-Cron#aktive-tage). | Mo–So |
 | **RSS-Rückblick (Tage)** | Ältere Feed-Einträge werden nicht übernommen und aus der Datenbank entfernt (verknüpfte ausgenommen). `0` = unbegrenzt, höchstens 365. | 7 |
 
 Über der Tabelle nennt der Tab die Zeitzone der Seite, in der alle Uhrzeiten gelten. Eine
 ungültige Uhrzeit wird verworfen; es bleibt der bisherige Wert.
 
-Die Themenauswahl betrachtet die Artikel der letzten 24 Stunden und sollte daher **bis zu 12 Stunden
+Die Themenauswahl betrachtet die neu abgerufenen Artikel (seit dem letzten aktiven Tag) und sollte daher **bis zu 12 Stunden
 nach** dem Abruf liegen (auch über Mitternacht, z. B. 23:00 → 00:30). Andernfalls – oder wenn beide
 Zeiten gleich sind – erscheint beim Speichern eine Warnung. Hintergründe:
 [Zeitplan und Cron](Zeitplan-und-Cron).

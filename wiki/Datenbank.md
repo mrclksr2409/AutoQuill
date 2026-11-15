@@ -99,6 +99,7 @@ Interviews werden nicht automatisch aufgeräumt und sind nicht Teil der Sicherun
 | `source_link_enabled`, `source_link_template` | Quellenhinweis | `true`, `Quelle: {source_link}` |
 | `rss_lookback_days` | RSS-Rückblick in Tagen (0–365) | `7` |
 | `fetch_time`, `select_time` | Uhrzeiten Abruf und Themenauswahl (`HH:MM`, Ortszeit) | `00:00`, `01:00` |
+| `run_days` | Aktive Wochentage für Themenauswahl und Tagesbericht (ISO, 1 = Montag … 7 = Sonntag) | `[1,2,3,4,5,6,7]` |
 | `writing_style` | Schreibstil | leer |
 | `prompt_title`, `prompt_body`, `prompt_excerpt`, `prompt_category` | Die vier Prompts | siehe [Prompts](Prompts#standard-prompts) |
 | `interview_style` | `first_person`, `editorial` oder `qa` | `first_person` |

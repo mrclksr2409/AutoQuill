@@ -182,6 +182,28 @@ class Settings {
             }
         }
 
+        // Marker pattern as notify_events: a group with nothing ticked submits
+        // no key. Zero days would mean the plugin never selects again, which is
+        // never what anyone wants - keep the previous days and say so.
+        if (!empty($input['run_days_present'])) {
+            $days = isset($input['run_days']) && is_array($input['run_days'])
+                ? array_values(array_intersect(C::WEEKDAYS, array_map('intval', $input['run_days'])))
+                : [];
+
+            if ($days) {
+                $clean['run_days'] = $days;
+            } else {
+                $clean['run_days'] = is_array($prev['run_days'] ?? null) ? $prev['run_days'] : C::WEEKDAYS;
+                add_settings_error(
+                    C::OPTION_KEY,
+                    'auto_quill_no_run_days',
+                    __('Es muss mindestens ein aktiver Tag ausgewählt sein. Die bisherigen Tage bleiben erhalten.', 'auto-quill'),
+                    'error'
+                );
+            }
+        }
+        unset($clean['run_days_present']);
+
         // Selection looks at the last 24h of articles, so it should follow the
         // fetch closely. Measured across midnight: 23:00 -> 00:30 is fine.
         $to_minutes = static fn(string $t): int => (int) substr($t, 0, 2) * 60 + (int) substr($t, 3, 2);
@@ -649,7 +671,38 @@ class Settings {
                                 <input type="time" id="select_time"
                                        name="<?php echo esc_attr(C::OPTION_KEY); ?>[select_time]"
                                        value="<?php echo esc_attr((string) ($settings['select_time'] ?? C::defaults()['select_time'])); ?>">
-                                <p class="description"><?php esc_html_e('Wann die KI täglich die Top-Themen aus den Artikeln der letzten 24 Stunden wählt. Sollte nach dem RSS-Abruf liegen.', 'auto-quill'); ?></p>
+                                <p class="description"><?php esc_html_e('Wann die KI an den aktiven Tagen die Top-Themen aus den neu abgerufenen Artikeln wählt. Sollte nach dem RSS-Abruf liegen.', 'auto-quill'); ?></p>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <th scope="row"><?php esc_html_e('Aktive Tage', 'auto-quill'); ?></th>
+                            <td>
+                                <?php
+                                $run_days       = \AutoQuill\Core\Scheduler::active_days($settings);
+                                $weekday_labels = [
+                                    1 => __('Mo', 'auto-quill'),
+                                    2 => __('Di', 'auto-quill'),
+                                    3 => __('Mi', 'auto-quill'),
+                                    4 => __('Do', 'auto-quill'),
+                                    5 => __('Fr', 'auto-quill'),
+                                    6 => __('Sa', 'auto-quill'),
+                                    7 => __('So', 'auto-quill'),
+                                ];
+                                ?>
+                                <input type="hidden"
+                                       name="<?php echo esc_attr(C::OPTION_KEY); ?>[run_days_present]"
+                                       value="1">
+                                <?php foreach ($weekday_labels as $day => $label): ?>
+                                    <label style="display:inline-block; margin-right:12px;">
+                                        <input type="checkbox"
+                                               name="<?php echo esc_attr(C::OPTION_KEY); ?>[run_days][]"
+                                               value="<?php echo esc_attr((string) $day); ?>"
+                                               <?php checked(in_array($day, $run_days, true)); ?>>
+                                        <?php echo esc_html($label); ?>
+                                    </label>
+                                <?php endforeach; ?>
+                                <p class="description"><?php esc_html_e('An welchen Wochentagen Themenauswahl und Tagesbericht laufen. An den anderen Tagen werden keine KI-Anfragen gestellt und keine Mails verschickt. Der RSS-Abruf läuft weiterhin täglich, und die Themenauswahl berücksichtigt alle Artikel seit dem letzten aktiven Tag. Die Buttons im Dashboard funktionieren an jedem Tag.', 'auto-quill'); ?></p>
                             </td>
                         </tr>
 
@@ -980,7 +1033,7 @@ class Settings {
                     ?>
 
                     <p class="description" style="margin: 1em 0;">
-                        <?php esc_html_e('AutoQuill kann einmal täglich zusammenfassen, was seit der letzten Mail passiert ist. Gibt es nichts zu berichten, wird auch nichts verschickt. Ob die Mail ankommt, hängt von der Mail-Konfiguration der Seite ab — im Zweifel ein SMTP-Plugin einrichten und den Test unten nutzen.', 'auto-quill'); ?>
+                        <?php esc_html_e('AutoQuill kann an den aktiven Tagen (Tab „Feeds & Zeitplan“) zusammenfassen, was seit der letzten Mail passiert ist. Gibt es nichts zu berichten, wird auch nichts verschickt. Ob die Mail ankommt, hängt von der Mail-Konfiguration der Seite ab — im Zweifel ein SMTP-Plugin einrichten und den Test unten nutzen.', 'auto-quill'); ?>
                     </p>
 
                     <table class="form-table">
@@ -996,7 +1049,7 @@ class Settings {
                                            name="<?php echo esc_attr(C::OPTION_KEY); ?>[notify_enabled]"
                                            value="1"
                                            <?php checked(!empty($notify_enabled)); ?>>
-                                    <?php esc_html_e('Täglich eine Zusammenfassung per E-Mail senden', 'auto-quill'); ?>
+                                    <?php esc_html_e('An den aktiven Tagen eine Zusammenfassung per E-Mail senden', 'auto-quill'); ?>
                                 </label>
                             </td>
                         </tr>

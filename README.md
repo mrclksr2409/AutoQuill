@@ -102,7 +102,8 @@ Hinweise), das AutoQuill mit seinen anderen Plugins teilt.
 | **Modell** | KI-Provider | Dropdown; die Liste wird mit dem API-Schlüssel beim Anbieter abgerufen (12 h zwischengespeichert, „Modelle neu laden" erzwingt einen Abruf). Beim eigenen Endpunkt Textfeld mit Vorschlägen | `gpt-4o-mini` / `claude-sonnet-4-6` / `meta-llama/Llama-3.3-70B-Instruct` |
 | **Schreibstil** | Prompts | Anweisungen für Tonalität, Anrede und Wortwahl aller erzeugten Texte | leer |
 | **RSS-Abruf** | Feeds & Zeitplan | Uhrzeit des täglichen Feed-Abrufs (Ortszeit) | 00:00 |
-| **Themenauswahl** | Feeds & Zeitplan | Uhrzeit der täglichen KI-Themenauswahl (Ortszeit), sollte nach dem Abruf liegen | 01:00 |
+| **Themenauswahl** | Feeds & Zeitplan | Uhrzeit der KI-Themenauswahl (Ortszeit), sollte nach dem Abruf liegen | 01:00 |
+| **Aktive Tage** | Feeds & Zeitplan | Wochentage, an denen Themenauswahl und Tagesbericht laufen; der RSS-Abruf bleibt täglich | Mo–So |
 | **RSS-Rückblick (Tage)** | Feeds & Zeitplan | Zeitfenster für Feed-Artikel, 0 = unbegrenzt | 7 |
 | **Prompts** | Prompts | Vorgaben für Titel, Beitragstext, Auszug, Kategorie | siehe Tab |
 | **Perspektive des Beitrags** | Interview | Ich-Perspektive, redaktioneller Artikel mit Zitaten oder Frage-Antwort | Ich-Perspektive |
@@ -300,6 +301,15 @@ Tags werden ignoriert. WordPress prüft automatisch und zeigt neue Versionen unt
 stattdessen dem `beta`-Branch.
 
 ## Changelog
+
+### [1.9.3] — 2026-11-15
+
+#### Hinzugefügt
+- Neue Einstellung „Aktive Tage“ (Feeds & Zeitplan): Themenauswahl und Tagesbericht laufen nur an
+  den gewählten Wochentagen, z. B. Mo/Mi/Fr. An den anderen Tagen entstehen keine KI-Kosten und
+  keine Mails. Der RSS-Abruf läuft weiterhin täglich.
+- Die Themenauswahl betrachtet jetzt alle Artikel seit dem letzten aktiven Tag (begrenzt durch den
+  RSS-Rückblick) statt fest 24 Stunden. Sind alle Tage aktiv, bleibt es bei 24 Stunden.
 
 ### [1.9.2] — 2026-11-08
 

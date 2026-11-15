@@ -55,7 +55,9 @@ class Notifier {
         return Scheduler::next_occurrence(
             (string) (self::settings()['notify_time'] ?? ''),
             Constants::defaults()['notify_time'],
-            $from
+            $from,
+            // Same active days as the selection: the mail reports its topics.
+            Scheduler::active_days()
         );
     }
 

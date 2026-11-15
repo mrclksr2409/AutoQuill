@@ -5,11 +5,21 @@ AutoQuill erledigt vier Aufgaben zeitgesteuert:
 | Aufgabe | Cron-Hook | Einstellung | Standard | Immer aktiv? |
 |---|---|---|---|---|
 | RSS-Abruf | `auto_quill_daily_fetch` | Feeds & Zeitplan → RSS-Abruf | 00:00 | ja |
-| Themenauswahl | `auto_quill_daily_select` | Feeds & Zeitplan → Themenauswahl | 01:00 | ja |
+| Themenauswahl | `auto_quill_daily_select` | Feeds & Zeitplan → Themenauswahl | 01:00 | an den aktiven Tagen |
 | Sicherung | `auto_quill_daily_backup` | Backup → Uhrzeit | 03:00 | nur wenn eingeschaltet |
-| Tagesbericht | `auto_quill_daily_digest` | Benachrichtigungen → Uhrzeit | 08:00 | nur wenn eingeschaltet |
+| Tagesbericht | `auto_quill_daily_digest` | Benachrichtigungen → Uhrzeit | 08:00 | nur wenn eingeschaltet, an den aktiven Tagen |
 
 Alle Zeiten gelten in der **Zeitzone der Seite** (Einstellungen → Allgemein → Zeitzone).
+
+## Aktive Tage
+
+Unter **Feeds & Zeitplan → Aktive Tage** legst du fest, an welchen Wochentagen Themenauswahl und
+Tagesbericht laufen (Standard: alle). An den übrigen Tagen ist für beide gar kein Termin eingeplant,
+es entstehen also weder KI-Kosten noch Mails. RSS-Abruf und Sicherung laufen weiterhin täglich.
+
+Damit an den freien Tagen keine Artikel verloren gehen, betrachtet die Themenauswahl alle Artikel
+seit dem letzten aktiven Tag, bei Mo/Mi/Fr also am Montag die letzten 72 Stunden. Begrenzt wird das
+durch den RSS-Rückblick. Die Buttons im [Dashboard](Dashboard) funktionieren an jedem Tag.
 
 ## Wie AutoQuill plant
 
